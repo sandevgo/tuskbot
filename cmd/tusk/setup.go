@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"os"
+	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
@@ -22,6 +25,12 @@ import (
 func NewServices(ctx context.Context) []srv.Service {
 	logger := log.FromCtx(ctx)
 	services := make([]srv.Service, 0)
+
+	// init env
+	err := initEnv(ctx, config.GetRuntimePath())
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to init env")
+	}
 
 	// 1. Configuration
 	appCfg := config.NewAppConfig(ctx)
@@ -130,17 +139,8 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
 func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent) ([]srv.Service, error) {
 	var services []srv.Service
 
-	// CLI Chat used for test only
-	//if cfg.EnableCLI {
-	//	rlChat, err := cli.NewReadLine(ag, cfg)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	services = append(services, rlChat)
-	//}
-
 	// Telegram Bot
-	if cfg.EnableTelegram {
+	if cfg.IsTelegramSelected() {
 		tgCfg := config.NewTelegramConfig(ctx)
 		bot, err := telegram.NewBot(ctx, tgCfg, ag)
 		if err != nil {
@@ -150,4 +150,24 @@ func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent)
 	}
 
 	return services, nil
+}
+
+func initEnv(ctx context.Context, runtimePath string) error {
+	logger := log.FromCtx(ctx)
+	envFile := filepath.Join(runtimePath, ".env")
+
+	if _, err := os.Stat(envFile); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+
+	if err := godotenv.Load(envFile); err != nil {
+		logger.Warn().Err(err).Str("path", envFile).Msg("failed to load .env file")
+		return err
+	}
+
+	logger.Debug().Str("path", envFile).Msg("loaded .env file")
+	return nil
 }

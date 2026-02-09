@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -10,19 +11,14 @@ import (
 )
 
 type AppConfig struct {
-	RuntimePath      string `env:"TUSK_RUNTIME_PATH" envDefault:".tuskbot"`
-	MainModel        string `env:"TUSK_MAIN_MODEL" envDefault:"openrouter/google/gemma-3-27b-it:free"`
-	OpenRouterAPIKey string `env:"TUSK_OPENROUTER_API_KEY,required,notEmpty"`
+	MainModel         string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
+	OpenRouterAPIKey  string `env:"TUSK_OPENROUTER_API_KEY,required,notEmpty"`
+	ChatChannel       string `env:"TUSK_CHAT_CHANNEL,required,notEmpty"`
+	ContextWindowSize int    `env:"TUSK_CONTEXT_WINDOW_SIZE" envDefault:"30"`
 
-	// Transport Flags
-	EnableTelegram bool `env:"TUSK_ENABLE_TELEGRAM" envDefault:"false"`
-	EnableCLI      bool `env:"TUSK_ENABLE_CLI" envDefault:"true"`
-
-	// Context Management
-	ContextWindowSize int `env:"TUSK_CONTEXT_WINDOW_SIZE" envDefault:"30"`
-
-	Provider string
-	Model    string
+	runtimePath string
+	Provider    string
+	Model       string
 }
 
 func NewAppConfig(ctx context.Context) *AppConfig {
@@ -37,33 +33,52 @@ func NewAppConfig(ctx context.Context) *AppConfig {
 		c.Model = c.MainModel[i+1:]
 	}
 
+	c.runtimePath = GetRuntimePath()
 	return c
 }
 
 func (c *AppConfig) GetRuntimePath() string {
-	return c.RuntimePath
+	return c.runtimePath
 }
 
 func (c *AppConfig) GetSystemPath() string {
-	return filepath.Join(c.RuntimePath, "SYSTEM.md")
+	return filepath.Join(c.runtimePath, "SYSTEM.md")
 }
 
 func (c *AppConfig) GetIdentityPath() string {
-	return filepath.Join(c.RuntimePath, "IDENTITY.md")
+	return filepath.Join(c.runtimePath, "IDENTITY.md")
 }
 
 func (c *AppConfig) GetUserProfilePath() string {
-	return filepath.Join(c.RuntimePath, "USER.md")
+	return filepath.Join(c.runtimePath, "USER.md")
 }
 
 func (c *AppConfig) GetMemoryPath() string {
-	return filepath.Join(c.RuntimePath, "MEMORY.md")
+	return filepath.Join(c.runtimePath, "MEMORY.md")
 }
 
 func (c *AppConfig) GetDatabasePath() string {
-	return filepath.Join(c.RuntimePath, "tuskbot.db")
+	return filepath.Join(c.runtimePath, "tuskbot.db")
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {
-	return filepath.Join(c.RuntimePath, "mcp_config.json")
+	return filepath.Join(c.runtimePath, "mcp_config.json")
+}
+
+func (c *AppConfig) IsTelegramSelected() bool {
+	return strings.ToLower(c.ChatChannel) == "telegram"
+}
+
+// GetRuntimePath can be used outside AppConfig
+func GetRuntimePath() string {
+	path := os.Getenv("TUSK_RUNTIME_PATH")
+	if path == "" {
+		path = ".tuskbot"
+	}
+
+	if !filepath.IsAbs(path) {
+		home, _ := os.UserHomeDir()
+		path = filepath.Join(home, path)
+	}
+	return path
 }

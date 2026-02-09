@@ -44,20 +44,20 @@ TuskBot comes with a set of pre-configured tools for immediate use:
 ## 🗺 Roadmap
 
 *   **[ ] Unified Command Interface:** Support of slash-commands (`/`).
-*   **[ ] Multi-Transport Support:** Adapters for WhatsApp, Slack, Discord.
-*   **[ ] Agentic Scheduler (Cron):** Background task management.
 *   **[ ] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
 
 ## 🔧 Configuration
 
 TuskBot uses environment variables for configuration.
 
-| Variable | Description | Required | Default |
-| :--- | :--- | :---: | :--- |
-| `TELEGRAM_TOKEN` | Your Telegram Bot Token | ✅ | - |
-| `TELEGRAM_OWNER_ID` | Your Telegram User ID (for security) | ✅ | - |
-| `OPENROUTER_API_KEY` | API Key for the LLM Provider | ✅ | - |
-| `OPENROUTER_MODEL` | Model to use (e.g., `anthropic/claude-3.5-sonnet`) | ❌ | `google/gemma-3-27b-it:free` |
-| `RAG_MODEL_PATH` | Path to the local GGUF embedding model | ✅ | - |
-| `TUSKBOT_RUNTIME_PATH` | Path for logs, memory, and file ops | ❌ | `.tuskbot` |
-| `LLM_PROVIDER` | Provider selection | ❌ | `openrouter` |
+| Variable | Description                                          |
+| :--- |:-----------------------------------------------------|
+| `TUSK_TELEGRAM_TOKEN` | Your Telegram Bot Token                              |
+| `TUSK_TELEGRAM_OWNER_ID` | Your Telegram User ID (for security)                 |
+| `TUSK_OPENROUTER_API_KEY` | API Key for OpenRouter                               |
+| `TUSK_RAG_MODEL_PATH` | Path to the local GGUF embedding model               |
+| `TUSK_MAIN_MODEL` | Main LLM model (format: `provider/model`)            |
+| `TUSK_RUNTIME_PATH` | Path for logs, database, and workspace               |
+| `TUSK_CONTEXT_WINDOW_SIZE`| Number of messages in active context (default: `30`) |
+| `TUSK_ENABLE_TELEGRAM` | Enable/Disable Telegram transport                    |
+| `TUSK_DEBUG` | Enable debug logging (set to `1`)                    |

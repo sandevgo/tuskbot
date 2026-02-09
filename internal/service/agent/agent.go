@@ -49,12 +49,6 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
 
-	for _, msg := range messages {
-		fmt.Println("=====")
-		fmt.Println(msg.Content)
-		fmt.Println("=====")
-	}
-
 	// 3. Prepare Tools
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {

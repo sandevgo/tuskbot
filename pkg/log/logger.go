@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -19,12 +17,16 @@ import (
 const logPathLength = 1
 
 func NewContextWithLogger(ctx context.Context, debug bool) (context.Context, func()) {
+	//	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
+	//		pathItems := strings.Split(file, "/")
+	//		if len(pathItems) > 4 {
+	//			file = strings.Join(pathItems[len(pathItems)-logPathLength:], "/")
+	//		}
+	//		return file + ":" + strconv.Itoa(line)
+	//	}
+
 	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		pathItems := strings.Split(file, "/")
-		if len(pathItems) > 4 {
-			file = strings.Join(pathItems[len(pathItems)-logPathLength:], "/")
-		}
-		return file + ":" + strconv.Itoa(line)
+		return ""
 	}
 
 	if debug {

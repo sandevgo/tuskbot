@@ -31,7 +31,7 @@ bench:
 # Run the application
 run: build
 	@echo "Running $(PROJECT_NAME)..."
-	@./bin/tusk
+	@./bin/tusk start
 
 # Install dependencies
 deps:

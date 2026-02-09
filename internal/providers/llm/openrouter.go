@@ -12,7 +12,10 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-const openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
+const (
+	openRouterURL       = "https://openrouter.ai/api/v1/chat/completions"
+	openRouterModelsURL = "https://openrouter.ai/api/v1/models"
+)
 
 type OpenRouter struct {
 	cfg    *config.AppConfig
@@ -41,6 +44,16 @@ type chatResponse struct {
 	Error   struct {
 		Message string `json:"message"`
 	} `json:"error,omitempty"`
+}
+
+type ModelInfo struct {
+	ID            string `json:"id"`
+	Name          string `json:"name"`
+	ContextLength int    `json:"context_length"`
+}
+
+type modelsResponse struct {
+	Data []ModelInfo `json:"data"`
 }
 
 func (o *OpenRouter) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
@@ -93,4 +106,33 @@ func (o *OpenRouter) Chat(ctx context.Context, history []core.Message, tools []c
 	}
 
 	return chatResp.Choices[0].Message, nil
+}
+
+func (o *OpenRouter) GetModels(ctx context.Context) ([]ModelInfo, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, openRouterModelsURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+o.cfg.OpenRouterAPIKey)
+	req.Header.Set("HTTP-Referer", core.TuskRepositoryURL)
+	req.Header.Set("X-Title", core.TuskName)
+
+	resp, err := o.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("api returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var res modelsResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return res.Data, nil
 }

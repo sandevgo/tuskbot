@@ -116,8 +116,6 @@ func (r *KnowledgeRepo) SearchContext(ctx context.Context, vector []float32, lim
 		results = append(results, item)
 	}
 
-	fmt.Println("Search results:", results)
-
 	return results, nil
 }
 
