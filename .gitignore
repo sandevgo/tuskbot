@@ -3,4 +3,6 @@
 .idea
 .DS_Store
 /bin
+/docs
+/external
 /vendor

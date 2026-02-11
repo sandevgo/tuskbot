@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -154,5 +155,47 @@ func (r *KnowledgeRepo) GetUnextractedMessages(ctx context.Context, limit int) (
 		}
 		msgs = append(msgs, m)
 	}
+	return msgs, nil
+}
+
+func (r *KnowledgeRepo) GetRecentExtractedMessages(
+	ctx context.Context,
+	limit int,
+	before time.Time,
+	threshold time.Duration,
+) ([]core.StoredMessage, error) {
+	earliest := before.Add(-threshold)
+
+	query := `
+		SELECT id, session_id, role, content, created_at 
+		FROM messages 
+		WHERE extracted = 1 
+		  AND role IN ('user', 'assistant')
+		  AND created_at < ? 
+		  AND created_at >= ?
+		ORDER BY created_at DESC 
+		LIMIT ?`
+
+	rows, err := r.db.QueryContext(ctx, query, before, earliest, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var msgs []core.StoredMessage
+	for rows.Next() {
+		var m core.StoredMessage
+		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		m.Extracted = true
+		msgs = append(msgs, m)
+	}
+
+	// Reverse to chronological order (oldest first) so prepending maintains conversation flow
+	for i, j := 0, len(msgs)-1; i < j; i, j = i+1, j-1 {
+		msgs[i], msgs[j] = msgs[j], msgs[i]
+	}
+
 	return msgs, nil
 }

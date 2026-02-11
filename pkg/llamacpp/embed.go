@@ -45,11 +45,12 @@ func SetDefaultLogger() {
 }
 
 func init() {
-	SetSilentLogger()
+	//SetSilentLogger()
 }
 
 // LlamaEmbedder wraps the C pointers for the model and context.
 type LlamaEmbedder struct {
+	mu        sync.RWMutex
 	model     *C.struct_llama_model
 	ctx       *C.struct_llama_context
 	isEncoder bool
@@ -89,7 +90,6 @@ func NewLlamaEmbedder(modelPath string) (*LlamaEmbedder, error) {
 	}
 
 	// Determine if this is an Encoder model (BERT, etc.) to avoid warnings.
-	// We check the architecture metadata string directly.
 	isEncoder := false
 	if C.llama_model_has_encoder(model) {
 		isEncoder = true
@@ -117,6 +117,9 @@ func NewLlamaEmbedder(modelPath string) (*LlamaEmbedder, error) {
 
 // Free releases the C memory associated with the model and context.
 func (l *LlamaEmbedder) Free() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	if l.ctx != nil {
 		C.llama_free(l.ctx)
 		l.ctx = nil
@@ -129,6 +132,9 @@ func (l *LlamaEmbedder) Free() {
 
 // Embed generates a vector for the given text.
 func (l *LlamaEmbedder) Embed(text string) ([]float32, error) {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+
 	if l.model == nil || l.ctx == nil {
 		return nil, errors.New("embedder is not initialized or already freed")
 	}
@@ -146,7 +152,6 @@ func (l *LlamaEmbedder) Embed(text string) ([]float32, error) {
 	tokens := make([]C.llama_token, l.nCtx)
 
 	// 2. Tokenize with truncation
-	// We pass l.nCtx as n_tokens_max. llama_tokenize will stop if it hits this limit.
 	nTokens := C.llama_tokenize(
 		vocab,
 		cText,
@@ -158,11 +163,10 @@ func (l *LlamaEmbedder) Embed(text string) ([]float32, error) {
 	)
 
 	if nTokens < 0 {
-		// If negative, it usually means error or buffer too small (though we passed nCtx)
 		return nil, fmt.Errorf("tokenization failed (code: %d)", nTokens)
 	}
 
-	// 3. Safety Clamp (just in case)
+	// 3. Safety Clamp
 	if int(nTokens) > l.nCtx {
 		nTokens = C.int32_t(l.nCtx)
 	}
@@ -186,15 +190,11 @@ func (l *LlamaEmbedder) Embed(text string) ([]float32, error) {
 	// Retrieve embeddings
 	var embPtr *C.float
 	if l.isEncoder {
-		// For BERT/Encoder: get pooled sequence embedding (seq_id = 0)
 		embPtr = C.llama_get_embeddings_seq(l.ctx, 0)
 	} else {
-		// For GPT/Decoder: get embedding of the LAST token
-		// Index -1 means "last token in batch"
 		embPtr = C.llama_get_embeddings_ith(l.ctx, -1)
 	}
 
-	// Fallback if specialized methods returned nil
 	if embPtr == nil {
 		embPtr = C.llama_get_embeddings(l.ctx)
 	}

@@ -36,6 +36,11 @@ func NewAgent(
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate func(core.Message)) (string, error) {
 	logger := log.FromCtx(ctx)
 
+	logger.Info().
+		Str("session_id", sessionID).
+		Str("input", input).
+		Msg("agent received user request")
+
 	// 1. Record the User Input
 	userMsg := core.Message{Role: core.RoleUser, Content: input}
 	if err := a.memory.SaveMessage(ctx, sessionID, userMsg); err != nil {

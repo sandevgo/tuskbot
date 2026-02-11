@@ -14,7 +14,7 @@ func NewProvider(ctx context.Context, appCfg *config.AppConfig) (core.AIProvider
 	log.FromCtx(ctx).Info().
 		Str("provider", appCfg.Provider).
 		Str("model", appCfg.Model).
-		Msg("main model config")
+		Msg("starting llm provider")
 
 	switch appCfg.Provider {
 	case "openrouter":

@@ -8,14 +8,14 @@ import (
 
 func TestLlamaEmbedder(t *testing.T) {
 	// Suppress llama.cpp logs for cleaner test output
-	SetSilentLogger()
+	//SetSilentLogger()
 
 	// 1. Determine model path
 	modelPath := os.Getenv("TUSKBOT_TEST_MODEL")
 	if modelPath == "" {
 		// Check default runtime location relative to this package
 		candidates := []string{
-			"/Users/sandevgo/.tuskbot/models/all-MiniLM-L6-v2-Q8_0.gguf",
+			"/Users/sandevgo/.tuskbot/models/e5-base-v2-q8_0.gguf",
 		}
 		for _, p := range candidates {
 			if _, err := os.Stat(p); err == nil {

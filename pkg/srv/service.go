@@ -24,7 +24,10 @@ func StartServices(ctx context.Context, services []Service) {
 
 func ShutdownServices(ctx context.Context, services []Service) {
 	<-ctx.Done()
-	for _, service := range services {
+	// Shutdown in reverse order (LIFO) to ensure dependencies are still alive
+	// when high-level services shut down.
+	for i := len(services) - 1; i >= 0; i-- {
+		service := services[i]
 		if err := service.Shutdown(ctx); err != nil {
 			log.FromCtx(ctx).Error().Err(err).Msgf("%T failed to shutdown", service)
 		}

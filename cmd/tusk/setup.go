@@ -61,8 +61,8 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	// 5. Knowledge Extractor Service
 	// Runs in background to convert conversation history into atomic facts
-	//extractor := knowledge.NewExtractor(knowledgeRepo, aiProvider, embedder)
-	//services = append(services, extractor)
+	extractor := memory.NewExtractor(knowledgeRepo, aiProvider, embedder)
+	services = append(services, extractor)
 
 	// 6. MCP & Tools
 	mcpManager, err := initMCP(ctx, appCfg)
@@ -76,7 +76,7 @@ func NewServices(ctx context.Context) []srv.Service {
 		messagesRepo,
 		knowledgeRepo,
 		embedder,
-		memory.NewPromptBuilder(appCfg),
+		memory.NewSysPrompt(appCfg),
 	)
 
 	executor := agent.NewExecutor(mcpManager)

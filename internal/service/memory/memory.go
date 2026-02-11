@@ -15,7 +15,7 @@ type Memory struct {
 	msgRepo  core.MessagesRepository
 	knowRepo core.KnowledgeRepository
 	embedder core.Embedder
-	prompter *PromptBuilder
+	prompter *SysPrompt
 }
 
 func NewMemory(
@@ -23,7 +23,7 @@ func NewMemory(
 	msgRepo core.MessagesRepository,
 	knowRepo core.KnowledgeRepository,
 	embedder core.Embedder,
-	prompter *PromptBuilder,
+	prompter *SysPrompt,
 ) *Memory {
 	return &Memory{
 		cfg:      cfg,
@@ -34,12 +34,9 @@ func NewMemory(
 	}
 }
 
-// GetFullContext assembles the complete prompt for the Agent
 func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string) ([]core.Message, error) {
-	// 1. Start with System Prompt
 	messages := s.prompter.Build()
 
-	// 2. Add RAG Context as a System Message
 	if rag := s.getContext(ctx, sessionID, userQuery); rag != "" {
 		messages = append(messages, core.Message{
 			Role:    core.RoleSystem,
@@ -47,7 +44,6 @@ func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string
 		})
 	}
 
-	// 3. Add Chronological History
 	history, err := s.msgRepo.GetMessages(ctx, sessionID, s.cfg.ContextWindowSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history: %w", err)

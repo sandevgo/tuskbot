@@ -15,6 +15,7 @@ type KnowledgeRepository interface {
 	SearchContext(ctx context.Context, vector []float32, limitKnowledge, limitHistory int) ([]ContextItem, error)
 	MarkMessagesExtracted(ctx context.Context, messageIDs []int64) error
 	GetUnextractedMessages(ctx context.Context, limit int) ([]StoredMessage, error)
+	GetRecentExtractedMessages(ctx context.Context, limit int, before time.Time, threshold time.Duration) ([]StoredMessage, error)
 }
 
 type StoredMessage struct {

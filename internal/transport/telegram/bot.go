@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/config"
@@ -68,7 +69,7 @@ func NewBot(
 }
 
 func (b *Bot) Start(ctx context.Context) error {
-	log.FromCtx(ctx).Info().Msg("Starting Telegram Bot...")
+	log.FromCtx(ctx).Info().Msg("starting telegram bot")
 	b.bot.Start()
 	return nil
 }
@@ -89,15 +90,17 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	_, err := b.agent.Run(ctx, sessionID, c.Text(), func(msg core.Message) {
 		// Send Reasoning (optional, good for debugging)
-		if msg.Reasoning != "" {
+		if strings.TrimSpace(msg.Reasoning) != "" {
 			_ = c.Send(fmt.Sprintf("💭 <b>Thinking:</b>\n%s", msg.Reasoning), tele.ModeHTML)
 		}
 
 		// Send Content
 		if msg.Content != "" {
-			htmlContent := conv.MarkdownToTelegramHTML([]byte(msg.Content))
-			if err := c.Send(htmlContent, tele.ModeHTML); err != nil {
-				logger.Error().Err(err).Msg("failed to send telegram message")
+			htmlContent := strings.TrimSpace(conv.MarkdownToTelegramHTML([]byte(msg.Content)))
+			if htmlContent != "" {
+				if err := c.Send(htmlContent, tele.ModeHTML); err != nil {
+					logger.Error().Err(err).Msg("failed to send telegram message")
+				}
 			}
 		}
 
@@ -109,7 +112,7 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("agent run failed")
-		return c.Send(fmt.Sprintf("Error: %v", err))
+		return c.Send(fmt.Sprintf("error: %v", err))
 	}
 
 	return nil

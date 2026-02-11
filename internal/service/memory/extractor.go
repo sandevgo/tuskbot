@@ -13,34 +13,40 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
+const (
+	defaultBatchSize          = 100
+	defaultExtractionInterval = 30 * time.Minute
+	defaultSessionGap         = 30 * time.Minute
+	defaultCommitTimeout      = 5 * time.Minute
+	windowSize                = 20
+	windowOverlap             = 5
+)
+
 type Extractor struct {
-	repo     core.KnowledgeRepository
-	ai       core.AIProvider
-	embedder core.Embedder
-	interval time.Duration
+	repo                core.KnowledgeRepository
+	ai                  core.AIProvider
+	embedder            core.Embedder
+	Interval            time.Duration
+	BatchSize           int
+	ContextGapThreshold time.Duration
 }
 
 func NewExtractor(repo core.KnowledgeRepository, ai core.AIProvider, embedder core.Embedder) *Extractor {
 	return &Extractor{
-		repo:     repo,
-		ai:       ai,
-		embedder: embedder,
-		interval: 2 * time.Minute,
+		repo:                repo,
+		ai:                  ai,
+		embedder:            embedder,
+		Interval:            defaultExtractionInterval,
+		BatchSize:           defaultBatchSize,
+		ContextGapThreshold: defaultSessionGap,
 	}
 }
 
 func (e *Extractor) Start(ctx context.Context) error {
 	logger := log.FromCtx(ctx)
-	logger.Info().Msg("Knowledge Extractor service started")
+	logger.Info().Msg("starting knowledge extractor")
 
-	// Initial run after a short delay to let app startup
-	time.AfterFunc(10*time.Second, func() {
-		if err := e.processBatch(ctx); err != nil {
-			logger.Error().Err(err).Msg("failed to process initial knowledge extraction batch")
-		}
-	})
-
-	ticker := time.NewTicker(e.interval)
+	ticker := time.NewTicker(e.Interval)
 	defer ticker.Stop()
 
 	for {
@@ -49,7 +55,7 @@ func (e *Extractor) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			if err := e.processBatch(ctx); err != nil {
-				logger.Error().Err(err).Msg("failed to process knowledge extraction batch")
+				logger.Error().Err(err).Msg("batch processing failed")
 			}
 		}
 	}
@@ -60,101 +66,286 @@ func (e *Extractor) Shutdown(ctx context.Context) error {
 }
 
 func (e *Extractor) processBatch(ctx context.Context) error {
-	logger := log.FromCtx(ctx)
-
-	// 1. Fetch unextracted messages
-	msgs, err := e.repo.GetUnextractedMessages(ctx, 20)
+	unextracted, err := e.repo.GetUnextractedMessages(ctx, e.BatchSize)
 	if err != nil {
-		return fmt.Errorf("failed to fetch messages: %w", err)
+		return fmt.Errorf("fetch messages: %w", err)
+	}
+	if len(unextracted) == 0 {
+		return nil
 	}
 
+	contextMsgs, err := e.repo.GetRecentExtractedMessages(ctx, 5, unextracted[0].CreatedAt, e.ContextGapThreshold)
+	if err != nil {
+		return fmt.Errorf("fetch context messages: %w", err)
+	}
+
+	allMsgs := append(contextMsgs, unextracted...)
+	unextractedIDs := make(map[int64]struct{}, len(unextracted))
+	for _, m := range unextracted {
+		unextractedIDs[m.ID] = struct{}{}
+	}
+
+	sessions := splitByContextSessions(allMsgs, e.ContextGapThreshold)
+
+	for _, session := range sessions {
+		if err := e.processSessionWindows(ctx, session, unextractedIDs); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *Extractor) processSessionWindows(ctx context.Context, session []core.StoredMessage, unextractedIDs map[int64]struct{}) error {
+	if len(session) == 0 {
+		return nil
+	}
+
+	windows := createSlidingWindows(session, windowSize, windowOverlap)
+
+	for i, window := range windows {
+		isLastWindow := i == len(windows)-1
+
+		if isLastWindow && len(window) < windowSize {
+			lastMsg := window[len(window)-1]
+			if time.Since(lastMsg.CreatedAt) < defaultCommitTimeout {
+				continue
+			}
+		}
+
+		// zombie sessions
+		if !hasUnextracted(window, unextractedIDs) {
+			continue
+		}
+
+		if err := e.processWindow(ctx, window, unextractedIDs); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func createSlidingWindows(msgs []core.StoredMessage, size, overlap int) [][]core.StoredMessage {
 	if len(msgs) == 0 {
 		return nil
 	}
 
-	logger.Debug().Int("count", len(msgs)).Msg("extracting knowledge from messages")
+	step := size - overlap
+	var windows [][]core.StoredMessage
 
-	// 2. Build Prompt
-	var conversation strings.Builder
-	var msgIDs []int64
-	for _, m := range msgs {
-		conversation.WriteString(fmt.Sprintf("%s: %s\n", strings.ToUpper(m.Role), m.Content))
-		msgIDs = append(msgIDs, m.ID)
+	for i := 0; i < len(msgs); i += step {
+		end := i + size
+		if end > len(msgs) {
+			end = len(msgs)
+		}
+
+		window := make([]core.StoredMessage, end-i)
+		copy(window, msgs[i:end])
+		windows = append(windows, window)
+
+		if end == len(msgs) {
+			break
+		}
 	}
 
-	prompt := fmt.Sprintf(`Analyze the following conversation and extract atomic facts about the user, their projects, preferences, or specific instructions they gave.
-Ignore trivial chit-chat.
-Return the result as a JSON list of objects with "fact" (string) and "category" (string: "preference", "user_fact", "project", "instruction").
+	return windows
+}
 
-Conversation:
-%s`, conversation.String())
+func (e *Extractor) processWindow(ctx context.Context, window []core.StoredMessage, unextractedIDs map[int64]struct{}) error {
+	conversation, allIDs := formatConversation(window)
 
-	// 3. Call LLM
+	logger := log.FromCtx(ctx)
+	logger.Debug().Int("count", len(window)).Msg("extracting knowledge from window")
+
+	facts, err := e.extractFacts(ctx, conversation)
+	if err != nil {
+		logger.Error().Err(err).Str("content", conversation).Msg("extraction failed")
+		return fmt.Errorf("extraction failed: %w", err)
+	}
+
+	if err = e.persistFacts(ctx, facts); err != nil {
+		return err
+	}
+
+	return e.markUnextracted(ctx, allIDs, unextractedIDs)
+}
+
+func (e *Extractor) markUnextracted(ctx context.Context, ids []int64, unextractedIDs map[int64]struct{}) error {
+	toMark := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if _, ok := unextractedIDs[id]; ok {
+			toMark = append(toMark, id)
+		}
+	}
+
+	if len(toMark) == 0 {
+		return nil
+	}
+
+	if err := e.repo.MarkMessagesExtracted(ctx, toMark); err != nil {
+		return fmt.Errorf("mark extracted: %w", err)
+	}
+	return nil
+}
+
+func (e *Extractor) extractFacts(ctx context.Context, conversation string) ([]extractedFact, error) {
+	const systemPrompt = "You are a knowledge extraction system. Output only valid JSON."
+	userPrompt := buildExtractionPrompt(conversation)
+
 	resp, err := e.ai.Chat(ctx, []core.Message{
-		{Role: core.RoleSystem, Content: "You are a knowledge extraction system. Output only valid JSON."},
-		{Role: core.RoleUser, Content: prompt},
+		{Role: core.RoleSystem, Content: systemPrompt},
+		{Role: core.RoleUser, Content: userPrompt},
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("llm extraction failed: %w", err)
+		return nil, fmt.Errorf("llm chat: %w", err)
 	}
 
-	// 4. Parse Response
-	var facts []struct {
-		Fact     string `json:"fact"`
-		Category string `json:"category"`
-	}
+	return parseExtractionResponse(resp.Content)
+}
 
-	content := resp.Content
-	// Attempt to clean markdown code blocks and find the JSON array
-	if idx := strings.Index(content, "["); idx != -1 {
-		content = content[idx:]
-	}
-	if idx := strings.LastIndex(content, "]"); idx != -1 {
-		content = content[:idx+1]
-	}
+func (e *Extractor) persistFacts(ctx context.Context, facts []extractedFact) error {
+	logger := log.FromCtx(ctx)
 
-	if err := json.Unmarshal([]byte(content), &facts); err != nil {
-		// If parsing fails, we log and mark messages as extracted anyway to prevent infinite loops.
-		logger.Error().Err(err).Str("content", resp.Content).Msg("failed to parse extraction JSON, skipping batch")
-		return e.repo.MarkMessagesExtracted(ctx, msgIDs)
-	}
-
-	// 5. Embed and Save Facts
 	for _, f := range facts {
-		chunks, err := e.embedder.Embed(ctx, f.Fact)
-		if err != nil {
-			logger.Error().Err(err).Str("fact", f.Fact).Msg("failed to embed fact")
-			continue
-		}
-		if len(chunks) == 0 {
-			continue
-		}
-
-		hash := sha256.Sum256([]byte(f.Fact))
-		factHash := hex.EncodeToString(hash[:])
-
-		storedFact := core.StoredKnowledge{
-			Fact:      f.Fact,
-			Category:  f.Category,
-			Source:    "extracted",
-			Embedding: chunks[0],
-			FactHash:  factHash,
-		}
-
-		if err := e.repo.SaveFact(ctx, storedFact); err != nil {
-			// Ignore unique constraint errors (duplicates)
-			if !strings.Contains(err.Error(), "UNIQUE constraint failed") && !strings.Contains(err.Error(), "constraint failed") {
-				logger.Error().Err(err).Msg("failed to save fact")
+		if err := e.saveFact(ctx, f); err != nil {
+			if isDuplicateError(err) {
+				continue
 			}
-		} else {
-			logger.Info().Str("fact", f.Fact).Msg("knowledge extracted and saved")
+			return fmt.Errorf("failed to save fact '%s': %w", f.Fact, err)
+		}
+		logger.Info().Str("category", f.Category).Msg("knowledge extracted")
+	}
+	return nil
+}
+
+func (e *Extractor) saveFact(ctx context.Context, fact extractedFact) error {
+	chunks, err := e.embedder.Embed(ctx, fact.Fact)
+	if err != nil {
+		return fmt.Errorf("embed: %w", err)
+	}
+	if len(chunks) == 0 {
+		return fmt.Errorf("empty embedding")
+	}
+
+	stored := core.StoredKnowledge{
+		Fact:      fact.Fact,
+		Category:  fact.Category,
+		Source:    "extracted",
+		Embedding: chunks[0],
+		FactHash:  hashFact(fact.Fact),
+	}
+
+	if err := e.repo.SaveFact(ctx, stored); err != nil {
+		if isDuplicateError(err) {
+			return nil
+		}
+		return fmt.Errorf("save: %w", err)
+	}
+	return nil
+}
+
+func splitByContextSessions(msgs []core.StoredMessage, threshold time.Duration) [][]core.StoredMessage {
+	if len(msgs) == 0 {
+		return nil
+	}
+
+	var groups [][]core.StoredMessage
+	currentGroup := []core.StoredMessage{msgs[0]}
+
+	for i := 1; i < len(msgs); i++ {
+		if msgs[i].CreatedAt.Sub(msgs[i-1].CreatedAt) > threshold {
+			groups = append(groups, currentGroup)
+			currentGroup = []core.StoredMessage{}
+		}
+		currentGroup = append(currentGroup, msgs[i])
+	}
+
+	if len(currentGroup) > 0 {
+		groups = append(groups, currentGroup)
+	}
+
+	return groups
+}
+
+func hasUnextracted(window []core.StoredMessage, unextractedIDs map[int64]struct{}) bool {
+	for _, msg := range window {
+		if _, isNew := unextractedIDs[msg.ID]; isNew {
+			return true
 		}
 	}
+	return false
+}
 
-	// 6. Mark messages as processed
-	if err := e.repo.MarkMessagesExtracted(ctx, msgIDs); err != nil {
-		return fmt.Errorf("failed to mark messages extracted: %w", err)
+func formatConversation(msgs []core.StoredMessage) (string, []int64) {
+	var b strings.Builder
+	ids := make([]int64, 0, len(msgs))
+
+	for _, m := range msgs {
+		if m.Role == core.RoleTool || m.Role == core.RoleSystem || strings.HasPrefix(m.Content, "Tool Call") {
+			continue
+		}
+
+		b.WriteString(strings.ToUpper(m.Role))
+		b.WriteString(": ")
+		b.WriteString(m.Content)
+		b.WriteByte('\n')
+		ids = append(ids, m.ID)
 	}
 
-	return nil
+	return b.String(), ids
+}
+
+type extractedFact struct {
+	Fact     string `json:"fact"`
+	Category string `json:"category"`
+}
+
+func buildExtractionPrompt(conversation string) string {
+	return fmt.Sprintf(
+		`Extract distinct, permanent facts from the conversation. Output format: JSON list of objects {fact, category}. Categories: [preference, user_fact, project, instruction]. Rules: 1. Ignore greetings and small talk. 2. Facts must be self-contained (replace "he" with "User"). Conversation: %s`,
+		conversation,
+	)
+}
+
+func parseExtractionResponse(content string) ([]extractedFact, error) {
+	jsonStr := extractJSONArray(content)
+	if jsonStr == "" {
+		return nil, fmt.Errorf("no JSON array found in response")
+	}
+
+	var facts []extractedFact
+	if err := json.Unmarshal([]byte(jsonStr), &facts); err != nil {
+		return nil, fmt.Errorf("unmarshal facts: %w", err)
+	}
+
+	return facts, nil
+}
+
+func extractJSONArray(content string) string {
+	start := strings.Index(content, "[")
+	if start == -1 {
+		return ""
+	}
+
+	end := strings.LastIndex(content[start:], "]")
+	if end == -1 {
+		return ""
+	}
+
+	return content[start : start+end+1]
+}
+
+func hashFact(fact string) string {
+	hash := sha256.Sum256([]byte(fact))
+	return hex.EncodeToString(hash[:])
+}
+
+func isDuplicateError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unique constraint failed") ||
+		strings.Contains(msg, "constraint failed")
 }
