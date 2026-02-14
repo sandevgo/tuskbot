@@ -90,6 +90,8 @@ FROM alpine:3.23.3 AS artifacts
 WORKDIR /output
 
 # Headers
+COPY --from=builder /src/sqlite/sqlite3.h /output/include/
+COPY --from=builder /src/sqlite/sqlite3ext.h /output/include/
 COPY --from=builder /src/sqlite-vec.h /output/include/
 
 # Linux Libs

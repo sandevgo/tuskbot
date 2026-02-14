@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+
+  build-release:
+    name: Build Linux (Static)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build Linux amd64
+        run: |
+          make release-linux 
+
+      - name: Build MacOS arm64
+        run: |
+          make release-macos
+
+      - name: Tar linux-amd64
+        run: |
+          tar -czvf tusk-linux-amd64.tar.gz bin/tusk-linux-amd64
+
+      - name: Tar macos-arm64
+        run: |
+          tar -czvf tusk-darwin-arm64.tar.gz bin/tusk-darwin-arm64
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: tusk-linux-amd64
+          path: tusk-linux-amd64.tar.gz
+
+      - name: Upload MacOS Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: tusk-darwin-arm64
+          path: tusk-darwin-arm64.tar.gz
+
+  create-release:
+    needs: [build-release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: tusk-*
+          merge-multiple: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.tar.gz
+          draft: true
+          prerelease: true

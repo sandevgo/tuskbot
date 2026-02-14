@@ -1,24 +1,65 @@
 # Define variables
 PROJECT_NAME := tuskbot
+GO_FLAGS := -trimpath -ldflags="-s -w"
 
-# Linker flags: -s (disable symbol table) -w (disable DWARF generation)
-LDFLAGS := -ldflags="-s -w"
-GCFLAGS := -gcflags="" # -m
-GO_BUILD_ENV := CGO_ENABLED=1
-
-.PHONY: all build test clean run format llamacpp
+.PHONY: all build test clean run format llamacpp release-linux release-macos _build_linux_amd64 _build_darwin_arm64
 
 # Default target
 all: deps build test
 
-# Build the project
+# For dev purposes
 build:
 	@echo "Building $(PROJECT_NAME)..."
-	@go build -trimpath $(GCFLAGS) $(LDFLAGS) -o bin/tusk cmd/tusk/*.go
+	@go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
 	@du -h bin/tusk
 	@echo "$(PROJECT_NAME) built successfully."
 
-# Run tests
+run: build
+	@echo "Running $(PROJECT_NAME)..."
+	@./bin/tusk start
+
+# Release targets
+release-linux:
+	@echo "🚀 Launching Docker build for Linux..."
+	@DOCKER_BUILDKIT=1 docker build \
+		--file build/general/Dockerfile \
+		--target export \
+		--output bin \
+		--build-arg BUILD_TARGET=linux_amd64 \
+		.
+	@mv bin/tusk bin/tusk-linux-amd64
+
+release-macos:
+	@echo "🚀 Launching Docker build for macOS..."
+	@DOCKER_BUILDKIT=1 docker build \
+		--file build/general/Dockerfile \
+		--target export \
+		--output bin \
+		--build-arg BUILD_TARGET=darwin_arm64 \
+		.
+	@mv bin/tusk bin/tusk-darwin-arm64
+
+_build_linux_amd64:
+	@echo "🐧 Internal: Compiling for Linux (Static Musl)..."
+	@CGO_ENABLED=1 \
+		GOOS=linux GOARCH=amd64 \
+		CC="zig cc -target x86_64-linux-musl" \
+		CXX="zig c++ -target x86_64-linux-musl" \
+		go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
+
+_build_darwin_arm64:
+	@echo "🍎 Internal: Compiling for macOS (Apple Silicon)..."
+	@CGO_ENABLED=1 \
+		GOOS=darwin GOARCH=arm64 \
+		CC="zig cc -target aarch64-macos" \
+		CXX="zig c++ -target aarch64-macos" \
+		CGO_LDFLAGS=" \
+			-L$(MACOS_SDK)/usr/lib \
+			-F$(MACOS_SDK)/System/Library/Frameworks \
+		" \
+		go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
+
+# Testing rargets
 test:
 	@echo "Running tests..."
 	@go test -v ./...
@@ -28,10 +69,8 @@ bench:
 	@echo "Running benchmarks..."
 	@go test -bench=. -benchmem ./internal/...
 
-# Run the application
-run: build
-	@echo "Running $(PROJECT_NAME)..."
-	@./bin/tusk start
+heap:
+	@go build -gcflags="-m" ./internal/... 2>&1  | grep escapes
 
 # Install dependencies
 deps:
@@ -45,13 +84,10 @@ deps:
 clean:
 	@echo "Cleaning up..."
 	@rm -rf bin/
-	@rm -rf var/data
-	@rm -rf var/raw
+	@rm -rf vendor/
 	@echo "Cleanup completed successfully."
 
-heap:
-	@go build -gcflags="-m" ./internal/... 2>&1  | grep escapes
-
+# Add migration
 migration:
 	@echo "Creating new migration..."
 	@goose -dir ./internal/storage/sqlite/migrations create $(name) sql
