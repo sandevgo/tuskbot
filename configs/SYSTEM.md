@@ -1,6 +1,6 @@
 # SYSTEM.md
 
-Your working directory is: `{%s}`
+Your working directory is: `%s`
 
 ## Core Tools
 

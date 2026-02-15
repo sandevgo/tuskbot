@@ -7,70 +7,69 @@ import (
 	"time"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/sandevgo/tuskbot/internal/config"
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
 )
 
-// ModelStep allows selection of the AI model from OpenRouter
+type modelInitMsg struct{}
+
+// ModelStep allows selection of the AI model based on provider
 type ModelStep struct {
-	list     list.Model
-	loading  bool
-	fetching bool // Ensures we only trigger the API call once
-	err      error
+	list       list.Model
+	loading    bool
+	fetching   bool
+	err        error
+	provider   string
+	manualMode bool
+	input      textinput.Model
 }
 
 func NewModelStep() Step {
-	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "Select AI Model"
-	l.SetShowStatusBar(true)
-	l.SetFilteringEnabled(true)
-	l.Styles.Title = titleStyle
-
-	return &ModelStep{
-		list:    l,
-		loading: true,
-	}
+	return &ModelStep{}
 }
 
 func (s *ModelStep) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg { return modelInitMsg{} }
 }
 
 func (s *ModelStep) Update(msg tea.Msg, state *InstallState, width, height int) (Step, tea.Cmd) {
-	// 1. Trigger fetch once when we enter the step
-	if s.loading && !s.fetching {
-		s.fetching = true
-		apiKey := state.EnvVars["TUSK_OPENROUTER_API_KEY"]
-
-		return s, func() tea.Msg {
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			cfg := &config.AppConfig{
-				OpenRouterAPIKey: apiKey,
-			}
-			p := llm.NewOpenRouter(cfg)
-			models, err := p.GetModels(ctx)
-			if err != nil {
-				return errMsg(err)
-			}
-
-			var items []list.Item
-			for _, mod := range models {
-				items = append(items, item{
-					id:    mod.ID,
-					title: mod.Name,
-					desc:  fmt.Sprintf("ID: %s | Context: %d", mod.ID, mod.ContextLength),
-				})
-			}
-			return modelsMsg(items)
-		}
+	if s.provider == "" {
+		s.provider = strings.ToLower(state.EnvVars["TUSK_MODEL_PROVIDER"])
 	}
 
-	// Update list size
-	s.list.SetSize(width, height-4)
+	if s.list.Title == "" && s.provider != "" {
+		l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
+		l.Title = fmt.Sprintf("Select %s Model", strings.Title(s.provider))
+		l.SetShowStatusBar(true)
+		l.SetFilteringEnabled(true)
+		l.Styles.Title = titleStyle
+		s.list = l
 
+		s.loading = true
+		s.fetching = true
+		return s, s.fetchModels(state)
+	}
+
+	if s.manualMode {
+		var cmd tea.Cmd
+		s.input, cmd = s.input.Update(msg)
+
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.String() == "enter" {
+				modelName := s.input.Value()
+				state.EnvVars["TUSK_MAIN_MODEL"] = fmt.Sprintf("%s/%s", s.provider, modelName)
+				return nil, nil
+			}
+		}
+		return s, cmd
+	}
+
+	if !s.manualMode && s.provider != "" {
+		s.list.SetSize(width, height-4)
+	}
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case modelsMsg:
@@ -80,19 +79,30 @@ func (s *ModelStep) Update(msg tea.Msg, state *InstallState, width, height int) 
 		return s, nil
 
 	case errMsg:
+		if s.provider == "ollama" {
+			s.manualMode = true
+			s.loading = false
+			s.fetching = false
+			s.err = nil
+
+			s.input = textinput.New()
+			s.input.Focus()
+			s.input.CharLimit = 100
+			s.input.Width = 40
+			s.input.Placeholder = "llama3.2, mistral, codellama..."
+			return s, textinput.Blink
+		}
 		s.loading = false
 		s.fetching = false
 		s.err = msg
-		return s, nil // Return nil command to break the error loop
+		return s, nil
 
 	case tea.KeyMsg:
-		// If there's an error, allow retry with Enter
 		if s.err != nil {
 			if msg.String() == "enter" {
 				s.err = nil
 				s.loading = true
-				s.fetching = false
-				return s, nil
+				return s, s.fetchModels(state)
 			}
 			return s, nil
 		}
@@ -106,8 +116,7 @@ func (s *ModelStep) Update(msg tea.Msg, state *InstallState, width, height int) 
 			}
 
 			if i, ok := s.list.SelectedItem().(item); ok {
-				provider := state.EnvVars["TUSK_MODEL_PROVIDER"]
-				state.EnvVars["TUSK_MAIN_MODEL"] = fmt.Sprintf("%s/%s", strings.ToLower(provider), i.id)
+				state.EnvVars["TUSK_MAIN_MODEL"] = fmt.Sprintf("%s/%s", s.provider, i.id)
 				return nil, nil
 			}
 			return s, cmd
@@ -118,13 +127,68 @@ func (s *ModelStep) Update(msg tea.Msg, state *InstallState, width, height int) 
 	return s, cmd
 }
 
+func (s *ModelStep) fetchModels(state *InstallState) tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		var provider core.AIProvider
+
+		switch s.provider {
+		case "openai":
+			apiKey := state.EnvVars["TUSK_OPENAI_API_KEY"]
+			provider = llm.NewOpenAI(apiKey, "")
+		case "anthropic":
+			apiKey := state.EnvVars["TUSK_ANTHROPIC_API_KEY"]
+			provider = llm.NewAnthropic(apiKey, "")
+		case "openrouter":
+			apiKey := state.EnvVars["TUSK_OPENROUTER_API_KEY"]
+			provider = llm.NewOpenRouter(apiKey, "")
+		case "ollama":
+			baseURL := state.EnvVars["TUSK_OLLAMA_BASE_URL"]
+			apiKey := state.EnvVars["TUSK_OLLAMA_API_KEY"]
+			provider = llm.NewOllama(baseURL, apiKey, "")
+		default:
+			return errMsg(fmt.Errorf("unknown provider: %s", s.provider))
+		}
+
+		models, err := provider.Models(ctx)
+		if err != nil {
+			return errMsg(err)
+		}
+
+		items := make([]list.Item, 0, len(models))
+		for _, m := range models {
+			items = append(items, item{
+				id:    m.ID,
+				title: m.Name,
+				desc:  fmt.Sprintf("ID: %s | Context: %d", m.ID, m.ContextLength),
+			})
+		}
+		return modelsMsg(items)
+	}
+}
+
 func (s *ModelStep) View(state *InstallState) string {
+	if s.provider == "" && !s.manualMode {
+		return "Loading..."
+	}
+
 	if s.err != nil {
 		return errorStyle.Render(fmt.Sprintf("Error fetching models: %v", s.err)) +
-			"\n\nCheck your API key and internet connection.\n\n(press enter to retry, ctrl+c to quit)\n"
+			"\n\n(press enter to retry, ctrl+c to quit)\n"
 	}
+
+	if s.manualMode {
+		return "Ollama connection failed. Enter model name manually:\n\n" +
+			s.input.View() + "\n\n" +
+			"Examples: llama3.2, mistral, codellama, phi3\n" +
+			"(press enter to confirm)\n"
+	}
+
 	if s.loading {
-		return "Fetching models from OpenRouter...\n"
+		return fmt.Sprintf("Fetching available models from %s...\n", s.provider)
 	}
+
 	return s.list.View()
 }

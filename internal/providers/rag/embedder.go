@@ -25,8 +25,8 @@ func (e *Embedder) Embed(ctx context.Context, text string) ([][]float32, error) 
 	chunks := ChunkText(text, E5BaseChunkerConfig())
 	embeddings := make([][]float32, 0, len(chunks))
 
+	log.FromCtx(ctx).Debug().Msgf("embedding %d chunk", len(chunks))
 	for _, chunk := range chunks {
-		log.FromCtx(ctx).Debug().Str("chunk", chunk.Text).Msg("embedding chunk")
 		emb, err := e.llm.Embed(chunk.Text)
 		if err != nil {
 			return nil, fmt.Errorf("failed to embed chunk: %w", err)

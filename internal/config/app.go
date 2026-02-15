@@ -12,9 +12,14 @@ import (
 
 type AppConfig struct {
 	MainModel         string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
-	OpenRouterAPIKey  string `env:"TUSK_OPENROUTER_API_KEY,required,notEmpty"`
 	ChatChannel       string `env:"TUSK_CHAT_CHANNEL,required,notEmpty"`
 	ContextWindowSize int    `env:"TUSK_CONTEXT_WINDOW_SIZE" envDefault:"30"`
+
+	AnthropicAPIKey  string `env:"TUSK_ANTHROPIC_API_KEY"`
+	OpenAIAPIKey     string `env:"TUSK_OPENAI_API_KEY"`
+	OpenRouterAPIKey string `env:"TUSK_OPENROUTER_API_KEY"`
+	OllamaAPIKey     string `env:"TUSK_OLLAMA_API_KEY"`
+	OllamaBaseURL    string `env:"TUSK_OLLAMA_BASE_URL" envDefault:"http://127.0.0.1:11434"`
 
 	runtimePath string
 	Provider    string

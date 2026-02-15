@@ -1,23 +1,22 @@
 # TuskBot 🦣
 
-![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot)
-![Stage](https://img.shields.io/badge/stage-MVP-blue)
-![MCP](https://img.shields.io/badge/MCP-compliant-green)
-![SQLite](https://img.shields.io/badge/storage-SQLite--vec-blue)
-![License](https://img.shields.io/github/license/sandevgo/TuskBot)
+[![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=flat-square)](https://github.com/sandevgo/tuskbot/actions)
+[![Release](https://img.shields.io/github/v/release/sandevgo/tuskbot?include_prereleases&style=flat-square)](https://github.com/sandevgo/tuskbot/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot?style=flat-square&color=00ADD8)](https://github.com/sandevgo/tuskbot/blob/main/go.mod)
+[![License](https://img.shields.io/github/license/sandevgo/TuskBot?style=flat-square)](https://github.com/sandevgo/tuskbot/LICENSE)
 
 **Autonomous AI Agent**
 
-TuskBot is a Go-based autonomous agent designed to handle tasks directly in your Telegram. It evolves the ideas of OpenClaw into a more scalable, tool-oriented assistant. Unlike standard bots, TuskBot is built to interact with your system, remember context through local RAG, and connect to any external service via the Model Context Protocol (MCP).
+TuskBot is a Go-based autonomous agent designed to handle tasks directly in your Telegram. It evolves the ideas of OpenClaw into a more scalable, secure, tool-oriented assistant.
 
 ## 🎯 Motivation
 
 TuskBot originated as an evolution of the **OpenClaw** concept, addressing its core architectural limitations:
 
-*   **Performance:** Transitioning from JavaScript to **Go** provides the concurrency and execution speed required for intensive agentic tasks.
-*   **Stability via Isolation:** Unlike OpenClaw’s integrated scripts—which are prone to crashing the entire process—TuskBot uses a **Model Context Protocol (MCP)** approach. Tools are isolated, making the system modular and resilient.
-*   **Reliable Memory (RAG vs. Files):** Instead of relying on fragile daily log files and summarization (which quickly bloat the context window), TuskBot implements a **full RAG pipeline**. Using vector embeddings (SQLite-vec), it retrieves only relevant context, allowing the bot to "remember" details from weeks ago without overflowing the context window.
-*   **Safe Self-Improvement:** OpenClaw’s self-improvement often leads to recursive code corruption. TuskBot enables **safe evolution** by allowing the agent to extend its own capabilities through connecting or generating new MCP-compliant servers, keeping the core logic intact.
+*   **High-Performance Engine:** Built with **Go** for native concurrency and high-speed execution, no interpreted overheads.
+*   **Modular Stability:** Powered by **Model Context Protocol (MCP)**. Tool isolation prevents cascading failures and ensures system resilience.
+*   **Persistent Context:** Full **Local RAG pipeline** (SQLite-vec + llama.cpp). No need to send all your chats to OpenAI for embedding.
+*   **Privacy-First Design:** Native support for **Ollama** and local embedding models.
 
 ## 🚀 Capabilities
 
@@ -33,31 +32,29 @@ The bot maintains a long-term memory of your interactions using a local Retrieva
 TuskBot comes with a set of pre-configured tools for immediate use:
 *   **Filesystem:** Manage, read, and write files in the bot's workspace.
 *   **Shell Execution:** Run system commands and scripts directly through the chat.
-*   **Web Fetch:** Pull and parse content from URLs for analysis.
-
-## 🛠 Tech Stack
-*   **Language:** Go (Golang)
-*   **Inference:** `llama.cpp` (embedded)
-*   **Storage:** SQLite (Metadata & Vectors)
-*   **Connectivity:** OpenRouter (LLM), Telegram (Bot API), MCP (Tools)
+*   **MCP Manager:** Allows agent to connect and restart MCP servers.
 
 ## 🗺 Roadmap
 
 *   **[ ] Unified Command Interface:** Support of slash-commands (`/`).
+*   **[ ] Cron/heartbeat:** Scheduled tasks and periodic checks.
 *   **[ ] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
 
 ## 🔧 Configuration
 
 TuskBot uses environment variables for configuration.
 
-| Variable | Description                                          |
-| :--- |:-----------------------------------------------------|
-| `TUSK_TELEGRAM_TOKEN` | Your Telegram Bot Token                              |
-| `TUSK_TELEGRAM_OWNER_ID` | Your Telegram User ID (for security)                 |
-| `TUSK_OPENROUTER_API_KEY` | API Key for OpenRouter                               |
-| `TUSK_RAG_MODEL_PATH` | Path to the local GGUF embedding model               |
-| `TUSK_MAIN_MODEL` | Main LLM model (format: `provider/model`)            |
-| `TUSK_RUNTIME_PATH` | Path for logs, database, and workspace               |
-| `TUSK_CONTEXT_WINDOW_SIZE`| Number of messages in active context (default: `30`) |
-| `TUSK_ENABLE_TELEGRAM` | Enable/Disable Telegram transport                    |
-| `TUSK_DEBUG` | Enable debug logging (set to `1`)                    |
+| Variable | Description |
+| :--- | :--- |
+| `TUSK_TELEGRAM_TOKEN` | Your Telegram Bot Token |
+| `TUSK_TELEGRAM_OWNER_ID` | Your Telegram User ID (for security) |
+| `TUSK_CHAT_CHANNEL` | Primary chat interface (e.g., `telegram`) |
+| `TUSK_MAIN_MODEL` | Main LLM model (format: `provider/model`) |
+| `TUSK_EMBEDDING_MODEL_PATH` | Path to the local GGUF embedding model |
+| `TUSK_RUNTIME_PATH` | Path for logs, database, and workspace (default: `~/.tuskbot`) |
+| `TUSK_CONTEXT_WINDOW_SIZE` | Number of messages in active context (default: `30`) |
+| `TUSK_OPENROUTER_API_KEY` | API Key for OpenRouter |
+| `TUSK_OPENAI_API_KEY` | API Key for OpenAI |
+| `TUSK_ANTHROPIC_API_KEY` | API Key for Anthropic |
+| `TUSK_OLLAMA_BASE_URL` | Base URL for Ollama (default: `http://127.0.0.1:11434`) |
+| `TUSK_DEBUG` | Enable debug logging (set to `1`) |

@@ -32,7 +32,8 @@ func init() {
 }
 
 func setupLogger(ctx context.Context) (context.Context, func()) {
-	return log.NewContextWithLogger(ctx, debug)
+	isDebug := debug || config.IsDebug()
+	return log.NewContextWithLogger(ctx, isDebug)
 }
 
 func CustomizeHelp(rootCmd *cobra.Command) {

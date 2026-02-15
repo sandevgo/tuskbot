@@ -10,20 +10,22 @@ import (
 )
 
 // NewProvider creates the appropriate AIProvider based on configuration.
-func NewProvider(ctx context.Context, appCfg *config.AppConfig) (core.AIProvider, error) {
+func NewProvider(ctx context.Context, cfg *config.AppConfig) (core.AIProvider, error) {
 	log.FromCtx(ctx).Info().
-		Str("provider", appCfg.Provider).
-		Str("model", appCfg.Model).
+		Str("provider", cfg.Provider).
+		Str("model", cfg.Model).
 		Msg("starting llm provider")
 
-	switch appCfg.Provider {
-	case "openrouter":
-		return NewOpenRouter(appCfg), nil
+	switch cfg.Provider {
 	case "openai":
-		return nil, fmt.Errorf("openai provider not yet implemented")
+		return NewOpenAI(cfg.OpenAIAPIKey, cfg.Model), nil
+	case "anthropic":
+		return NewAnthropic(cfg.AnthropicAPIKey, cfg.Model), nil
+	case "openrouter":
+		return NewOpenRouter(cfg.OpenRouterAPIKey, cfg.Model), nil
 	case "ollama":
-		return nil, fmt.Errorf("ollama provider not yet implemented")
+		return NewOllama(cfg.OllamaBaseURL, cfg.OllamaAPIKey, cfg.Model), nil
 	default:
-		return nil, fmt.Errorf("unknown llm provider: %s", appCfg.Provider)
+		return nil, fmt.Errorf("unknown llm provider: %s", cfg.Provider)
 	}
 }

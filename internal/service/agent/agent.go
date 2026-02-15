@@ -36,9 +36,8 @@ func NewAgent(
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate func(core.Message)) (string, error) {
 	logger := log.FromCtx(ctx)
 
-	logger.Info().
+	logger.Debug().
 		Str("session_id", sessionID).
-		Str("input", input).
 		Msg("agent received user request")
 
 	// 1. Record the User Input
@@ -64,10 +63,18 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 
 	// 4. ReAct Loop
 	for {
+		logger.Debug().
+			Str("session_id", sessionID).
+			Msg("agent sending request to llm")
+
 		responseMsg, err := a.ai.Chat(ctx, messages, tools)
 		if err != nil {
 			return "", fmt.Errorf("ai chat error: %w", err)
 		}
+
+		logger.Debug().
+			Str("session_id", sessionID).
+			Msg("agent received llm response")
 
 		// Save Assistant Response and update local context
 		if err := a.memory.SaveMessage(ctx, sessionID, responseMsg); err != nil {
@@ -89,6 +96,10 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		}
 
 		// 5. Execute Tool Calls
+		logger.Debug().
+			Str("session_id", sessionID).
+			Msg("agent called mcp tool")
+
 		toolResults := a.executor.Execute(ctx, responseMsg.ToolCalls)
 
 		for _, toolMsg := range toolResults {

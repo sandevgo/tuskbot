@@ -90,9 +90,10 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	_, err := b.agent.Run(ctx, sessionID, c.Text(), func(msg core.Message) {
 		// Send Reasoning (optional, good for debugging)
-		if strings.TrimSpace(msg.Reasoning) != "" {
-			_ = c.Send(fmt.Sprintf("💭 <b>Thinking:</b>\n%s", msg.Reasoning), tele.ModeHTML)
-		}
+		//if strings.TrimSpace(msg.Reasoning) != "" {
+		//	_ = c.Send(fmt.Sprintf("💭 <b>Thinking:</b>\n%s", msg.Reasoning), tele.ModeHTML)
+		//  _ = c.Notify(tele.Typing)
+		//}
 
 		// Send Content
 		if msg.Content != "" {
@@ -101,12 +102,14 @@ func (b *Bot) handleMessage(c tele.Context) error {
 				if err := c.Send(htmlContent, tele.ModeHTML); err != nil {
 					logger.Error().Err(err).Msg("failed to send telegram message")
 				}
+				_ = c.Notify(tele.Typing)
 			}
 		}
 
 		// Notify about tool execution
 		for _, tc := range msg.ToolCalls {
 			_ = c.Send(fmt.Sprintf("🛠 Executing: %s", tc.Function.Name))
+			_ = c.Notify(tele.Typing)
 		}
 	})
 

@@ -45,7 +45,7 @@ func SetDefaultLogger() {
 }
 
 func init() {
-	//SetSilentLogger()
+	SetSilentLogger()
 }
 
 // LlamaEmbedder wraps the C pointers for the model and context.

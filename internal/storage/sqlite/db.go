@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/pressly/goose/v3"
+	"github.com/sandevgo/tuskbot/pkg/log"
 	_ "github.com/sandevgo/tuskbot/pkg/sqlite"
-	// _ "modernc.org/sqlite"
 )
 
 //go:embed migrations/*.sql
@@ -31,15 +31,16 @@ func NewDB(ctx context.Context, dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	if err := migrate(db); err != nil {
+	if err := migrate(ctx, db); err != nil {
 		return nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	return db, nil
 }
 
-func migrate(db *sql.DB) error {
+func migrate(ctx context.Context, db *sql.DB) error {
 	goose.SetBaseFS(embedMigrations)
+	goose.SetLogger(log.NewGooseLoggerFromCtx(ctx))
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("failed to set goose dialect: %w", err)

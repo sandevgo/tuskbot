@@ -25,7 +25,8 @@ type Step interface {
 func getSteps() []Step {
 	return []Step{
 		NewProviderStep(),
-		NewOpenRouterKeyStep(),
+		NewAPIKeyStep(),
+		NewOllamaURLStep(),
 		NewModelStep(),
 		NewDownloadModelStep(),
 		NewChannelStep(),
