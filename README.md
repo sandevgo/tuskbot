@@ -47,7 +47,6 @@ tusk install
 ```
 
 **Running TuskBot**
-Simple as that:
 
 ```bash
 tusk start
