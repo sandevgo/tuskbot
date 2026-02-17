@@ -59,6 +59,20 @@ _build_darwin_arm64:
 		" \
 		go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
 
+# Build production Docker image (requires linux binary first)
+DOCKER_IMAGE_NAME ?= tuskbot
+DOCKER_IMAGE_TAG ?= latest
+DOCKERFILE := build/docker/Dockerfile
+
+release-image:
+	@echo "🐳 Building Docker image $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)..."
+	@docker build \
+		-f $(DOCKERFILE) \
+		-t $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) \
+		.
+	@echo "✅ Image built: $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
+	@docker images $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) --format "Size: {{.Size}}"
+
 # Testing rargets
 test:
 	@echo "Running tests..."

@@ -52,6 +52,35 @@ tusk install
 tusk start
 ```
 
+## Using Docker
+
+Docker compose example:
+
+```yaml
+services:
+  tuskbot:
+    image: tuskbot:latest
+    volumes:
+      - tuskbot-data:/root/.tuskbot
+    environment:
+      - TUSK_RUNTIME_PATH=/root/.tuskbot
+    # Override command for install vs run
+    command: start  # default
+
+volumes:
+  tuskbot-data:
+```
+
+**Running installation with Docker Compose:**
+
+```bash
+# Install
+docker compose run --rm tuskbot install
+
+# Run
+docker compose up -d
+```
+
 ## 🔧 Configuration
 
 TuskBot uses environment variables for configuration.
