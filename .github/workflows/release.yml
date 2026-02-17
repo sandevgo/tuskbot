@@ -60,6 +60,9 @@ jobs:
           name: tusk-linux-amd64
           path: bin/
 
+      - name: Extract Linux Binary
+        run: tar -xvf bin/tusk-linux-amd64.tar.gz
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
