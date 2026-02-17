@@ -27,6 +27,7 @@ func getSteps() []Step {
 		NewProviderStep(),
 		NewAPIKeyStep(),
 		NewOllamaURLStep(),
+		NewCustomURLStep(),
 		NewModelStep(),
 		NewDownloadModelStep(),
 		NewChannelStep(),

@@ -15,7 +15,7 @@ type ProviderStep struct {
 
 func NewProviderStep() Step {
 	return &ProviderStep{
-		choices: []string{"Anthropic", "OpenAI", "OpenRouter", "Ollama"},
+		choices: []string{"Anthropic", "OpenAI", "OpenRouter", "Ollama", "Custom"},
 		cursor:  0,
 	}
 }

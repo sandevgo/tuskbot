@@ -41,6 +41,9 @@ func (s *APIKeyStep) initProvider(state *InstallState) bool {
 	case "openrouter":
 		s.envKey = "TUSK_OPENROUTER_API_KEY"
 		s.title = "OpenRouter API Key"
+	case "custom":
+		s.envKey = "TUSK_CUSTOM_OPENAI_API_KEY"
+		s.title = "Custom OpenAI API Key"
 	case "ollama":
 		s.envKey = "TUSK_OLLAMA_API_KEY"
 		s.title = "Ollama API Key (Optional)"
@@ -67,6 +70,8 @@ func (s *APIKeyStep) initProvider(state *InstallState) bool {
 		s.input.Placeholder = "sk-..."
 	case "openrouter":
 		s.input.Placeholder = "sk-or-v1-..."
+	case "custom":
+		s.input.Placeholder = "sk-..."
 	case "ollama":
 		s.input.Placeholder = "Optional - press Enter to skip"
 		s.input.EchoMode = textinput.EchoNormal
