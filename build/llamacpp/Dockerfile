@@ -77,6 +77,27 @@ RUN cmake /src \
     -DLLAMA_BUILD_EXAMPLES=OFF
 RUN make -j$(nproc) llama ggml
 
+# --- СБОРКА ПОД LINUX (ARM64) ---
+FROM builder AS build-linux-arm64
+ENV ZIG_TARGET=aarch64-linux-musl
+WORKDIR /build/linux-arm64
+RUN cmake /src \
+    -DCMAKE_C_COMPILER="/usr/local/bin/zig-cc" \
+    -DCMAKE_CXX_COMPILER="/usr/local/bin/zig-cxx" \
+    -DCMAKE_AR="/usr/local/bin/zig-ar" \
+    -DCMAKE_RANLIB="/usr/local/bin/zig-ranlib" \
+    -DCMAKE_C_FLAGS="-O3 -g0" \
+    -DCMAKE_CXX_FLAGS="-O3 -g0" \
+    -DCMAKE_SYSTEM_NAME=Linux \
+    -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DLLAMA_STATIC=ON \
+    -DLLAMA_NATIVE=OFF \
+    -DLLAMA_BUILD_SERVER=OFF \
+    -DLLAMA_BUILD_TESTS=OFF \
+    -DLLAMA_BUILD_EXAMPLES=OFF
+RUN make -j$(nproc) llama ggml
+
 # --- СБОРКА ПОД MACOS (Apple Silicon / ARM64) ---
 FROM builder AS build-macos
 ENV ZIG_TARGET=aarch64-macos-none
@@ -121,6 +142,12 @@ COPY --from=build-linux /build/linux/ggml/src/libggml.a /output/lib/linux_amd64/
 COPY --from=build-linux /build/linux/ggml/src/libggml-base.a /output/lib/linux_amd64/libggml-base.a
 COPY --from=build-linux /build/linux/ggml/src/libggml-cpu.a /output/lib/linux_amd64/libggml-cpu.a
 #COPY --from=build-linux /build/linux/ /output/linux
+
+# Linux ARM64 Libs
+COPY --from=build-linux-arm64 /build/linux-arm64/src/libllama.a /output/lib/linux_arm64/libllama.a
+COPY --from=build-linux-arm64 /build/linux-arm64/ggml/src/libggml.a /output/lib/linux_arm64/libggml.a
+COPY --from=build-linux-arm64 /build/linux-arm64/ggml/src/libggml-base.a /output/lib/linux_arm64/libggml-base.a
+COPY --from=build-linux-arm64 /build/linux-arm64/ggml/src/libggml-cpu.a /output/lib/linux_arm64/libggml-cpu.a
 
 # MacOS Libs
 COPY --from=build-macos /build/macos/src/libllama.a /output/lib/darwin_arm64/libllama.a
