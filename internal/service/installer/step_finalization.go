@@ -28,6 +28,9 @@ func (s *FinalizationStep) Update(msg tea.Msg, state *InstallState, width, heigh
 		state.EnvVars["TUSK_DEBUG"] = "0"
 	}
 
+	// Only used as intermediate state
+	delete(state.EnvVars, "TUSK_MODEL_PROVIDER")
+
 	// Signal completion
 	return nil, nil
 }
