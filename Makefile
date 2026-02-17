@@ -29,6 +29,16 @@ release-linux:
 		.
 	@mv bin/tusk bin/tusk-linux-amd64
 
+release-linux-arm64:
+	@echo "🚀 Launching Docker build for Linux ARM64..."
+	@DOCKER_BUILDKIT=1 docker build \
+		--file build/release/Dockerfile \
+		--target export \
+		--output bin \
+		--build-arg BUILD_TARGET=linux_arm64 \
+		.
+	@mv bin/tusk bin/tusk-linux-arm64
+
 release-macos:
 	@echo "🚀 Launching Docker build for macOS..."
 	@DOCKER_BUILDKIT=1 docker build \
@@ -45,6 +55,14 @@ _build_linux_amd64:
 		GOOS=linux GOARCH=amd64 \
 		CC="zig cc -target x86_64-linux-musl" \
 		CXX="zig c++ -target x86_64-linux-musl" \
+		go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
+
+_build_linux_arm64:
+	@echo "🐧 Internal: Compiling for Linux ARM64 (Static Musl)..."
+	@CGO_ENABLED=1 \
+		GOOS=linux GOARCH=arm64 \
+		CC="zig cc -target aarch64-linux-musl" \
+		CXX="zig c++ -target aarch64-linux-musl" \
 		go build $(GO_FLAGS) -o bin/tusk cmd/tusk/*.go
 
 _build_darwin_arm64:
