@@ -54,6 +54,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: tusk-linux-amd64
+          path: bin/
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
