@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     git \
+    ca-certificates \
     && rm -rf /var/lib/apt-get/lists/*
 
 COPY ./bin/tusk-linux-amd64 /usr/local/bin/tusk
