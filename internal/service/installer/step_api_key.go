@@ -94,6 +94,16 @@ func (s *APIKeyStep) Update(msg tea.Msg, state *InstallState, width, height int)
 	case tea.KeyMsg:
 		if msg.String() == "enter" {
 			state.EnvVars[s.envKey] = s.input.Value()
+
+			if s.provider == "ollama" {
+				next := NewOllamaURLStep()
+				return next, next.Init()
+			}
+			if s.provider == "custom" {
+				next := NewCustomURLStep()
+				return next, next.Init()
+			}
+
 			return nil, nil
 		}
 	}
