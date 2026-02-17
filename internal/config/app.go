@@ -21,6 +21,9 @@ type AppConfig struct {
 	OllamaAPIKey     string `env:"TUSK_OLLAMA_API_KEY"`
 	OllamaBaseURL    string `env:"TUSK_OLLAMA_BASE_URL" envDefault:"http://127.0.0.1:11434"`
 
+	CustomOpenAIBaseURL string `env:"TUSK_CUSTOM_OPENAI_BASE_URL"`
+	CustomOpenAIAPIKey  string `env:"TUSK_CUSTOM_OPENAI_API_KEY"`
+
 	runtimePath string
 	Provider    string
 	Model       string

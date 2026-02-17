@@ -25,6 +25,8 @@ func NewProvider(ctx context.Context, cfg *config.AppConfig) (core.AIProvider, e
 		return NewOpenRouter(cfg.OpenRouterAPIKey, cfg.Model), nil
 	case "ollama":
 		return NewOllama(cfg.OllamaBaseURL, cfg.OllamaAPIKey, cfg.Model), nil
+	case "custom_openai":
+		return NewCustomOpenAI(cfg.CustomOpenAIBaseURL, cfg.CustomOpenAIAPIKey, cfg.Model), nil
 	default:
 		return nil, fmt.Errorf("unknown llm provider: %s", cfg.Provider)
 	}
