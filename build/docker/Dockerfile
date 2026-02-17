@@ -8,7 +8,9 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     && rm -rf /var/lib/apt-get/lists/*
 
-COPY ./bin/tusk-linux-amd64 /usr/local/bin/tusk
+ARG TARGETARCH
+
+COPY ./bin/tusk-linux-${TARGETARCH} /usr/local/bin/tusk
 
 ENV TUSK_RUNTIME_PATH=/root/.tuskbot
 VOLUME ["/root/.tuskbot"]
