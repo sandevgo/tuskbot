@@ -184,7 +184,7 @@ func (s *ModelStep) View(state *InstallState) string {
 	}
 
 	if s.manualMode {
-		return "Ollama connection failed. Enter model name manually:\n\n" +
+		return fmt.Sprintf("%s connection failed. Enter model name manually:\n\n", strings.Title(s.provider)) +
 			s.input.View() + "\n\n" +
 			"Examples: llama3.2, mistral, codellama, phi3\n" +
 			"(press enter to confirm)\n"

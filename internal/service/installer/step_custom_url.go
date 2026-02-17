@@ -24,11 +24,6 @@ func (s *CustomURLStep) Init() tea.Cmd {
 }
 
 func (s *CustomURLStep) Update(msg tea.Msg, state *InstallState, width, height int) (Step, tea.Cmd) {
-	provider := strings.ToLower(state.EnvVars["TUSK_MODEL_PROVIDER"])
-	if provider != "custom" {
-		return nil, nil
-	}
-
 	var cmd tea.Cmd
 	s.input, cmd = s.input.Update(msg)
 
