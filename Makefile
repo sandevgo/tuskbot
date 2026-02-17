@@ -22,7 +22,7 @@ run: build
 release-linux:
 	@echo "🚀 Launching Docker build for Linux..."
 	@DOCKER_BUILDKIT=1 docker build \
-		--file build/general/Dockerfile \
+		--file build/release/Dockerfile \
 		--target export \
 		--output bin \
 		--build-arg BUILD_TARGET=linux_amd64 \
@@ -32,7 +32,7 @@ release-linux:
 release-macos:
 	@echo "🚀 Launching Docker build for macOS..."
 	@DOCKER_BUILDKIT=1 docker build \
-		--file build/general/Dockerfile \
+		--file build/release/Dockerfile \
 		--target export \
 		--output bin \
 		--build-arg BUILD_TARGET=darwin_arm64 \
