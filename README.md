@@ -59,7 +59,7 @@ Docker compose example:
 ```yaml
 services:
   tuskbot:
-    image: tuskbot:latest
+    image: ghcr.io/sandevgo/tuskbot:latest
     volumes:
       - tuskbot-data:/root/.tuskbot
     command: start
@@ -71,8 +71,8 @@ volumes:
 **Running installation with Docker Compose:**
 
 ```bash
-# Install
-docker compose run --rm tuskbot install
+# Configure
+docker compose run tuskbot install
 
 # Run
 docker compose up -d
