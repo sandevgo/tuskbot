@@ -22,6 +22,10 @@ jobs:
         run: |
           make release-linux
 
+      - name: Build Linux arm64
+        run: |
+          make release-linux-arm64
+
       - name: Build MacOS arm64
         run: |
           make release-macos
@@ -29,6 +33,10 @@ jobs:
       - name: Tar linux-amd64
         run: |
           tar -czvf tusk-linux-amd64.tar.gz bin/tusk-linux-amd64
+
+      - name: Tar linux-arm64
+        run: |
+          tar -czvf tusk-linux-arm64.tar.gz bin/tusk-linux-arm64
 
       - name: Tar macos-arm64
         run: |
@@ -39,6 +47,12 @@ jobs:
         with:
           name: tusk-linux-amd64
           path: tusk-linux-amd64.tar.gz
+
+      - name: Upload Linux ARM64 Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: tusk-linux-arm64
+          path: tusk-linux-arm64.tar.gz
 
       - name: Upload MacOS Artifact
         uses: actions/upload-artifact@v6
@@ -54,14 +68,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Download Linux Artifact
+      - name: Download Linux AMD64 Artifact
         uses: actions/download-artifact@v7
         with:
           name: tusk-linux-amd64
           path: bin/
 
-      - name: Extract Linux Binary
+      - name: Download Linux ARM64 Artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: tusk-linux-arm64
+          path: bin/
+
+      - name: Extract Linux AMD64 Binary
         run: tar -xvf bin/tusk-linux-amd64.tar.gz
+
+      - name: Extract Linux ARM64 Binary
+        run: tar -xvf bin/tusk-linux-arm64.tar.gz
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -89,10 +112,9 @@ jobs:
           context: .
           file: build/docker/Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   create-release:
     needs: [build-release, build-docker]
