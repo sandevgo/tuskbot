@@ -1,0 +1,9 @@
+services:
+  tuskbot:
+    image: tuskbot:latest
+    volumes:
+      - tuskbot-data:/root/.tuskbot
+    command: start
+
+volumes:
+  tuskbot-data:
