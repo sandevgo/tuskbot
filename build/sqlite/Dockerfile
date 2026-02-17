@@ -70,6 +70,21 @@ RUN /usr/local/bin/zig-cc \
 
 RUN /usr/local/bin/zig-ar rcs libsqlite_vec.a sqlite-vec.o
 
+# --- BUILD FOR LINUX (ARM64) ---
+FROM builder AS build-linux-arm64
+ENV ZIG_TARGET=aarch64-linux-musl
+WORKDIR /build/linux-arm64
+
+RUN /usr/local/bin/zig-cc \
+    -O3 -fPIC \
+    -D_GNU_SOURCE \
+    -I/src/sqlite \
+    -include sys/types.h \
+    -c /src/sqlite-vec.c \
+    -o sqlite-vec.o
+
+RUN /usr/local/bin/zig-ar rcs libsqlite_vec.a sqlite-vec.o
+
 # --- BUILD FOR MACOS (Apple Silicon / ARM64) ---
 FROM builder AS build-macos
 ENV ZIG_TARGET=aarch64-macos-none
@@ -96,6 +111,7 @@ COPY --from=builder /src/sqlite-vec.h /output/include/
 
 # Linux Libs
 COPY --from=build-linux /build/linux/libsqlite_vec.a /output/lib/linux_amd64/libsqlite_vec.a
+COPY --from=build-linux-arm64 /build/linux-arm64/libsqlite_vec.a /output/lib/linux_arm64/libsqlite_vec.a
 
 # MacOS Libs
 COPY --from=build-macos /build/macos/libsqlite_vec.a /output/lib/darwin_arm64/libsqlite_vec.a
