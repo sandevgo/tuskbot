@@ -82,20 +82,29 @@ docker compose up -d
 
 TuskBot uses environment variables for configuration.
 
-| Variable | Description |
-| :--- | :--- |
-| `TUSK_TELEGRAM_TOKEN` | Your Telegram Bot Token |
-| `TUSK_TELEGRAM_OWNER_ID` | Your Telegram User ID (for security) |
-| `TUSK_CHAT_CHANNEL` | Primary chat interface (e.g., `telegram`) |
-| `TUSK_MAIN_MODEL` | Main LLM model (format: `provider/model`) |
-| `TUSK_EMBEDDING_MODEL_PATH` | Path to the local GGUF embedding model |
-| `TUSK_RUNTIME_PATH` | Path for logs, database, and workspace (default: `~/.tuskbot`) |
-| `TUSK_CONTEXT_WINDOW_SIZE` | Number of messages in active context (default: `30`) |
-| `TUSK_OPENROUTER_API_KEY` | API Key for OpenRouter |
-| `TUSK_OPENAI_API_KEY` | API Key for OpenAI |
-| `TUSK_ANTHROPIC_API_KEY` | API Key for Anthropic |
-| `TUSK_OLLAMA_BASE_URL` | Base URL for Ollama (default: `http://127.0.0.1:11434`) |
-| `TUSK_DEBUG` | Enable debug logging (set to `1`) |
+### Core Settings
+
+*   `TUSK_TELEGRAM_TOKEN`: Your Telegram Bot Token.
+*   `TUSK_TELEGRAM_OWNER_ID`: Your Telegram User ID (for security).
+*   `TUSK_CHAT_CHANNEL`: Primary chat interface (e.g., `telegram`).
+*   `TUSK_RUNTIME_PATH`: Path for logs, database, and workspace (default: `~/.tuskbot`).
+*   `TUSK_DEBUG`: Enable debug logging (set to `1`).
+
+### AI & Memory
+
+*   `TUSK_MAIN_MODEL`: Main LLM model (format: `provider/model`).
+*   `TUSK_EMBEDDING_MODEL_PATH`: Path to the local GGUF embedding model.
+*   `TUSK_CONTEXT_WINDOW_SIZE`: Number of messages in active context (default: `30`).
+
+### Providers
+
+*   `TUSK_OPENROUTER_API_KEY`: API Key for OpenRouter.
+*   `TUSK_OPENAI_API_KEY`: API Key for OpenAI.
+*   `TUSK_ANTHROPIC_API_KEY`: API Key for Anthropic.
+*   `TUSK_OLLAMA_BASE_URL`: Base URL for Ollama (default: `http://127.0.0.1:11434`).
+*   `TUSK_OLLAMA_API_KEY`: API Key for Ollama (optional).
+*   `TUSK_CUSTOM_OPENAI_BASE_URL`: Base URL for Custom OpenAI provider.
+*   `TUSK_CUSTOM_OPENAI_API_KEY`: API Key for Custom OpenAI provider.
 
 ## 🗺 Roadmap
 
