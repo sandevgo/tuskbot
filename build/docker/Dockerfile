@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y \
 
 COPY ./bin/tusk-linux-amd64 /usr/local/bin/tusk
 
-ENV TUSK_RUNTIME_PATH=/data
-VOLUME ["/data"]
+ENV TUSK_RUNTIME_PATH=/root/.tuskbot
+VOLUME ["/root/.tuskbot"]
 
 ENTRYPOINT ["tusk"]
 CMD ["start"]

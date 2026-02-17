@@ -62,10 +62,7 @@ services:
     image: tuskbot:latest
     volumes:
       - tuskbot-data:/root/.tuskbot
-    environment:
-      - TUSK_RUNTIME_PATH=/root/.tuskbot
-    # Override command for install vs run
-    command: start  # default
+    command: start
 
 volumes:
   tuskbot-data:
