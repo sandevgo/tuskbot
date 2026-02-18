@@ -15,7 +15,8 @@ const (
 	sqlInsertMessage    = `INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id) VALUES (?, ?, ?, ?, ?)`
 	sqlSelectMessages   = `SELECT role, content, tool_calls, tool_call_id FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?`
 	sqlSelectUnembedded = `SELECT id, role, content, tool_calls, tool_call_id FROM messages WHERE embedded = false AND content != '' ORDER BY id ASC LIMIT ?`
-	sqlUpsertVector     = `INSERT OR REPLACE INTO messages_vec (rowid, embedding) VALUES (?, ?)`
+	sqlInsertVector     = `INSERT INTO messages_vec (rowid, embedding) VALUES (?, ?)`
+	sqlDeleteVector     = `DELETE FROM messages_vec WHERE rowid = ?`
 	sqlMarkEmbedded     = `UPDATE messages SET embedded = true WHERE id = ?`
 )
 
@@ -119,8 +120,12 @@ func (r *MessagesRepo) persistEmbedding(tx *sql.Tx, msgID int64, embedding []flo
 		return fmt.Errorf("failed to serialize vector: %w", err)
 	}
 
-	if _, err := tx.Exec(sqlUpsertVector, msgID, vecBlob); err != nil {
-		return fmt.Errorf("failed to upsert vector: %w", err)
+	if _, err := tx.Exec(sqlDeleteVector, msgID); err != nil {
+		return fmt.Errorf("failed to delete vector: %w", err)
+	}
+
+	if _, err := tx.Exec(sqlInsertVector, msgID, vecBlob); err != nil {
+		return fmt.Errorf("failed to insert vector: %w", err)
 	}
 
 	if _, err := tx.Exec(sqlMarkEmbedded, msgID); err != nil {
