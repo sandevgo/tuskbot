@@ -161,15 +161,19 @@ func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 	defer C.free(unsafe.Pointer(cText))
 
 	vocab := C.llama_model_get_vocab(l.model)
-	tokens := make([]C.llama_token, l.nCtx)
 
-	// 2. Tokenize with truncation
+	// Allocate a larger buffer for tokenization to handle inputs larger than context window
+	// We will truncate later if necessary.
+	maxTokens := l.nCtx * 4
+	tokens := make([]C.llama_token, maxTokens)
+
+	// 2. Tokenize
 	nTokens := C.llama_tokenize(
 		vocab,
 		cText,
 		C.int32_t(len(text)),
 		(*C.llama_token)(unsafe.Pointer(&tokens[0])),
-		C.int32_t(l.nCtx),
+		C.int32_t(maxTokens),
 		true, // add_special
 		true, // parse_special
 	)
@@ -178,7 +182,7 @@ func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 		return nil, fmt.Errorf("tokenization failed (code: %d)", nTokens)
 	}
 
-	// 3. Safety Clamp
+	// 3. Safety Clamp / Truncate to context size
 	if int(nTokens) > l.nCtx {
 		nTokens = C.int32_t(l.nCtx)
 	}
