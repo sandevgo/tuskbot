@@ -117,7 +117,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	for name, srv := range servers {
 		go func(n string, s ServerConfig) {
 			// Use a timeout for the connection attempt
-			connectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
 			// Create a logger with context for this specific server
