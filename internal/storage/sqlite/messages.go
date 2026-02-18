@@ -29,13 +29,13 @@ func NewMessagesRepo(db *sql.DB) *MessagesRepo {
 
 // AddMessage persists a message
 func (r *MessagesRepo) AddMessage(ctx context.Context, sessionID string, msg core.Message) error {
-	toolCallsJSON, err := marshalToolCalls(msg.ToolCalls)
+	toolCallsStr, err := marshalToolCalls(msg.ToolCalls)
 	if err != nil {
 		return fmt.Errorf("failed to marshal tool calls: %w", err)
 	}
 
 	return r.withTx(ctx, func(tx *sql.Tx) error {
-		res, err := tx.ExecContext(ctx, sqlInsertMessage, sessionID, msg.Role, msg.Content, toolCallsJSON, msg.ToolCallID)
+		res, err := tx.ExecContext(ctx, sqlInsertMessage, sessionID, msg.Role, msg.Content, toolCallsStr, msg.ToolCallID)
 		if err != nil {
 			return fmt.Errorf("failed to insert message: %w", err)
 		}
@@ -208,12 +208,7 @@ func scanStoredMessages(rows *sql.Rows) ([]core.StoredMessage, error) {
 
 		msg.Content = content.String
 		msg.ToolCallID = toolCallID.String
-
-		toolCalls, err := unmarshalToolCalls(toolCallsStr.String)
-		if err != nil {
-			return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
-		}
-		msg.ToolCalls = toolCalls
+		msg.ToolCalls = toolCallsStr.String
 
 		messages = append(messages, msg)
 	}
