@@ -2,6 +2,7 @@ package llamacpp
 
 /*
 #include <stdlib.h>
+#include <stdbool.h>
 #include "llama.h"
 
 // Silent callback to suppress logs
@@ -19,6 +20,16 @@ void set_silent_logger() {
 // Helper to restore default stderr logger
 void set_default_logger() {
     llama_log_set(NULL, NULL);
+}
+
+// Callback to check abort flag
+bool tusk_abort_callback(void * data) {
+    return *(bool*)data;
+}
+
+// Helper to register the callback safely
+void set_tusk_abort_callback(struct llama_context * ctx, bool * flag) {
+    llama_set_abort_callback(ctx, tusk_abort_callback, flag);
 }
 */
 import "C"
@@ -177,13 +188,40 @@ func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 		nTokens,
 	)
 
+	// 4. Setup Abort Callback for Context Cancellation
+	var abortFlag C.bool = false
+	C.set_tusk_abort_callback(l.ctx, &abortFlag)
+
+	// Monitor context in background
+	done := make(chan struct{})
+	defer func() {
+		close(done)
+		// Clear callback
+		C.set_tusk_abort_callback(l.ctx, nil)
+	}()
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			abortFlag = true
+		case <-done:
+		}
+	}()
+
+	// 5. Inference
 	// Use the correct inference function based on architecture
 	if l.isEncoder {
 		if res := C.llama_encode(l.ctx, batch); res != 0 {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return nil, fmt.Errorf("llama_encode failed with code %d", res)
 		}
 	} else {
 		if res := C.llama_decode(l.ctx, batch); res != 0 {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			return nil, fmt.Errorf("llama_decode failed with code %d", res)
 		}
 	}
