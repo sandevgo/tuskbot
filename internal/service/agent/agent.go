@@ -3,11 +3,14 @@ package agent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
+
+const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
 	appCfg   *config.AppConfig
@@ -67,7 +70,10 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 			Str("session_id", sessionID).
 			Msg("agent sending request to llm")
 
-		responseMsg, err := a.ai.Chat(ctx, messages, tools)
+		chatCtx, cancel := context.WithTimeout(ctx, ChatTimeout)
+		responseMsg, err := a.ai.Chat(chatCtx, messages, tools)
+		cancel()
+
 		if err != nil {
 			return "", fmt.Errorf("ai chat error: %w", err)
 		}
