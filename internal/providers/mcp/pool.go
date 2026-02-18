@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -123,8 +124,5 @@ func (p *StdioConnectionPool) Close() error {
 	// Clear map
 	p.clients = make(map[string]*ManagedClient)
 
-	if len(errs) > 0 {
-		return fmt.Errorf("encountered %d errors closing pool", len(errs))
-	}
-	return nil
+	return errors.Join(errs...)
 }

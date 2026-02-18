@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mark3labs/mcp-go/client"
 	mcpproto "github.com/mark3labs/mcp-go/mcp"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
@@ -49,15 +48,20 @@ const manageMcpSchema = `
 }
 `
 
+var _ core.MCPServer = (*Manager)(nil)
+
+var (
+	ConnectTimeout  = 30 * time.Second
+	ToolListTimeout = 5 * time.Second
+	ToolCallTimeout = 2 * time.Minute
+)
+
 type Manager struct {
-	pool        ConnectionPool
+	config      Config
 	configStore ConfigStore
+	pool        ConnectionPool
 
 	mu           sync.RWMutex
-	configPath   string
-	config       Config
-	clients      map[string]*client.Client
-	toolToClient map[string]*client.Client
 	toolToServer map[string]string // Maps tool name -> server name
 
 	// Caching
@@ -73,9 +77,6 @@ func NewManager(ctx context.Context, configPath string) (*Manager, error) {
 	mgr := &Manager{
 		pool:           NewStdioConnectionPool(),
 		configStore:    NewFileConfig(configPath),
-		configPath:     configPath,
-		clients:        make(map[string]*client.Client),
-		toolToClient:   make(map[string]*client.Client),
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
 	}
@@ -123,7 +124,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	for name, srv := range servers {
 		go func(n string, s ServerConfig) {
 			// Use a timeout derived from the parent context
-			connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			connectCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
 			defer cancel()
 
 			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
@@ -183,7 +184,7 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		wg.Add(1)
 		go func(n string, c *ManagedClient) {
 			defer wg.Done()
-			tCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			tCtx, cancel := context.WithTimeout(ctx, ToolListTimeout)
 			defer cancel()
 
 			resp, err := c.ListTools(tCtx, mcpproto.ListToolsRequest{})
@@ -267,7 +268,7 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	req.Params.Arguments = argsMap
 
 	// Set a reasonable timeout for tool execution
-	tCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	tCtx, cancel := context.WithTimeout(ctx, ToolCallTimeout)
 	defer cancel()
 
 	res, err := cli.CallTool(tCtx, req)
@@ -335,7 +336,7 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		m.mu.Unlock()
 
 		if err := m.configStore.Save(ctx, &m.config); err != nil {
-			return "Server started but config save failed", err
+			return "", fmt.Errorf("server started but config save failed: %w", err)
 		}
 		return fmt.Sprintf("Server %s added and started", input.ServerName), nil
 
