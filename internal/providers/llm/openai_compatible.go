@@ -80,7 +80,7 @@ func parseOpenAIResponse(resp *http.Response) (core.Message, error) {
 		return core.Message{}, fmt.Errorf("decode: %w", err)
 	}
 	if len(result.Choices) == 0 {
-		return core.Message{}, fmt.Errorf("empty choices")
+		return core.Message{}, fmt.Errorf("empty choices: %s", string(data))
 	}
 	return result.Choices[0].Message, nil
 }
