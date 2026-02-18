@@ -22,10 +22,16 @@ func NewEmbedder(cfg *config.RAGConfig) (*Embedder, error) {
 }
 
 func (e *Embedder) Embed(ctx context.Context, text string) ([][]float32, error) {
+	logger := log.FromCtx(ctx)
+
 	chunks := ChunkText(text, E5BaseChunkerConfig())
 	embeddings := make([][]float32, 0, len(chunks))
 
-	log.FromCtx(ctx).Debug().Msgf("embedding %d chunk", len(chunks))
+	logger.Debug().
+		Int("chunks", len(chunks)).
+		Int("input_length", len(text)).
+		Msg("embedding chunks")
+
 	for _, chunk := range chunks {
 		emb, err := e.llm.Embed(chunk.Text)
 		if err != nil {
