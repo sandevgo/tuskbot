@@ -115,20 +115,29 @@ func (m *Manager) RegisterNativeTool(name, description string, schema json.RawMe
 }
 
 func (m *Manager) Start(ctx context.Context) error {
+	m.mu.RLock()
+	servers := make(map[string]ServerConfig, len(m.config.MCPServers))
+	for k, v := range m.config.MCPServers {
+		servers[k] = v
+	}
+	m.mu.RUnlock()
+
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Invalidate cache on start
 	m.cacheValid = false
+	m.mu.Unlock()
 
-	for name, srv := range m.config.MCPServers {
+	for name, srv := range servers {
 		log.FromCtx(ctx).Info().Str("server", name).Msg("starting mcp connection")
 
 		cli, err := m.connectToServer(ctx, srv)
 		if err != nil {
 			return fmt.Errorf("failed to start %s: %w", name, err)
 		}
+
+		m.mu.Lock()
 		m.clients[name] = cli
+		m.cacheValid = false // Invalidate cache to include new client
+		m.mu.Unlock()
 	}
 	return nil
 }
