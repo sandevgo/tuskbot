@@ -209,14 +209,17 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		}
 
 		for _, t := range res.tools {
+			// example: "filesystem.read_file"
+			qualifiedName := fmt.Sprintf("%s.%s", res.serverName, t.Name)
+
 			// Map tool name to server name for routing
-			newToolToServer[t.Name] = res.serverName
+			newToolToServer[qualifiedName] = res.serverName
 
 			schemaBytes, _ := json.Marshal(t.InputSchema)
 			allTools = append(allTools, core.Tool{
 				Type: "function",
 				Function: core.Function{
-					Name:        t.Name,
+					Name:        qualifiedName,
 					Description: t.Description,
 					Parameters:  schemaBytes,
 				},
