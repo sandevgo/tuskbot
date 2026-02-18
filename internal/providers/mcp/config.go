@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
@@ -84,6 +85,49 @@ func (c *FileConfig) Save(ctx context.Context, cfg *Config) error {
 }
 
 func (c *FileConfig) Watch(ctx context.Context) (<-chan Config, error) {
-	// TODO: Implement file watching logic
-	return nil, nil
+	updates := make(chan Config)
+
+	info, err := os.Stat(c.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat config file: %w", err)
+	}
+	lastMod := info.ModTime()
+
+	go func() {
+		defer close(updates)
+
+		// Poll for changes every second
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				info, err = os.Stat(c.path)
+				if err != nil {
+					// File might be temporarily missing during atomic write or deleted
+					continue
+				}
+
+				if info.ModTime().After(lastMod) {
+					lastMod = info.ModTime()
+					newCfg, err := c.Load(ctx)
+					if err != nil {
+						log.FromCtx(ctx).Error().Err(err).Msg("failed to reload mcp config")
+						continue
+					}
+
+					select {
+					case updates <- *newCfg:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return updates, nil
 }
