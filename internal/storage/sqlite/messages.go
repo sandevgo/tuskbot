@@ -15,7 +15,7 @@ const (
 	sqlInsertMessage    = `INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id) VALUES (?, ?, ?, ?, ?)`
 	sqlSelectMessages   = `SELECT role, content, tool_calls, tool_call_id FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?`
 	sqlSelectUnembedded = `SELECT id, role, content, tool_calls, tool_call_id FROM messages WHERE embedded = false AND content != '' ORDER BY id ASC LIMIT ?`
-	sqlUpsertVector     = `INSERT INTO messages_vec (rowid, embedding) VALUES (?, ?) ON CONFLICT(rowid) DO UPDATE SET embedding = excluded.embedding`
+	sqlUpsertVector     = `INSERT OR REPLACE INTO messages_vec (rowid, embedding) VALUES (?, ?)`
 	sqlMarkEmbedded     = `UPDATE messages SET embedded = true WHERE id = ?`
 )
 
