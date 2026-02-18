@@ -133,8 +133,8 @@ func (l *LlamaEmbedder) Free() {
 
 // Embed generates a vector for the given text.
 func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
-	l.mu.RLock()
-	defer l.mu.RUnlock()
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
 	if l.model == nil || l.ctx == nil {
 		return nil, errors.New("embedder is not initialized or already freed")
