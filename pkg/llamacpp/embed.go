@@ -162,9 +162,10 @@ func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 
 	vocab := C.llama_model_get_vocab(l.model)
 
-	// Allocate a larger buffer for tokenization to handle inputs larger than context window
-	// We will truncate later if necessary.
-	maxTokens := l.nCtx * 4
+	// Allocate a buffer based on input length to guarantee it fits.
+	// len(text) in bytes is a safe upper bound for token count.
+	// We add 512 just to be absolutely safe.
+	maxTokens := len(text) + 512
 	tokens := make([]C.llama_token, maxTokens)
 
 	// 2. Tokenize
