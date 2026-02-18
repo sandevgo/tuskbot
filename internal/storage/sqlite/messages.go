@@ -152,6 +152,38 @@ func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]
 }
 
 func (h *MessagesRepo) UpdateMessageEmbedding(ctx context.Context, id int64, embedding []float32) error {
-	//TODO implement me
-	return nil
+	if len(embedding) == 0 {
+		return fmt.Errorf("empty embedding provided")
+	}
+
+	vecBlob, err := serializeVector(embedding)
+	if err != nil {
+		return fmt.Errorf("serialize vector: %w", err)
+	}
+
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 1. Insert or update vector (use INSERT...ON CONFLICT for atomic upsert)
+	_, err = tx.ExecContext(ctx, `
+        INSERT INTO messages_vec (rowid, embedding)
+        VALUES (?, ?)
+        ON CONFLICT(rowid) DO UPDATE SET embedding = excluded.embedding
+    `, id, vecBlob)
+	if err != nil {
+		return fmt.Errorf("insert vector: %w", err)
+	}
+
+	// 2. Mark as embedded in main table (CRITICAL - was missing!)
+	_, err = tx.ExecContext(ctx,
+		`UPDATE messages SET embedded = true WHERE id = ?`,
+		id)
+	if err != nil {
+		return fmt.Errorf("update embedded flag: %w", err)
+	}
+
+	return tx.Commit()
 }
