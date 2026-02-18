@@ -106,11 +106,5 @@ func (s *Memory) getContext(ctx context.Context, sessionID, userQuery string) st
 }
 
 func (s *Memory) SaveMessage(ctx context.Context, sessionID string, msg core.Message) error {
-	if msg.Content != "" && len(msg.Embedding) == 0 {
-		chunks, err := s.embedder.Embed(ctx, msg.Content)
-		if err == nil {
-			msg.Embedding = chunks
-		}
-	}
 	return s.msgRepo.AddMessage(ctx, sessionID, msg)
 }

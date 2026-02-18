@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	EmbedderBatchSize    = 10
+	EmbedderBatchSize    = 30
 	EmbedderPollInterval = 5 * time.Second
 )
 
