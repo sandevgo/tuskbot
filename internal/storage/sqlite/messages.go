@@ -59,6 +59,11 @@ func (h *MessagesRepo) AddMessage(ctx context.Context, sessionID string, msg cor
 		if err != nil {
 			return fmt.Errorf("failed to insert message vector: %w", err)
 		}
+		// Mark as embedded in main table
+		_, err = tx.ExecContext(ctx, `UPDATE messages SET embedded = true WHERE id = ?`, id)
+		if err != nil {
+			return fmt.Errorf("failed to set embedded flag: %w", err)
+		}
 	}
 
 	return tx.Commit()
@@ -112,7 +117,7 @@ func (h *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit 
 
 func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]core.StoredMessage, error) {
 	query := `
-		SELECT role, content, tool_calls, tool_call_id
+		SELECT id, role, content, tool_calls, tool_call_id
 		FROM messages 
 		WHERE embedded = false AND content != '' ORDER BY id DESC LIMIT ?
 	`
@@ -128,7 +133,7 @@ func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]
 		var msg core.StoredMessage
 		var content, toolCallsStr, toolCallID sql.NullString
 
-		if err := rows.Scan(&msg.Role, &content, &toolCallsStr, &toolCallID); err != nil {
+		if err := rows.Scan(&msg.ID, &msg.Role, &content, &toolCallsStr, &toolCallID); err != nil {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}
 
