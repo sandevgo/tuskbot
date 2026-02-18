@@ -15,17 +15,6 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
-// ServerConfig represents an entry in mcp_config.json
-type ServerConfig struct {
-	Command string            `json:"command"`
-	Args    []string          `json:"args"`
-	Env     map[string]string `json:"env"`
-}
-
-type Config struct {
-	MCPServers map[string]ServerConfig `json:"mcpServers"`
-}
-
 // NativeHandler defines a function signature for internal tools
 type NativeHandler func(ctx context.Context, args json.RawMessage) (string, error)
 

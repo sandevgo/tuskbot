@@ -1,0 +1,85 @@
+package mcp
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"sync"
+
+	"github.com/sandevgo/tuskbot/pkg/log"
+)
+
+// ServerConfig represents an entry in mcp_config.json
+type ServerConfig struct {
+	Command string            `json:"command"`
+	Args    []string          `json:"args"`
+	Env     map[string]string `json:"env"`
+}
+
+type Config struct {
+	MCPServers map[string]ServerConfig `json:"mcpServers"`
+}
+
+type ConfigStore interface {
+	Load(ctx context.Context) (Config, error)
+	Save(ctx context.Context, cfg Config) error
+	Watch(ctx context.Context) (<-chan Config, error)
+}
+
+type FileConfig struct {
+	path string
+	mu   sync.RWMutex
+}
+
+func NewFileConfig(path string) *FileConfig {
+	return &FileConfig{
+		path: path,
+	}
+}
+
+func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
+	logger := log.FromCtx(ctx)
+
+	config := &Config{
+		MCPServers: make(map[string]ServerConfig),
+	}
+
+	data, err := os.ReadFile(c.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Info().Msg("mcp_config.json not found, creating default")
+
+			// Save empty (default) config
+			if err = c.Save(ctx, config); err != nil {
+				return nil, fmt.Errorf("failed to create default config: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("failed to read mcp config: %w", err)
+		}
+	}
+
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse mcp config: %w", err)
+	}
+
+	return config, nil
+}
+
+func (c *FileConfig) Save(ctx context.Context, cfg *Config) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(c.path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *FileConfig) Watch(ctx context.Context) (<-chan Config, error) {
+	// TODO: Implement file watching logic
+	return nil, nil
+}
