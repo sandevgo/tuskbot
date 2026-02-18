@@ -109,3 +109,49 @@ func (h *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit 
 	log.FromCtx(ctx).Debug().Int("count", len(messages)).Msg("loaded history messages")
 	return messages, nil
 }
+
+func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]core.StoredMessage, error) {
+	query := `
+		SELECT role, content, tool_calls, tool_call_id
+		FROM messages 
+		WHERE embedded = false AND content != '' ORDER BY id DESC LIMIT ?
+	`
+
+	rows, err := h.db.QueryContext(ctx, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query messages: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []core.StoredMessage
+	for rows.Next() {
+		var msg core.StoredMessage
+		var content, toolCallsStr, toolCallID sql.NullString
+
+		if err := rows.Scan(&msg.Role, &content, &toolCallsStr, &toolCallID); err != nil {
+			return nil, fmt.Errorf("failed to scan message: %w", err)
+		}
+
+		msg.Content = content.String
+		msg.ToolCallID = toolCallID.String
+
+		if toolCallsStr.Valid && toolCallsStr.String != "" && toolCallsStr.String != "null" {
+			if err := json.Unmarshal([]byte(toolCallsStr.String), &msg.ToolCalls); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
+			}
+		}
+
+		messages = append(messages, msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return messages, nil
+}
+
+func (h *MessagesRepo) UpdateMessageEmbedding(ctx context.Context, id int64, embedding []float32) error {
+	//TODO implement me
+	return nil
+}

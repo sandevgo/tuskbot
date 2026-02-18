@@ -49,6 +49,10 @@ func (w *EmbedderWorker) Start(ctx context.Context) error {
 	}
 }
 
+func (w *EmbedderWorker) Shutdown(ctx context.Context) error {
+	return nil
+}
+
 func (w *EmbedderWorker) processBatch(ctx context.Context) error {
 	logger := log.FromCtx(ctx)
 

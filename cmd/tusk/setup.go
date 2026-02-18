@@ -64,6 +64,10 @@ func NewServices(ctx context.Context) []srv.Service {
 	extractor := memory.NewExtractor(knowledgeRepo, aiProvider, embedder)
 	services = append(services, extractor)
 
+	// Embedding extractor
+	embedderWorker := memory.NewEmbedderWorker(messagesRepo, embedder)
+	services = append(services, embedderWorker)
+
 	// 6. MCP & Tools
 	mcpManager, err := initMCP(ctx, appCfg)
 	if err != nil {

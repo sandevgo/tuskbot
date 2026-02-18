@@ -29,6 +29,7 @@ type StoredMessage struct {
 	ToolCallID string    `json:"tool_call_id,omitempty"`
 	Embedding  []float32 `json:"-"`
 	CreatedAt  time.Time `json:"created_at"`
+	Embedded   bool      `json:"embedded"`
 	Extracted  bool      `json:"extracted"`
 }
 
