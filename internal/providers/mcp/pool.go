@@ -10,6 +10,14 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
+type ConnectionPool interface {
+	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
+	Remove(name string) error
+	Get(name string) (*ManagedClient, bool)
+	All() map[string]*ManagedClient
+	Close() error
+}
+
 type StdioConnectionPool struct {
 	mu      sync.RWMutex
 	clients map[string]*ManagedClient

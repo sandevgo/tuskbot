@@ -51,6 +51,9 @@ const manageMcpSchema = `
 `
 
 type Manager struct {
+	pool        ConnectionPool
+	configStore ConfigStore
+
 	mu           sync.RWMutex
 	configPath   string
 	config       Config
