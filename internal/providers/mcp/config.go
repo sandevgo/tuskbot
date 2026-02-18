@@ -23,8 +23,8 @@ type Config struct {
 }
 
 type ConfigStore interface {
-	Load(ctx context.Context) (Config, error)
-	Save(ctx context.Context, cfg Config) error
+	Load(ctx context.Context) (*Config, error)
+	Save(ctx context.Context, cfg *Config) error
 	Watch(ctx context.Context) (<-chan Config, error)
 }
 

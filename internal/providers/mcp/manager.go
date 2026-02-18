@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -59,6 +58,7 @@ type Manager struct {
 	config       Config
 	clients      map[string]*client.Client
 	toolToClient map[string]*client.Client
+	toolToServer map[string]string // Maps tool name -> server name
 
 	// Caching
 	cachedTools []core.Tool
@@ -71,6 +71,8 @@ type Manager struct {
 
 func NewManager(ctx context.Context, configPath string) (*Manager, error) {
 	mgr := &Manager{
+		pool:           NewStdioConnectionPool(),
+		configStore:    NewFileConfig(configPath),
 		configPath:     configPath,
 		clients:        make(map[string]*client.Client),
 		toolToClient:   make(map[string]*client.Client),
@@ -78,9 +80,11 @@ func NewManager(ctx context.Context, configPath string) (*Manager, error) {
 		nativeToolDefs: make([]core.Tool, 0),
 	}
 
-	if err := mgr.loadConfig(ctx); err != nil {
+	cfg, err := mgr.configStore.Load(ctx)
+	if err != nil {
 		return nil, err
 	}
+	mgr.config = *cfg
 
 	// Register the manage_mcp tool
 	mgr.RegisterNativeTool(
@@ -116,26 +120,22 @@ func (m *Manager) Start(ctx context.Context) error {
 	m.mu.RUnlock()
 
 	// Start servers in parallel background goroutines
-	// This ensures that one hanging server doesn't block the entire bot startup
 	for name, srv := range servers {
 		go func(n string, s ServerConfig) {
-			// Use a timeout for the connection attempt
+			// Use a timeout derived from the parent context
 			connectCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
-			// Create a logger with context for this specific server
 			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
 			logger.Info().Msg("starting mcp server")
 
-			cli, err := m.connectToServer(connectCtx, s)
-			if err != nil {
+			if _, err := m.pool.Add(connectCtx, n, s); err != nil {
 				logger.Error().Err(err).Msg("failed to start mcp server")
 				return
 			}
 
 			m.mu.Lock()
-			m.clients[n] = cli
-			m.cacheValid = false // Invalidate cache to include new client
+			m.cacheValid = false
 			m.mu.Unlock()
 
 			logger.Info().Msg("mcp server connected")
@@ -146,38 +146,7 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
-	m.mu.RLock()
-	clients := make(map[string]*client.Client, len(m.clients))
-	for k, v := range m.clients {
-		clients[k] = v
-	}
-	m.mu.RUnlock()
-
-	var wg sync.WaitGroup
-	for name, cli := range clients {
-		wg.Add(1)
-		go func(n string, c *client.Client) {
-			defer wg.Done()
-
-			// Create a channel to handle close timeout
-			done := make(chan struct{})
-			go func() {
-				if err := c.Close(); err != nil {
-					log.FromCtx(ctx).Error().Err(err).Str("server", n).Msg("failed to close client")
-				}
-				close(done)
-			}()
-
-			select {
-			case <-done:
-				return
-			case <-time.After(5 * time.Second):
-				log.FromCtx(ctx).Warn().Str("server", n).Msg("mcp server close timed out, forcing shutdown")
-			}
-		}(name, cli)
-	}
-	wg.Wait()
-	return nil
+	return m.pool.Close()
 }
 
 func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
@@ -198,13 +167,8 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		allTools = append(allTools, t)
 	}
 
-	// Snapshot clients to avoid holding lock during network I/O
-	m.mu.RLock()
-	clientsSnapshot := make(map[string]*client.Client, len(m.clients))
-	for k, v := range m.clients {
-		clientsSnapshot[k] = v
-	}
-	m.mu.RUnlock()
+	// Get all active clients from pool
+	clients := m.pool.All()
 
 	// Prepare for parallel fetching
 	type toolResult struct {
@@ -212,12 +176,12 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		tools      []mcpproto.Tool
 		err        error
 	}
-	results := make(chan toolResult, len(clientsSnapshot))
+	results := make(chan toolResult, len(clients))
 	var wg sync.WaitGroup
 
-	for name, cli := range clientsSnapshot {
+	for name, cli := range clients {
 		wg.Add(1)
-		go func(n string, c *client.Client) {
+		go func(n string, c *ManagedClient) {
 			defer wg.Done()
 			tCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
@@ -235,7 +199,7 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 	close(results)
 
 	// Aggregate results
-	newToolToClient := make(map[string]*client.Client)
+	newToolToServer := make(map[string]string)
 
 	for res := range results {
 		if res.err != nil {
@@ -244,10 +208,8 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		}
 
 		for _, t := range res.tools {
-			// We need the client to call the tool later
-			// Note: If multiple servers have the same tool name, the last one wins (randomly due to map iteration)
-			// In a real system, we might want namespacing (e.g. server__tool)
-			newToolToClient[t.Name] = clientsSnapshot[res.serverName]
+			// Map tool name to server name for routing
+			newToolToServer[t.Name] = res.serverName
 
 			schemaBytes, _ := json.Marshal(t.InputSchema)
 			allTools = append(allTools, core.Tool{
@@ -264,7 +226,7 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 	// Update Cache
 	m.mu.Lock()
 	m.cachedTools = allTools
-	m.toolToClient = newToolToClient
+	m.toolToServer = newToolToServer
 	m.cacheValid = true
 	m.mu.Unlock()
 
@@ -279,17 +241,22 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 		return handler(ctx, json.RawMessage(args))
 	}
 
-	// 2. Check External Clients
+	// 2. Resolve Server
 	m.mu.RLock()
-	cli, ok := m.toolToClient[name]
+	serverName, ok := m.toolToServer[name]
 	m.mu.RUnlock()
 
 	if !ok {
-		// If tool not found, maybe cache is stale?
-		// We could force a refresh here, but for now just return error
 		return "", fmt.Errorf("tool not found: %s", name)
 	}
 
+	// 3. Get Client from Pool
+	cli, ok := m.pool.Get(serverName)
+	if !ok {
+		return "", fmt.Errorf("server %s is not available", serverName)
+	}
+
+	// 4. Execute
 	var argsMap map[string]interface{}
 	if err := json.Unmarshal([]byte(args), &argsMap); err != nil {
 		return "", fmt.Errorf("invalid json arguments: %w", err)
@@ -341,7 +308,6 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			return "", fmt.Errorf("command is required for add action")
 		}
 
-		// Sanitize environment keys
 		cleanEnv := make(map[string]string)
 		for k, v := range input.Env {
 			cleanKey := strings.Trim(k, "\"'")
@@ -354,48 +320,43 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			Env:     cleanEnv,
 		}
 
-		// 1. Connect WITHOUT lock (Heavy I/O)
-		// Use a strict timeout for adding new tools
+		// 1. Add to Pool (Handles connection and verification)
 		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
-		newClient, err := m.connectToServer(connectCtx, newCfg)
-		if err != nil {
+		if _, err := m.pool.Add(connectCtx, input.ServerName, newCfg); err != nil {
 			return "", fmt.Errorf("failed to connect to new server: %w", err)
 		}
 
-		// 2. Update State WITH lock
+		// 2. Update Config
 		m.mu.Lock()
-		if oldCli, exists := m.clients[input.ServerName]; exists {
-			_ = oldCli.Close()
-		}
-		m.clients[input.ServerName] = newClient
 		m.config.MCPServers[input.ServerName] = newCfg
-		m.cacheValid = false // Invalidate cache
+		m.cacheValid = false
 		m.mu.Unlock()
 
-		if err := m.saveConfig(); err != nil {
+		if err := m.configStore.Save(ctx, &m.config); err != nil {
 			return "Server started but config save failed", err
 		}
 		return fmt.Sprintf("Server %s added and started", input.ServerName), nil
 
 	case "remove":
-		m.mu.Lock()
-		if oldCli, exists := m.clients[input.ServerName]; exists {
-			_ = oldCli.Close()
-			delete(m.clients, input.ServerName)
+		// 1. Remove from Pool
+		if err := m.pool.Remove(input.ServerName); err != nil {
+			log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
 		}
+
+		// 2. Update Config
+		m.mu.Lock()
 		delete(m.config.MCPServers, input.ServerName)
-		m.cacheValid = false // Invalidate cache
+		m.cacheValid = false
 		m.mu.Unlock()
 
-		if err := m.saveConfig(); err != nil {
+		if err := m.configStore.Save(ctx, &m.config); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Server %s removed", input.ServerName), nil
 
 	case "reload":
-		// 1. Get Config (Read Lock)
 		m.mu.RLock()
 		srvCfg, exists := m.config.MCPServers[input.ServerName]
 		m.mu.RUnlock()
@@ -404,22 +365,16 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			return "", fmt.Errorf("server %s not found in config", input.ServerName)
 		}
 
-		// 2. Connect New Client (No Lock)
+		// Pool.Add handles closing the old connection if it exists
 		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
-		newClient, err := m.connectToServer(connectCtx, srvCfg)
-		if err != nil {
-			return "", fmt.Errorf("failed to reconnect: %w", err)
+		if _, err := m.pool.Add(connectCtx, input.ServerName, srvCfg); err != nil {
+			return "", fmt.Errorf("failed to reload server: %w", err)
 		}
 
-		// 3. Swap Clients (Write Lock)
 		m.mu.Lock()
-		if oldCli, exists := m.clients[input.ServerName]; exists {
-			_ = oldCli.Close()
-		}
-		m.clients[input.ServerName] = newClient
-		m.cacheValid = false // Invalidate cache
+		m.cacheValid = false
 		m.mu.Unlock()
 
 		return fmt.Sprintf("Server %s reloaded", input.ServerName), nil
@@ -427,80 +382,4 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 	default:
 		return "", fmt.Errorf("unknown action: %s", input.Action)
 	}
-}
-
-func (m *Manager) connectToServer(ctx context.Context, srv ServerConfig) (*client.Client, error) {
-	var env []string
-	for k, v := range srv.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	cli, err := client.NewStdioMCPClient(srv.Command, env, srv.Args...)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cli.Start(ctx); err != nil {
-		return nil, err
-	}
-
-	initReq := mcpproto.InitializeRequest{}
-	initReq.Params.ProtocolVersion = mcpproto.LATEST_PROTOCOL_VERSION
-	initReq.Params.ClientInfo = mcpproto.Implementation{
-		Name:    core.TuskName,
-		Version: core.TaskVersion,
-	}
-	initReq.Params.Capabilities = mcpproto.ClientCapabilities{}
-
-	if _, err := cli.Initialize(ctx, initReq); err != nil {
-		_ = cli.Close()
-		return nil, err
-	}
-
-	return cli, nil
-}
-
-func (m *Manager) loadConfig(ctx context.Context) error {
-	data, err := os.ReadFile(m.configPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			log.FromCtx(ctx).Info().Msg("mcp_config.json not found, creating default")
-
-			defaultCfg := Config{MCPServers: make(map[string]ServerConfig)}
-			data, err = json.MarshalIndent(defaultCfg, "", "  ")
-			if err != nil {
-				return fmt.Errorf("failed to marshal default config: %w", err)
-			}
-
-			if err := os.WriteFile(m.configPath, data, 0644); err != nil {
-				return fmt.Errorf("failed to write default config: %w", err)
-			}
-		} else {
-			return fmt.Errorf("failed to read mcp config: %w", err)
-		}
-	}
-
-	if err := json.Unmarshal(data, &m.config); err != nil {
-		return fmt.Errorf("failed to parse mcp config: %w", err)
-	}
-	return nil
-}
-
-func (m *Manager) saveConfig() error {
-	// Note: We should ideally lock before reading m.config, but since this is called
-	// inside ManageMCP where we handle locking or have local copies, it's generally okay.
-	// For strict correctness, we can RLock here, but we need to be careful of deadlocks if called from within a Lock.
-	// In this implementation, saveConfig is called AFTER Unlock in ManageMCP, so we should RLock.
-
-	m.mu.RLock()
-	data, err := json.MarshalIndent(m.config, "", "  ")
-	m.mu.RUnlock()
-
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-	if err := os.WriteFile(m.configPath, data, 0644); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-	return nil
 }
