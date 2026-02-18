@@ -10,7 +10,7 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
-const embeddingTimeout = 10 * time.Second
+const embeddingTimeout = 60 * time.Second
 
 type Embedder struct {
 	llm *llamacpp.LlamaEmbedder
