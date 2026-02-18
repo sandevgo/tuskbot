@@ -79,6 +79,11 @@ func (w *EmbedderWorker) processBatch(ctx context.Context) error {
 			continue
 		}
 
+		if len(chunks) == 0 {
+			logger.Warn().Int64("msg_id", msg.ID).Msg("no embeddings generated for message")
+			continue
+		}
+
 		if err := w.repo.UpdateMessageEmbedding(ctx, msg.ID, chunks[0]); err != nil {
 			logger.Error().
 				Err(err).
