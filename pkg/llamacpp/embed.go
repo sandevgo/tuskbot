@@ -23,6 +23,7 @@ void set_default_logger() {
 */
 import "C"
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -131,7 +132,7 @@ func (l *LlamaEmbedder) Free() {
 }
 
 // Embed generates a vector for the given text.
-func (l *LlamaEmbedder) Embed(text string) ([]float32, error) {
+func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, error) {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 

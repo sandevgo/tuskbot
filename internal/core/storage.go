@@ -8,6 +8,8 @@ import (
 type MessagesRepository interface {
 	AddMessage(ctx context.Context, sessionID string, msg Message) error
 	GetMessages(ctx context.Context, sessionID string, limit int) ([]Message, error)
+	GetUnembeddedMessages(ctx context.Context, limit int) ([]StoredMessage, error)
+	UpdateMessageEmbedding(ctx context.Context, id int64, embedding []float32) error
 }
 
 type KnowledgeRepository interface {

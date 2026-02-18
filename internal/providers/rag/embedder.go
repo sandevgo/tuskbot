@@ -3,6 +3,7 @@ package rag
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/pkg/llamacpp"
@@ -33,7 +34,10 @@ func (e *Embedder) Embed(ctx context.Context, text string) ([][]float32, error) 
 		Msg("embedding chunks")
 
 	for _, chunk := range chunks {
-		emb, err := e.llm.Embed(chunk.Text)
+		embCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		emb, err := e.llm.Embed(embCtx, chunk.Text)
+		cancel()
+
 		if err != nil {
 			return nil, fmt.Errorf("failed to embed chunk: %w", err)
 		}
