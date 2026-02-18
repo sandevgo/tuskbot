@@ -10,6 +10,8 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
+const embeddingTimeout = 10 * time.Second
+
 type Embedder struct {
 	llm *llamacpp.LlamaEmbedder
 }
@@ -34,7 +36,7 @@ func (e *Embedder) Embed(ctx context.Context, text string) ([][]float32, error) 
 		Msg("embedding chunks")
 
 	for _, chunk := range chunks {
-		embCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		embCtx, cancel := context.WithTimeout(ctx, embeddingTimeout)
 		emb, err := e.llm.Embed(embCtx, chunk.Text)
 		cancel()
 
