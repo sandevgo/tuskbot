@@ -39,7 +39,8 @@ func NewFileConfig(path string) *FileConfig {
 }
 
 func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
-	logger := log.FromCtx(ctx)
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	config := &Config{
 		MCPServers: make(map[string]ServerConfig),
@@ -48,7 +49,7 @@ func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
 	data, err := os.ReadFile(c.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			logger.Info().Msg("mcp_config.json not found, creating default")
+			log.FromCtx(ctx).Info().Msg("mcp_config.json not found, creating default")
 
 			// Save empty (default) config
 			if err = c.Save(ctx, config); err != nil {
@@ -67,6 +68,9 @@ func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
 }
 
 func (c *FileConfig) Save(ctx context.Context, cfg *Config) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
