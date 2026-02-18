@@ -5,9 +5,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
+)
+
+const (
+	sqlInsertMessage    = `INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id) VALUES (?, ?, ?, ?, ?)`
+	sqlSelectMessages   = `SELECT role, content, tool_calls, tool_call_id FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?`
+	sqlSelectUnembedded = `SELECT id, role, content, tool_calls, tool_call_id FROM messages WHERE embedded = false AND content != '' ORDER BY id DESC LIMIT ?`
+	sqlUpsertVector     = `INSERT INTO messages_vec (rowid, embedding) VALUES (?, ?) ON CONFLICT(rowid) DO UPDATE SET embedding = excluded.embedding`
+	sqlMarkEmbedded     = `UPDATE messages SET embedded = true WHERE id = ?`
 )
 
 type MessagesRepo struct {
@@ -18,73 +27,150 @@ func NewMessagesRepo(db *sql.DB) *MessagesRepo {
 	return &MessagesRepo{db: db}
 }
 
-func (h *MessagesRepo) AddMessage(ctx context.Context, sessionID string, msg core.Message) error {
-	toolCallsJSON, err := json.Marshal(msg.ToolCalls)
+// AddMessage persists a message
+func (r *MessagesRepo) AddMessage(ctx context.Context, sessionID string, msg core.Message) error {
+	toolCallsJSON, err := marshalToolCalls(msg.ToolCalls)
 	if err != nil {
 		return fmt.Errorf("failed to marshal tool calls: %w", err)
 	}
 
-	// If ToolCalls is "null" (empty slice), store as empty string to save space
-	tcStr := string(toolCallsJSON)
-	if tcStr == "null" {
-		tcStr = ""
-	}
-
-	tx, err := h.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// 1. Insert into main table
-	query := `INSERT INTO messages (session_id, role, content, tool_calls, tool_call_id) VALUES (?, ?, ?, ?, ?)`
-	res, err := tx.ExecContext(ctx, query, sessionID, msg.Role, msg.Content, tcStr, msg.ToolCallID)
-	if err != nil {
-		return fmt.Errorf("failed to insert message: %w", err)
-	}
-
-	// 2. Insert into vector table if embedding exists
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-
-	if msg.Embedding != nil && len(msg.Embedding) > 0 {
-		vecBlob, err := serializeVector(msg.Embedding[0])
+	return r.withTx(ctx, func(tx *sql.Tx) error {
+		res, err := tx.ExecContext(ctx, sqlInsertMessage, sessionID, msg.Role, msg.Content, toolCallsJSON, msg.ToolCallID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert message: %w", err)
 		}
-		// Use 'rowid' explicitly to ensure the vector is tied to the message ID
-		_, err = tx.ExecContext(ctx, `INSERT INTO messages_vec (rowid, embedding) VALUES (?, ?)`, id, vecBlob)
-		if err != nil {
-			return fmt.Errorf("failed to insert message vector: %w", err)
-		}
-		// Mark as embedded in main table
-		_, err = tx.ExecContext(ctx, `UPDATE messages SET embedded = true WHERE id = ?`, id)
-		if err != nil {
-			return fmt.Errorf("failed to set embedded flag: %w", err)
-		}
-	}
 
-	return tx.Commit()
+		id, err := res.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("failed to get last insert id: %w", err)
+		}
+
+		if len(msg.Embedding) > 0 {
+			if err := r.persistEmbedding(tx, id, msg.Embedding[0]); err != nil {
+				return fmt.Errorf("failed to persist embedding: %w", err)
+			}
+		}
+
+		return nil
+	})
 }
 
-func (h *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit int) ([]core.Message, error) {
-	// Fetch the LAST 'limit' messages by ordering DESC
-	query := `SELECT role, content, tool_calls, tool_call_id FROM messages WHERE session_id = ? ORDER BY id DESC LIMIT ?`
-
-	rows, err := h.db.QueryContext(ctx, query, sessionID, limit)
+// GetMessages retrieves the last 'limit' messages for a session in chronological order.
+func (r *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit int) ([]core.Message, error) {
+	rows, err := r.db.QueryContext(ctx, sqlSelectMessages, sessionID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query messages: %w", err)
 	}
 	defer rows.Close()
 
+	messages, err := scanMessages(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reverse to chronological order (oldest first)
+	slices.Reverse(messages)
+
+	log.FromCtx(ctx).Debug().Int("count", len(messages)).Msg("loaded history messages")
+	return messages, nil
+}
+
+// GetUnembeddedMessages retrieves messages that haven't been embedded yet.
+func (r *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]core.StoredMessage, error) {
+	rows, err := r.db.QueryContext(ctx, sqlSelectUnembedded, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query messages: %w", err)
+	}
+	defer rows.Close()
+
+	return scanStoredMessages(rows)
+}
+
+// UpdateMessageEmbedding updates the embedding for a specific message.
+func (r *MessagesRepo) UpdateMessageEmbedding(ctx context.Context, id int64, embedding []float32) error {
+	if len(embedding) == 0 {
+		return fmt.Errorf("empty embedding provided")
+	}
+
+	return r.withTx(ctx, func(tx *sql.Tx) error {
+		return r.persistEmbedding(tx, id, embedding)
+	})
+}
+
+// withTx executes the given function within a transaction.
+func (r *MessagesRepo) withTx(ctx context.Context, fn func(*sql.Tx) error) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// persistEmbedding saves the vector and marks the message as embedded.
+func (r *MessagesRepo) persistEmbedding(tx *sql.Tx, msgID int64, embedding []float32) error {
+	vecBlob, err := serializeVector(embedding)
+	if err != nil {
+		return fmt.Errorf("failed to serialize vector: %w", err)
+	}
+
+	if _, err := tx.Exec(sqlUpsertVector, msgID, vecBlob); err != nil {
+		return fmt.Errorf("failed to upsert vector: %w", err)
+	}
+
+	if _, err := tx.Exec(sqlMarkEmbedded, msgID); err != nil {
+		return fmt.Errorf("failed to mark as embedded: %w", err)
+	}
+
+	return nil
+}
+
+// marshalToolCalls converts tool calls to JSON string, handling empty cases.
+func marshalToolCalls(calls []core.ToolCall) (string, error) {
+	if len(calls) == 0 {
+		return "", nil
+	}
+
+	b, err := json.Marshal(calls)
+	if err != nil {
+		return "", err
+	}
+
+	// Handle "null" case for empty slices
+	if string(b) == "null" {
+		return "", nil
+	}
+
+	return string(b), nil
+}
+
+// unmarshalToolCalls parses JSON string into tool calls.
+func unmarshalToolCalls(data string) ([]core.ToolCall, error) {
+	if data == "" || data == "null" {
+		return nil, nil
+	}
+
+	var calls []core.ToolCall
+	if err := json.Unmarshal([]byte(data), &calls); err != nil {
+		return nil, err
+	}
+
+	return calls, nil
+}
+
+// scanMessages scans rows into core.Message slices.
+func scanMessages(rows *sql.Rows) ([]core.Message, error) {
 	var messages []core.Message
+
 	for rows.Next() {
 		var msg core.Message
 		var content, toolCallsStr, toolCallID sql.NullString
 
-		// Use NullString to safely handle potential NULLs in DB
 		if err := rows.Scan(&msg.Role, &content, &toolCallsStr, &toolCallID); err != nil {
 			return nil, fmt.Errorf("failed to scan message: %w", err)
 		}
@@ -92,11 +178,11 @@ func (h *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit 
 		msg.Content = content.String
 		msg.ToolCallID = toolCallID.String
 
-		if toolCallsStr.Valid && toolCallsStr.String != "" && toolCallsStr.String != "null" {
-			if err := json.Unmarshal([]byte(toolCallsStr.String), &msg.ToolCalls); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
-			}
+		toolCalls, err := unmarshalToolCalls(toolCallsStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
 		}
+		msg.ToolCalls = toolCalls
 
 		messages = append(messages, msg)
 	}
@@ -105,30 +191,13 @@ func (h *MessagesRepo) GetMessages(ctx context.Context, sessionID string, limit 
 		return nil, err
 	}
 
-	// The query returned messages in Reverse Chronological Order (Newest -> Oldest).
-	// We need to reverse them back to Chronological Order (Oldest -> Newest) for the LLM.
-	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
-		messages[i], messages[j] = messages[j], messages[i]
-	}
-
-	log.FromCtx(ctx).Debug().Int("count", len(messages)).Msg("loaded history messages")
 	return messages, nil
 }
 
-func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]core.StoredMessage, error) {
-	query := `
-		SELECT id, role, content, tool_calls, tool_call_id
-		FROM messages 
-		WHERE embedded = false AND content != '' ORDER BY id DESC LIMIT ?
-	`
-
-	rows, err := h.db.QueryContext(ctx, query, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query messages: %w", err)
-	}
-	defer rows.Close()
-
+// scanStoredMessages scans rows into core.StoredMessage slices.
+func scanStoredMessages(rows *sql.Rows) ([]core.StoredMessage, error) {
 	var messages []core.StoredMessage
+
 	for rows.Next() {
 		var msg core.StoredMessage
 		var content, toolCallsStr, toolCallID sql.NullString
@@ -140,11 +209,11 @@ func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]
 		msg.Content = content.String
 		msg.ToolCallID = toolCallID.String
 
-		if toolCallsStr.Valid && toolCallsStr.String != "" && toolCallsStr.String != "null" {
-			if err := json.Unmarshal([]byte(toolCallsStr.String), &msg.ToolCalls); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
-			}
+		toolCalls, err := unmarshalToolCalls(toolCallsStr.String)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal tool calls: %w", err)
 		}
+		msg.ToolCalls = toolCalls
 
 		messages = append(messages, msg)
 	}
@@ -154,41 +223,4 @@ func (h *MessagesRepo) GetUnembeddedMessages(ctx context.Context, limit int) ([]
 	}
 
 	return messages, nil
-}
-
-func (h *MessagesRepo) UpdateMessageEmbedding(ctx context.Context, id int64, embedding []float32) error {
-	if len(embedding) == 0 {
-		return fmt.Errorf("empty embedding provided")
-	}
-
-	vecBlob, err := serializeVector(embedding)
-	if err != nil {
-		return fmt.Errorf("serialize vector: %w", err)
-	}
-
-	tx, err := h.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	// 1. Insert or update vector (use INSERT...ON CONFLICT for atomic upsert)
-	_, err = tx.ExecContext(ctx, `
-        INSERT INTO messages_vec (rowid, embedding)
-        VALUES (?, ?)
-        ON CONFLICT(rowid) DO UPDATE SET embedding = excluded.embedding
-    `, id, vecBlob)
-	if err != nil {
-		return fmt.Errorf("insert vector: %w", err)
-	}
-
-	// 2. Mark as embedded in main table (CRITICAL - was missing!)
-	_, err = tx.ExecContext(ctx,
-		`UPDATE messages SET embedded = true WHERE id = ?`,
-		id)
-	if err != nil {
-		return fmt.Errorf("update embedded flag: %w", err)
-	}
-
-	return tx.Commit()
 }
