@@ -115,6 +115,7 @@ func (m *Manager) RegisterNativeTool(name, description string, schema json.RawMe
 }
 
 func (m *Manager) Start(ctx context.Context) error {
+	// Snapshot config to avoid holding lock during connection
 	m.mu.RLock()
 	servers := make(map[string]ServerConfig, len(m.config.MCPServers))
 	for k, v := range m.config.MCPServers {
@@ -122,35 +123,68 @@ func (m *Manager) Start(ctx context.Context) error {
 	}
 	m.mu.RUnlock()
 
-	m.mu.Lock()
-	m.cacheValid = false
-	m.mu.Unlock()
-
+	// Start servers in parallel background goroutines
+	// This ensures that one hanging server doesn't block the entire bot startup
 	for name, srv := range servers {
-		log.FromCtx(ctx).Info().Str("server", name).Msg("starting mcp connection")
+		go func(n string, s ServerConfig) {
+			// Use a timeout for the connection attempt
+			connectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
 
-		cli, err := m.connectToServer(ctx, srv)
-		if err != nil {
-			return fmt.Errorf("failed to start %s: %w", name, err)
-		}
+			// Create a logger with context for this specific server
+			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
+			logger.Info().Msg("starting mcp server")
 
-		m.mu.Lock()
-		m.clients[name] = cli
-		m.cacheValid = false // Invalidate cache to include new client
-		m.mu.Unlock()
+			cli, err := m.connectToServer(connectCtx, s)
+			if err != nil {
+				logger.Error().Err(err).Msg("failed to start mcp server")
+				return
+			}
+
+			m.mu.Lock()
+			m.clients[n] = cli
+			m.cacheValid = false // Invalidate cache to include new client
+			m.mu.Unlock()
+
+			logger.Info().Msg("mcp server connected")
+		}(name, srv)
 	}
+
 	return nil
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	for name, cli := range m.clients {
-		if err := cli.Close(); err != nil {
-			log.FromCtx(ctx).Error().Err(err).Str("server", name).Msg("failed to close client")
-		}
+	clients := make(map[string]*client.Client, len(m.clients))
+	for k, v := range m.clients {
+		clients[k] = v
 	}
+	m.mu.RUnlock()
+
+	var wg sync.WaitGroup
+	for name, cli := range clients {
+		wg.Add(1)
+		go func(n string, c *client.Client) {
+			defer wg.Done()
+
+			// Create a channel to handle close timeout
+			done := make(chan struct{})
+			go func() {
+				if err := c.Close(); err != nil {
+					log.FromCtx(ctx).Error().Err(err).Str("server", n).Msg("failed to close client")
+				}
+				close(done)
+			}()
+
+			select {
+			case <-done:
+				return
+			case <-time.After(5 * time.Second):
+				log.FromCtx(ctx).Warn().Str("server", n).Msg("mcp server close timed out, forcing shutdown")
+			}
+		}(name, cli)
+	}
+	wg.Wait()
 	return nil
 }
 
@@ -329,7 +363,11 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		}
 
 		// 1. Connect WITHOUT lock (Heavy I/O)
-		newClient, err := m.connectToServer(ctx, newCfg)
+		// Use a strict timeout for adding new tools
+		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+
+		newClient, err := m.connectToServer(connectCtx, newCfg)
 		if err != nil {
 			return "", fmt.Errorf("failed to connect to new server: %w", err)
 		}
@@ -375,7 +413,10 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		}
 
 		// 2. Connect New Client (No Lock)
-		newClient, err := m.connectToServer(ctx, srvCfg)
+		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+
+		newClient, err := m.connectToServer(connectCtx, srvCfg)
 		if err != nil {
 			return "", fmt.Errorf("failed to reconnect: %w", err)
 		}
