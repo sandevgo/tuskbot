@@ -37,6 +37,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 	"strings"
 	"sync"
 	"unsafe"
@@ -94,8 +95,10 @@ func NewLlamaEmbedder(modelPath string) (*LlamaEmbedder, error) {
 	cParams.n_ctx = C.uint32_t(nCtx)
 	cParams.n_batch = C.uint32_t(nCtx)
 	cParams.n_ubatch = C.uint32_t(nCtx)
-	cParams.n_threads = 4
-	cParams.n_threads_batch = 4
+	nThreads := runtime.NumCPU()
+	if nThreads > 4 {
+		nThreads = 4 // cap for embedding models
+	}
 
 	ctx := C.llama_init_from_model(model, cParams)
 	if ctx == nil {
