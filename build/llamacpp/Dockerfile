@@ -65,8 +65,8 @@ RUN cmake /src \
     -DCMAKE_CXX_COMPILER="/usr/local/bin/zig-cxx" \
     -DCMAKE_AR="/usr/local/bin/zig-ar" \
     -DCMAKE_RANLIB="/usr/local/bin/zig-ranlib" \
-    -DCMAKE_C_FLAGS="-O3 -g0" \
-    -DCMAKE_CXX_FLAGS="-O3 -g0" \
+    -DCMAKE_C_FLAGS="-O3 -g0 -march=haswell" \
+    -DCMAKE_CXX_FLAGS="-O3 -g0 -march=haswell" \
     -DCMAKE_SYSTEM_NAME=Linux \
     -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
     -DBUILD_SHARED_LIBS=OFF \
