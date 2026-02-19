@@ -7,11 +7,12 @@ CREATE TABLE IF NOT EXISTS messages (
     tool_calls TEXT,
     tool_call_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    embedded BOOLEAN DEFAULT FALSE,
     extracted BOOLEAN DEFAULT 0
 );
 
 CREATE VIRTUAL TABLE messages_vec USING vec0(
-    embedding float[768]
+    embedding float[384]
 );
 
 CREATE TABLE knowledge (
@@ -20,12 +21,11 @@ CREATE TABLE knowledge (
     category TEXT NOT NULL, -- 'preference', 'user_fact', 'project', 'instruction'
     source TEXT, -- 'extracted:conv_123' | 'manual' | 'file:project.md'
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME,
-    fact_hash TEXT UNIQUE
+    updated_at DATETIME
 );
 
 CREATE VIRTUAL TABLE knowledge_vec USING vec0(
-    embedding float[768] -- 768 for e5-base-v2.Q8_0.gguf
+    embedding float[384] -- 384 for e5-small
 );
 
 -- +goose Down

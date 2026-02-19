@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	modelURL  = "https://huggingface.co/velyan/e5-base-v2-Q8_0-GGUF/resolve/main/e5-base-v2-q8_0.gguf"
-	modelName = "e5-base-v2-q8_0.gguf"
+	modelURL  = "https://huggingface.co/tuskbot/multilingual-e5-small-gguf/resolve/main/model.gguf"
+	modelName = "multilingual-e5-small-f16.gguf"
 )
 
 type progressMsg float64
