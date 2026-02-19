@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/sandevgo/tuskbot/internal/config"
+	"github.com/sandevgo/tuskbot/internal/providers/rag"
 )
 
 const (
@@ -51,7 +52,7 @@ func (s *DownloadModelStep) waitForActivity() tea.Cmd {
 func (s *DownloadModelStep) doDownload() {
 	runtimePath := config.GetRuntimePath()
 	modelsDir := filepath.Join(runtimePath, "models")
-	destPath := filepath.Join(modelsDir, modelName)
+	destPath := filepath.Join(modelsDir, rag.ModelNameE5BaseQ8)
 
 	if err := os.MkdirAll(modelsDir, 0755); err != nil {
 		s.updates <- errMsg(err)
@@ -64,7 +65,7 @@ func (s *DownloadModelStep) doDownload() {
 		return
 	}
 
-	resp, err := http.Get(modelURL)
+	resp, err := http.Get(rag.ModelUrlE5BaseQ8)
 	if err != nil {
 		s.updates <- errMsg(err)
 		return
