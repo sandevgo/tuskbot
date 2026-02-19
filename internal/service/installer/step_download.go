@@ -47,7 +47,8 @@ func (s *DownloadModelStep) waitForActivity() tea.Cmd {
 func (s *DownloadModelStep) doDownload() {
 	runtimePath := config.GetRuntimePath()
 	modelsDir := filepath.Join(runtimePath, "models")
-	destPath := filepath.Join(modelsDir, rag.ModelNameE5BaseQ8)
+	modelName := rag.ModelNameE5BaseQ8
+	destPath := filepath.Join(modelsDir, modelName)
 
 	if err := os.MkdirAll(modelsDir, 0755); err != nil {
 		s.updates <- errMsg(err)
@@ -56,7 +57,7 @@ func (s *DownloadModelStep) doDownload() {
 
 	// Skip if exists
 	if _, err := os.Stat(destPath); err == nil {
-		s.updates <- downloadDoneMsg(destPath)
+		s.updates <- downloadDoneMsg(modelName)
 		return
 	}
 
@@ -92,7 +93,7 @@ func (s *DownloadModelStep) doDownload() {
 		return
 	}
 
-	s.updates <- downloadDoneMsg(destPath)
+	s.updates <- downloadDoneMsg(modelName)
 }
 
 func (s *DownloadModelStep) Update(msg tea.Msg, state *InstallState, width, height int) (Step, tea.Cmd) {
