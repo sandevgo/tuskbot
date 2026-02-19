@@ -24,39 +24,20 @@ func NewEmbedder(model DualEncoder) *Embedder {
 }
 
 // EncodeQuery encodes the beginning of the text and the ending.
-func (e *Embedder) EncodeQuery(ctx context.Context, text string) ([][]float32, error) {
+func (e *Embedder) EncodeQuery(ctx context.Context, text string) ([]float32, error) {
 	ctx, cancel := context.WithTimeout(ctx, embeddingTimeout)
 	defer cancel()
-
-	chunks := ChunkText(text, E5BaseChunkerConfig())
 
 	log.FromCtx(ctx).Debug().
 		Int("text_len", len(text)).
 		Msg("embedding query")
 
-	if len(chunks) == 0 {
-		return nil, fmt.Errorf("no chunks to encode query")
-	}
-
-	embeddings := make([][]float32, 0, 1)
-
-	// Encode first chunk
-	chunk, err := e.model.EncodeQuery(ctx, chunks[0].Text)
+	chunk, err := e.model.EncodeQuery(ctx, text)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode query: %w", err)
 	}
-	embeddings = append(embeddings, chunk)
 
-	// Encode last chunk
-	if len(chunks) > 1 {
-		chunk, err = e.model.EncodeQuery(ctx, chunks[len(chunks)-1].Text)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode query: %w", err)
-		}
-		embeddings = append(embeddings, chunk)
-	}
-
-	return embeddings, nil
+	return chunk, nil
 }
 
 func (e *Embedder) EncodePassage(ctx context.Context, text string) ([][]float32, error) {

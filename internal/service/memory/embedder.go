@@ -61,6 +61,10 @@ func (w *EmbedderWorker) processBatch(ctx context.Context) error {
 		return err
 	}
 
+	logger.Debug().
+		Int("len", len(msgs)).
+		Msg("processing embedding batch")
+
 	if len(msgs) == 0 {
 		return nil
 	}
@@ -70,7 +74,7 @@ func (w *EmbedderWorker) processBatch(ctx context.Context) error {
 			continue
 		}
 
-		chunks, err := w.embedder.Embed(ctx, msg.Content)
+		chunks, err := w.embedder.EncodePassage(ctx, msg.Content)
 		if err != nil {
 			logger.Warn().
 				Err(err).

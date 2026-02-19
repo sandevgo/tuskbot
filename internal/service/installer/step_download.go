@@ -110,7 +110,7 @@ func (s *DownloadModelStep) Update(msg tea.Msg, state *InstallState, width, heig
 		return s, tea.Batch(cmds...)
 
 	case downloadDoneMsg:
-		state.EnvVars["TUSK_EMBEDDING_MODEL_PATH"] = string(msg)
+		state.EnvVars["TUSK_EMBEDDING_MODEL"] = string(msg)
 		s.done = true
 		s.path = string(msg)
 		return nil, nil

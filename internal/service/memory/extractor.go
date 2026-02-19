@@ -220,7 +220,7 @@ func (e *Extractor) persistFacts(ctx context.Context, facts []extractedFact) err
 }
 
 func (e *Extractor) saveFact(ctx context.Context, fact extractedFact) error {
-	chunks, err := e.embedder.Embed(ctx, fact.Fact)
+	chunks, err := e.embedder.EncodePassage(ctx, fact.Fact)
 	if err != nil {
 		return fmt.Errorf("embed: %w", err)
 	}

@@ -8,7 +8,7 @@ type AIProvider interface {
 }
 
 type Embedder interface {
-	EncodeQuery(ctx context.Context, text string) ([][]float32, error)
+	EncodeQuery(ctx context.Context, text string) ([]float32, error)
 	EncodePassage(ctx context.Context, text string) ([][]float32, error)
 }
 
