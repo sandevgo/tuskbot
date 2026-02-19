@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 CREATE VIRTUAL TABLE messages_vec USING vec0(
-    embedding float[384]
+    embedding float[768]
 );
 
 CREATE TABLE knowledge (
@@ -25,7 +25,7 @@ CREATE TABLE knowledge (
 );
 
 CREATE VIRTUAL TABLE knowledge_vec USING vec0(
-    embedding float[384] -- 384 for e5-small
+    embedding float[768] -- 768 for e5-base
 );
 
 -- +goose Down
