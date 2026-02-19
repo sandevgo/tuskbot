@@ -1,6 +1,7 @@
 package llamacpp
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -45,7 +46,7 @@ func TestLlamaEmbedder(t *testing.T) {
 
 	// 4. Embed
 	text := "Hello TuskBot"
-	vec, err := embedder.Embed(text)
+	vec, err := embedder.Embed(context.Background(), text)
 	if err != nil {
 		t.Fatalf("Embed failed: %v", err)
 	}
