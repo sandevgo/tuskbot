@@ -53,11 +53,13 @@ func NewServices(ctx context.Context) []srv.Service {
 	}
 
 	// 4. RAG Provider (Embedder)
-	embedder, err := rag.NewEmbedder(ragCfg)
+	embedModel, err := rag.NewEmbeddingModel(ragCfg)
 	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to initialize RAG embedder")
+		logger.Fatal().Err(err).Msg("failed to initialize embedding model")
 	}
-	services = append(services, srv.NewCleanup(embedder.Shutdown))
+	services = append(services, srv.NewCleanup(embedModel.Shutdown))
+
+	embedder := rag.NewEmbedder(embedModel)
 
 	// 5. Knowledge Extractor Service
 	// Runs in background to convert conversation history into atomic facts

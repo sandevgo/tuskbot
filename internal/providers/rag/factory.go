@@ -8,7 +8,7 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/llamacpp"
 )
 
-func NewEmbeddingModel(cfg config.RAGConfig) (DualEncoder, error) {
+func NewEmbeddingModel(cfg *config.RAGConfig) (DualEncoder, error) {
 	modelPath := filepath.Join(config.GetRuntimePath(), "models", cfg.ModelName)
 
 	llamaEmb, err := llamacpp.NewLlamaEmbedder(modelPath)

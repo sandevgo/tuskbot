@@ -13,6 +13,7 @@ const embeddingTimeout = 60 * time.Second
 type DualEncoder interface {
 	EncodeQuery(ctx context.Context, text string) ([]float32, error)
 	EncodePassage(ctx context.Context, text string) ([]float32, error)
+	Shutdown() error
 }
 
 type Embedder struct {
