@@ -13,11 +13,6 @@ import (
 	"github.com/sandevgo/tuskbot/internal/providers/rag"
 )
 
-const (
-	modelURL  = "https://huggingface.co/tuskbot/multilingual-e5-small-gguf/resolve/main/model.gguf"
-	modelName = "multilingual-e5-small-f16.gguf"
-)
-
 type progressMsg float64
 type downloadDoneMsg string
 
