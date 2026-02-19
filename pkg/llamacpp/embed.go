@@ -94,6 +94,8 @@ func NewLlamaEmbedder(modelPath string) (*LlamaEmbedder, error) {
 	cParams.n_ctx = C.uint32_t(nCtx)
 	cParams.n_batch = C.uint32_t(nCtx)
 	cParams.n_ubatch = C.uint32_t(nCtx)
+	cParams.n_threads = 4
+	cParams.n_threads_batch = 4
 
 	ctx := C.llama_init_from_model(model, cParams)
 	if ctx == nil {
