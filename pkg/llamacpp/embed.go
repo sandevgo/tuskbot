@@ -192,8 +192,6 @@ func (l *LlamaEmbedder) Embed(ctx context.Context, text string) ([]float32, erro
 		return nil, fmt.Errorf("tokenization failed (code: %d)", nTokens)
 	}
 
-	fmt.Printf("DEBUG: text_len=%d, tokens=%d, nCtx=%d\n", len(text), nTokens, l.nCtx)
-
 	// 3. Safety Clamp / Truncate to context size
 	if int(nTokens) > l.nCtx {
 		nTokens = C.int32_t(l.nCtx)
