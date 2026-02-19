@@ -8,7 +8,7 @@ import (
 )
 
 type RAGConfig struct {
-	ModelPath string `env:"TUSK_EMBEDDING_MODEL_PATH,required"`
+	ModelName string `env:"TUSK_EMBEDDING_MODEL,required"`
 }
 
 func NewRAGConfig(ctx context.Context) *RAGConfig {

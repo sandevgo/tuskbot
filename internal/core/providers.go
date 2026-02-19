@@ -8,7 +8,15 @@ type AIProvider interface {
 }
 
 type Embedder interface {
-	Embed(ctx context.Context, text string) ([][]float32, error)
+	EncodeQuery(ctx context.Context, text string) ([][]float32, error)
+	EncodePassage(ctx context.Context, text string) ([][]float32, error)
+}
+
+type EmbeddingModel interface {
+	Dims() int
+	GetURL() string
+	GetModelName() string
+	Shutdown() error
 }
 
 type MCPServer interface {
