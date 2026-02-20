@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	mcpproto "github.com/mark3labs/mcp-go/mcp"
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -68,20 +67,6 @@ type managementInput struct {
 }
 
 var _ core.MCPServer = (*Manager)(nil)
-
-type Timeouts struct {
-	Connect  time.Duration
-	ToolList time.Duration
-	ToolCall time.Duration
-}
-
-func NewDefaultTimeouts() *Timeouts {
-	return &Timeouts{
-		Connect:  30 * time.Second,
-		ToolList: 5 * time.Second,
-		ToolCall: 2 * time.Minute,
-	}
-}
 
 type ConnectionPool interface {
 	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
