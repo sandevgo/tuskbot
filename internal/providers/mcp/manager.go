@@ -340,7 +340,7 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		}
 
 		// 1. Add to Pool (Handles connection and verification)
-		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
 		defer cancel()
 
 		if _, err := m.pool.Add(connectCtx, input.ServerName, newCfg); err != nil {
@@ -385,7 +385,7 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		}
 
 		// Pool.Add handles closing the old connection if it exists
-		connectCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
 		defer cancel()
 
 		if _, err := m.pool.Add(connectCtx, input.ServerName, srvCfg); err != nil {
