@@ -69,6 +69,7 @@ type Manager struct {
 	storage  Storage
 	pool     ConnectionPool
 	timeouts *Timeouts
+	cache    *ToolCache
 
 	mu           sync.RWMutex
 	toolToServer map[string]string // Maps tool name -> server name
@@ -87,11 +88,13 @@ func NewManager(
 	pool ConnectionPool,
 	storage Storage,
 	timeouts *Timeouts,
+	cache *ToolCache,
 ) (*Manager, error) {
 	mgr := &Manager{
 		pool:           pool,
 		storage:        storage,
 		timeouts:       timeouts,
+		cache:          cache,
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
 	}

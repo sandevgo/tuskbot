@@ -121,6 +121,7 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
 		mcp.NewStdioConnectionPool(),
 		mcp.NewFileStorage(cfg.GetMCPConfigPath()),
 		mcp.NewDefaultTimeouts(),
+		mcp.NewToolCache(),
 	)
 	if err != nil {
 		return nil, err
