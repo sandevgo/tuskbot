@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	EmbedModelPath = "./models/stsb-bert-tiny.i1-Q6_K.gguf"
+	EmbedModelPath = "./models/stsb-bert-tiny-i1.gguf"
 )
 
 func GetEmbedModelPath(t *testing.T) string {
