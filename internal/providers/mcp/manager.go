@@ -96,7 +96,7 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
-	return nil // TODO: Check resource cleanup
+	return m.pool.Close()
 }
 
 func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
