@@ -116,7 +116,11 @@ func initStorage(ctx context.Context, cfg *config.AppConfig) (*sql.DB, core.Mess
 }
 
 func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
-	mgr, err := mcp.NewManager(ctx, cfg.GetMCPConfigPath())
+	mgr, err := mcp.NewManager(
+		ctx,
+		mcp.NewStdioConnectionPool(),
+		mcp.NewFileConfig(cfg.GetMCPConfigPath()),
+	)
 	if err != nil {
 		return nil, err
 	}

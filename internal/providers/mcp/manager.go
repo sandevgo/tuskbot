@@ -57,9 +57,9 @@ var (
 )
 
 type Manager struct {
-	config      Config
-	configStore ConfigStore
-	pool        ConnectionPool
+	config  Config
+	storage Storage
+	pool    ConnectionPool
 
 	mu           sync.RWMutex
 	toolToServer map[string]string // Maps tool name -> server name
@@ -73,15 +73,19 @@ type Manager struct {
 	nativeToolDefs []core.Tool
 }
 
-func NewManager(ctx context.Context, configPath string) (*Manager, error) {
+func NewManager(
+	ctx context.Context,
+	pool ConnectionPool,
+	storage Storage,
+) (*Manager, error) {
 	mgr := &Manager{
-		pool:           NewStdioConnectionPool(),
-		configStore:    NewFileConfig(configPath),
+		pool:           pool,
+		storage:        storage,
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
 	}
 
-	cfg, err := mgr.configStore.Load(ctx)
+	cfg, err := mgr.storage.Load(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -332,13 +336,13 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			return "", fmt.Errorf("failed to connect to new server: %w", err)
 		}
 
-		// 2. Update Config
+		// 2. Update MCPConfig
 		m.mu.Lock()
 		m.config.MCPServers[input.ServerName] = newCfg
 		m.cacheValid = false
 		m.mu.Unlock()
 
-		if err := m.configStore.Save(ctx, &m.config); err != nil {
+		if err := m.storage.Save(ctx, &m.config); err != nil {
 			return "", fmt.Errorf("server started but config save failed: %w", err)
 		}
 		return fmt.Sprintf("Server %s added and started", input.ServerName), nil
@@ -349,13 +353,13 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
 		}
 
-		// 2. Update Config
+		// 2. Update MCPConfig
 		m.mu.Lock()
 		delete(m.config.MCPServers, input.ServerName)
 		m.cacheValid = false
 		m.mu.Unlock()
 
-		if err := m.configStore.Save(ctx, &m.config); err != nil {
+		if err := m.storage.Save(ctx, &m.config); err != nil {
 			return "", err
 		}
 		return fmt.Sprintf("Server %s removed", input.ServerName), nil
