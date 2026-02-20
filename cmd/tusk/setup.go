@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"os"
 	"path/filepath"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
-	"github.com/sandevgo/tuskbot/internal/providers/mcp/tools"
 	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
@@ -121,30 +119,11 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
 		ctx,
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
-		mcp.NewDefaultTimeouts(),
 		mcp.NewToolCache(),
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	// Helper to register a toolset
-	register := func(t interface {
-		GetDefinitions() map[string]struct {
-			Description string
-			Schema      string
-			Handler     func(context.Context, json.RawMessage) (string, error)
-		}
-	}) {
-		for name, def := range t.GetDefinitions() {
-			mgr.RegisterNativeTool(name, def.Description, json.RawMessage(def.Schema), def.Handler)
-		}
-	}
-
-	// Register Core Tools
-	register(tools.NewFilesystem(cfg.GetRuntimePath()))
-	register(tools.NewShell(cfg.GetRuntimePath()))
-	register(tools.NewFetch())
 
 	return mgr, nil
 }
