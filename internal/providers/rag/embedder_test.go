@@ -3,19 +3,18 @@ package rag
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 // mockDualEncoder is a test double for the DualEncoder interface
 type mockDualEncoder struct {
-	encodeQueryFunc  func(ctx context.Context, text string) ([]float32, error)
+	encodeQueryFunc   func(ctx context.Context, text string) ([]float32, error)
 	encodePassageFunc func(ctx context.Context, text string) ([]float32, error)
-	shutdownFunc     func() error
+	shutdownFunc      func() error
 
-	queryCalls  []string
+	queryCalls   []string
 	passageCalls []string
 }
 
@@ -129,7 +128,7 @@ func TestEmbedder_EncodeQuery(t *testing.T) {
 					t.Errorf("EncodeQuery() error = nil, wantErr true")
 					return
 				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("EncodeQuery() error = %v, should contain %v", err, tt.errContains)
 				}
 				return
@@ -197,12 +196,12 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:    "long text produces multiple chunks",
-			text:    "This is a long text that should be split into multiple chunks because it exceeds the token limit for a single chunk. " + 
-					"We need to make sure it is long enough to trigger the chunking logic in the system. " +
-					"Adding more sentences here to ensure we hit the threshold. " +
-					"Another sentence here for good measure. " +
-					"And yet another one to be absolutely sure we have enough content.",
+			name: "long text produces multiple chunks",
+			text: "This is a long text that should be split into multiple chunks because it exceeds the token limit for a single chunk. " +
+				"We need to make sure it is long enough to trigger the chunking logic in the system. " +
+				"Adding more sentences here to ensure we hit the threshold. " +
+				"Another sentence here for good measure. " +
+				"And yet another one to be absolutely sure we have enough content.",
 			timeout: 5 * time.Second,
 			mockSetup: func(m *mockDualEncoder) {
 				callCount := 0
@@ -278,12 +277,12 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 					t.Errorf("EncodePassage() error = nil, wantErr true")
 					return
 				}
-				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("EncodePassage() error = %v, should contain %v", err, tt.errContains)
 				}
 				if tt.errIndexCheck && tt.name == "returns error on chunk failure" {
 					// Verify error mentions chunk index 1 (second chunk, 0-indexed)
-					if !contains(err.Error(), "chunk 1") {
+					if !strings.Contains(err.Error(), "chunk 1") {
 						t.Errorf("EncodePassage() error should contain chunk index, got: %v", err)
 					}
 				}
@@ -315,13 +314,13 @@ func TestEmbedder_EncodeQuery_CallsModelWithCorrectContext(t *testing.T) {
 			if !ok {
 				t.Error("Expected context to have deadline")
 			}
-			
+
 			// Verify deadline is approximately timeout duration from now
 			expectedDeadline := time.Now().Add(100 * time.Millisecond)
-			if deadline.After(expectedDeadline.Add(10 * time.Millisecond)) || deadline.Before(expectedDeadline.Add(-10*time.Millisecond)) {
+			if deadline.After(expectedDeadline.Add(10*time.Millisecond)) || deadline.Before(expectedDeadline.Add(-10*time.Millisecond)) {
 				t.Errorf("Deadline %v not within expected range of %v", deadline, expectedDeadline)
 			}
-			
+
 			return []float32{0.1}, nil
 		},
 	}
@@ -350,7 +349,7 @@ func TestEmbedder_Shutdown(t *testing.T) {
 
 		embedder := NewEmbedder(mock)
 		err := embedder.model.Shutdown()
-		
+
 		if err != nil {
 			t.Errorf("Shutdown() error = %v", err)
 		}
@@ -358,19 +357,4 @@ func TestEmbedder_Shutdown(t *testing.T) {
 			t.Error("Shutdown() did not call model's Shutdown")
 		}
 	})
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || 
-		(len(s) > 0 && len(substr) > 0 && findSubstr(s, substr)))
-}
-
-func findSubstr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
