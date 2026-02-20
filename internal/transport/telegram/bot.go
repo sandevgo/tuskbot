@@ -85,16 +85,27 @@ func (b *Bot) handleMessage(c tele.Context) error {
 	logger := log.FromCtx(ctx)
 	sessionID := fmt.Sprintf("telegram-%d", c.Chat().ID)
 
-	// Notify user we are working
-	_ = c.Notify(tele.Typing)
+	// Start background typing indicator
+	typingCtx, stopTyping := context.WithCancel(ctx)
+	defer stopTyping()
+
+	go func() {
+		ticker := time.NewTicker(4 * time.Second) // Refresh before 5s expiry
+		defer ticker.Stop()
+
+		_ = c.Notify(tele.Typing)
+
+		for {
+			select {
+			case <-ticker.C:
+				_ = c.Notify(tele.Typing)
+			case <-typingCtx.Done():
+				return
+			}
+		}
+	}()
 
 	_, err := b.agent.Run(ctx, sessionID, c.Text(), func(msg core.Message) {
-		// Send Reasoning (optional, good for debugging)
-		//if strings.TrimSpace(msg.Reasoning) != "" {
-		//	_ = c.Send(fmt.Sprintf("💭 <b>Thinking:</b>\n%s", msg.Reasoning), tele.ModeHTML)
-		//  _ = c.Notify(tele.Typing)
-		//}
-
 		// Send Content
 		if msg.Content != "" {
 			htmlContent := strings.TrimSpace(conv.MarkdownToTelegramHTML([]byte(msg.Content)))
@@ -102,14 +113,12 @@ func (b *Bot) handleMessage(c tele.Context) error {
 				if err := c.Send(htmlContent, tele.ModeHTML); err != nil {
 					logger.Error().Err(err).Msg("failed to send telegram message")
 				}
-				_ = c.Notify(tele.Typing)
 			}
 		}
 
 		// Notify about tool execution
 		for _, tc := range msg.ToolCalls {
 			_ = c.Send(fmt.Sprintf("🛠 Executing: %s", tc.Function.Name))
-			_ = c.Notify(tele.Typing)
 		}
 	})
 
