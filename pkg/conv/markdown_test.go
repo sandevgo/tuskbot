@@ -36,9 +36,14 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 			expected: "<strong><em>bold italic</em></strong>\n",
 		},
 		{
-			name:     "underline",
-			input:    "__underline__",
-			expected: "<ins>underline</ins>\n",
+			name:     "raw HTML underline preserved",
+			input:    "<u>underline</u>",
+			expected: "<u>underline</u>\n",
+		},
+		{
+			name:     "double underscore is bold (standard markdown)",
+			input:    "__bold__",
+			expected: "<strong>bold</strong>\n",
 		},
 		{
 			name:     "strikethrough",
