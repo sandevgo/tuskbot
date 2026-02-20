@@ -123,8 +123,8 @@ func (b *Bot) handleMessage(c tele.Context) error {
 	})
 
 	if err != nil {
-		logger.Error().Err(err).Msg("agent run failed")
-		return c.Send(fmt.Sprintf("error: %v", err))
+		logger.Error().Err(err).Msg("agent failed to response")
+		return c.Send(fmt.Sprintf("Agent failed to response: %v", err))
 	}
 
 	return nil
