@@ -94,7 +94,7 @@ release-image:
 # Testing rargets
 test:
 	@echo "Running tests..."
-	@go test -v ./...
+	@go test -tags=integration -v ./...
 	@echo "Tests completed successfully."
 
 bench:
