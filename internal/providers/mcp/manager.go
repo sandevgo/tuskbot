@@ -20,28 +20,32 @@ const manageMcpSchema = `
 {
   "type": "object",
   "properties": {
-    "action": { 
-      "type": "string", 
-      "enum": ["add", "remove", "reload"], 
-      "description": "What to do with the server" 
+    "action": {
+      "type": "string",
+      "enum": ["add", "remove", "reload"],
+      "description": "What to do with the server"
     },
-    "server_name": { 
-      "type": "string", 
-      "description": "Unique name for the server" 
+    "server_name": {
+      "type": "string",
+      "description": "Unique name for the server"
     },
-    "command": { 
-      "type": "string", 
-      "description": "Command to run (e.g. npx, python, node). Required for 'add'." 
+    "command": {
+      "type": "string",
+      "description": "Command to run (e.g. npx, python, node). Required for 'add' with stdio."
     },
-    "args": { 
-      "type": "array", 
-      "items": { "type": "string" }, 
-      "description": "Arguments for the command" 
+    "args": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Arguments for the command"
     },
-    "env": { 
-      "type": "object", 
-      "additionalProperties": { "type": "string" }, 
-      "description": "Environment variables (e.g. API keys)" 
+    "env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Environment variables (e.g. API keys)"
+    },
+    "url": {
+      "type": "string",
+      "description": "Server URL (e.g. http://localhost:8080/sse). Required for 'add' with http."
     }
   },
   "required": ["action", "server_name"]
@@ -60,6 +64,7 @@ type managementInput struct {
 	Command    string            `json:"command"`
 	Args       []string          `json:"args"`
 	Env        map[string]string `json:"env"`
+	URL        string            `json:"url"`
 }
 
 var _ core.MCPServer = (*Manager)(nil)
@@ -79,13 +84,10 @@ func NewDefaultTimeouts() *Timeouts {
 }
 
 type Manager struct {
-	config   Config
-	storage  Storage
-	pool     ConnectionPool
+	registry *Registry
+	pool     *Pool
 	timeouts *Timeouts
 	cache    *ToolCache
-
-	mu sync.RWMutex
 
 	// Native tools support
 	nativeTools    map[string]NativeHandler
@@ -94,25 +96,24 @@ type Manager struct {
 
 func NewManager(
 	ctx context.Context,
-	pool ConnectionPool,
-	storage Storage,
+	pool *Pool,
+	registry *Registry,
 	timeouts *Timeouts,
 	cache *ToolCache,
 ) (*Manager, error) {
 	mgr := &Manager{
 		pool:           pool,
-		storage:        storage,
+		registry:       registry,
 		timeouts:       timeouts,
 		cache:          cache,
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
 	}
 
-	cfg, err := mgr.storage.Load(ctx)
-	if err != nil {
+	// Load initial config
+	if err := mgr.registry.Load(ctx); err != nil {
 		return nil, err
 	}
-	mgr.config = *cfg
 
 	// Register the manage_mcp tool
 	mgr.RegisterNativeTool(
@@ -139,13 +140,7 @@ func (m *Manager) RegisterNativeTool(name, description string, schema json.RawMe
 }
 
 func (m *Manager) Start(ctx context.Context) error {
-	// Snapshot config to avoid holding lock during connection
-	m.mu.RLock()
-	servers := make(map[string]ServerConfig, len(m.config.MCPServers))
-	for k, v := range m.config.MCPServers {
-		servers[k] = v
-	}
-	m.mu.RUnlock()
+	servers := m.registry.List()
 
 	// Start servers in parallel background goroutines
 	for name, srv := range servers {
@@ -172,7 +167,7 @@ func (m *Manager) Start(ctx context.Context) error {
 }
 
 func (m *Manager) Shutdown(ctx context.Context) error {
-	return m.pool.Close()
+	return nil // TODO: Check resource cleanup
 }
 
 func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
@@ -329,8 +324,8 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 }
 
 func (m *Manager) handleAdd(ctx context.Context, input managementInput) (string, error) {
-	if input.Command == "" {
-		return "", fmt.Errorf("command is required for add action")
+	if input.Command == "" && input.URL == "" {
+		return "", fmt.Errorf("command or url is required for add action")
 	}
 
 	cleanEnv := make(map[string]string)
@@ -343,6 +338,7 @@ func (m *Manager) handleAdd(ctx context.Context, input managementInput) (string,
 		Command: input.Command,
 		Args:    input.Args,
 		Env:     cleanEnv,
+		URL:     input.URL,
 	}
 
 	// 1. Add to Pool (Handles connection and verification)
@@ -353,16 +349,13 @@ func (m *Manager) handleAdd(ctx context.Context, input managementInput) (string,
 		return "", fmt.Errorf("failed to connect to new server: %w", err)
 	}
 
-	// 2. Update MCPConfig
-	m.mu.Lock()
-	m.config.MCPServers[input.ServerName] = newCfg
-	m.mu.Unlock()
+	// 2. Update Registry
+	if err := m.registry.Add(ctx, input.ServerName, newCfg); err != nil {
+		return "", fmt.Errorf("server started but registry save failed: %w", err)
+	}
 
 	m.cache.Invalidate()
 
-	if err := m.storage.Save(ctx, &m.config); err != nil {
-		return "", fmt.Errorf("server started but config save failed: %w", err)
-	}
 	return fmt.Sprintf("Server %s added and started", input.ServerName), nil
 }
 
@@ -372,26 +365,20 @@ func (m *Manager) handleRemove(ctx context.Context, input managementInput) (stri
 		log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
 	}
 
-	// 2. Update MCPConfig
-	m.mu.Lock()
-	delete(m.config.MCPServers, input.ServerName)
-	m.mu.Unlock()
+	// 2. Update Registry
+	if err := m.registry.Remove(ctx, input.ServerName); err != nil {
+		return "", err
+	}
 
 	m.cache.Invalidate()
 
-	if err := m.storage.Save(ctx, &m.config); err != nil {
-		return "", err
-	}
 	return fmt.Sprintf("Server %s removed", input.ServerName), nil
 }
 
 func (m *Manager) handleReload(ctx context.Context, input managementInput) (string, error) {
-	m.mu.RLock()
-	srvCfg, exists := m.config.MCPServers[input.ServerName]
-	m.mu.RUnlock()
-
+	srvCfg, exists := m.registry.Get(input.ServerName)
 	if !exists {
-		return "", fmt.Errorf("server %s not found in config", input.ServerName)
+		return "", fmt.Errorf("server %s not found in registry", input.ServerName)
 	}
 
 	// Pool.Add handles closing the old connection if it exists
