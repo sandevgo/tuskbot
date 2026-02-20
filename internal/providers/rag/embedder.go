@@ -17,16 +17,20 @@ type DualEncoder interface {
 }
 
 type Embedder struct {
-	model DualEncoder
+	model   DualEncoder
+	timeout time.Duration
 }
 
 func NewEmbedder(model DualEncoder) *Embedder {
-	return &Embedder{model: model}
+	return &Embedder{
+		model:   model,
+		timeout: embeddingTimeout,
+	}
 }
 
 // EncodeQuery encodes the beginning of the text and the ending.
 func (e *Embedder) EncodeQuery(ctx context.Context, text string) ([]float32, error) {
-	ctx, cancel := context.WithTimeout(ctx, embeddingTimeout)
+	ctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
 
 	log.FromCtx(ctx).Debug().
@@ -51,7 +55,7 @@ func (e *Embedder) EncodePassage(ctx context.Context, text string) ([][]float32,
 
 	embeddings := make([][]float32, 0, len(chunks))
 	for _, chunk := range chunks {
-		ctx, cancel := context.WithTimeout(ctx, embeddingTimeout)
+		ctx, cancel := context.WithTimeout(ctx, e.timeout)
 		emb, err := e.model.EncodePassage(ctx, chunk.Text)
 		cancel()
 
