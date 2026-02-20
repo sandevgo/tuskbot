@@ -50,12 +50,6 @@ const manageMcpSchema = `
 
 var _ core.MCPServer = (*Manager)(nil)
 
-var (
-	ConnectTimeout  = 30 * time.Second
-	ToolListTimeout = 5 * time.Second
-	ToolCallTimeout = 2 * time.Minute
-)
-
 type Timeouts struct {
 	Connect  time.Duration
 	ToolList time.Duration
