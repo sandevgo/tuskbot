@@ -9,13 +9,20 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-type Transport interface {
-	Connect(ctx context.Context, cfg ServerConfig) (*client.Client, error)
+type Transport = func(ctx context.Context, cfg ServerConfig) (*client.Client, error)
+
+func NewTransport(t TransportType) (Transport, error) {
+	switch t {
+	case TransportStdio:
+		return StdioTransport, nil
+	case TransportHTTP:
+		return nil, fmt.Errorf("not implemented yet")
+	}
+
+	return nil, fmt.Errorf("unsupported transport type: %s", t)
 }
 
-type StdioTransport struct{}
-
-func (t *StdioTransport) Connect(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+func StdioTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
 	var env []string
 	for k, v := range cfg.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
