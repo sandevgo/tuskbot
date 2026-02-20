@@ -12,7 +12,7 @@ import (
 )
 
 func TestLlamaEmbedder(t *testing.T) {
-	llamacpp.SetDefaultLogger()
+	// llamacpp.SetDefaultLogger()
 
 	modelPath := test.GetEmbedModelPath(t)
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
