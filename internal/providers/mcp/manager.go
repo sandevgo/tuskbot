@@ -48,6 +48,20 @@ const manageMcpSchema = `
 }
 `
 
+const (
+	actionAdd    = "add"
+	actionRemove = "remove"
+	actionReload = "reload"
+)
+
+type managementInput struct {
+	Action     string            `json:"action"`
+	ServerName string            `json:"server_name"`
+	Command    string            `json:"command"`
+	Args       []string          `json:"args"`
+	Env        map[string]string `json:"env"`
+}
+
 var _ core.MCPServer = (*Manager)(nil)
 
 type Timeouts struct {
@@ -297,95 +311,98 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 }
 
 func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, error) {
-	var input struct {
-		Action     string            `json:"action"`
-		ServerName string            `json:"server_name"`
-		Command    string            `json:"command"`
-		Args       []string          `json:"args"`
-		Env        map[string]string `json:"env"`
-	}
+	var input managementInput
 	if err := json.Unmarshal(args, &input); err != nil {
 		return "", fmt.Errorf("invalid arguments: %w", err)
 	}
 
 	switch input.Action {
-	case "add":
-		if input.Command == "" {
-			return "", fmt.Errorf("command is required for add action")
-		}
-
-		cleanEnv := make(map[string]string)
-		for k, v := range input.Env {
-			cleanKey := strings.Trim(k, "\"'")
-			cleanEnv[cleanKey] = v
-		}
-
-		newCfg := ServerConfig{
-			Command: input.Command,
-			Args:    input.Args,
-			Env:     cleanEnv,
-		}
-
-		// 1. Add to Pool (Handles connection and verification)
-		connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
-		defer cancel()
-
-		if _, err := m.pool.Add(connectCtx, input.ServerName, newCfg); err != nil {
-			return "", fmt.Errorf("failed to connect to new server: %w", err)
-		}
-
-		// 2. Update MCPConfig
-		m.mu.Lock()
-		m.config.MCPServers[input.ServerName] = newCfg
-		m.mu.Unlock()
-
-		m.cache.Invalidate()
-
-		if err := m.storage.Save(ctx, &m.config); err != nil {
-			return "", fmt.Errorf("server started but config save failed: %w", err)
-		}
-		return fmt.Sprintf("Server %s added and started", input.ServerName), nil
-
-	case "remove":
-		// 1. Remove from Pool
-		if err := m.pool.Remove(input.ServerName); err != nil {
-			log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
-		}
-
-		// 2. Update MCPConfig
-		m.mu.Lock()
-		delete(m.config.MCPServers, input.ServerName)
-		m.mu.Unlock()
-
-		m.cache.Invalidate()
-
-		if err := m.storage.Save(ctx, &m.config); err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("Server %s removed", input.ServerName), nil
-
-	case "reload":
-		m.mu.RLock()
-		srvCfg, exists := m.config.MCPServers[input.ServerName]
-		m.mu.RUnlock()
-
-		if !exists {
-			return "", fmt.Errorf("server %s not found in config", input.ServerName)
-		}
-
-		// Pool.Add handles closing the old connection if it exists
-		connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
-		defer cancel()
-
-		if _, err := m.pool.Add(connectCtx, input.ServerName, srvCfg); err != nil {
-			return "", fmt.Errorf("failed to reload server: %w", err)
-		}
-
-		m.cache.Invalidate()
-
-		return fmt.Sprintf("Server %s reloaded", input.ServerName), nil
-
+	case actionAdd:
+		return m.handleAdd(ctx, input)
+	case actionRemove:
+		return m.handleRemove(ctx, input)
+	case actionReload:
+		return m.handleReload(ctx, input)
 	default:
 		return "", fmt.Errorf("unknown action: %s", input.Action)
 	}
+}
+
+func (m *Manager) handleAdd(ctx context.Context, input managementInput) (string, error) {
+	if input.Command == "" {
+		return "", fmt.Errorf("command is required for add action")
+	}
+
+	cleanEnv := make(map[string]string)
+	for k, v := range input.Env {
+		cleanKey := strings.Trim(k, "\"'")
+		cleanEnv[cleanKey] = v
+	}
+
+	newCfg := ServerConfig{
+		Command: input.Command,
+		Args:    input.Args,
+		Env:     cleanEnv,
+	}
+
+	// 1. Add to Pool (Handles connection and verification)
+	connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
+	defer cancel()
+
+	if _, err := m.pool.Add(connectCtx, input.ServerName, newCfg); err != nil {
+		return "", fmt.Errorf("failed to connect to new server: %w", err)
+	}
+
+	// 2. Update MCPConfig
+	m.mu.Lock()
+	m.config.MCPServers[input.ServerName] = newCfg
+	m.mu.Unlock()
+
+	m.cache.Invalidate()
+
+	if err := m.storage.Save(ctx, &m.config); err != nil {
+		return "", fmt.Errorf("server started but config save failed: %w", err)
+	}
+	return fmt.Sprintf("Server %s added and started", input.ServerName), nil
+}
+
+func (m *Manager) handleRemove(ctx context.Context, input managementInput) (string, error) {
+	// 1. Remove from Pool
+	if err := m.pool.Remove(input.ServerName); err != nil {
+		log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
+	}
+
+	// 2. Update MCPConfig
+	m.mu.Lock()
+	delete(m.config.MCPServers, input.ServerName)
+	m.mu.Unlock()
+
+	m.cache.Invalidate()
+
+	if err := m.storage.Save(ctx, &m.config); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("Server %s removed", input.ServerName), nil
+}
+
+func (m *Manager) handleReload(ctx context.Context, input managementInput) (string, error) {
+	m.mu.RLock()
+	srvCfg, exists := m.config.MCPServers[input.ServerName]
+	m.mu.RUnlock()
+
+	if !exists {
+		return "", fmt.Errorf("server %s not found in config", input.ServerName)
+	}
+
+	// Pool.Add handles closing the old connection if it exists
+	connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
+	defer cancel()
+
+	if _, err := m.pool.Add(connectCtx, input.ServerName, srvCfg); err != nil {
+		return "", fmt.Errorf("failed to reload server: %w", err)
+	}
+
+	m.cache.Invalidate()
+
+	return fmt.Sprintf("Server %s reloaded", input.ServerName), nil
 }
