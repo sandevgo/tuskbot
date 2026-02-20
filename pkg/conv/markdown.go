@@ -21,12 +21,12 @@ func init() {
 }
 
 func MarkdownToTelegramHTML(md []byte) string {
-	// 1. Render HTML
+	// Render HTML
 	p := parser.NewWithExtensions(extensions)
 	renderer := html.NewRenderer(html.RendererOptions{Flags: htmlFlags})
 	unsafeHTML := markdown.Render(p.Parse(md), renderer)
 
-	// 2. Sanitize tags
+	// Sanitize tags
 	sanitized := tgPolicy.SanitizeBytes(unsafeHTML)
 
 	return string(sanitized)
