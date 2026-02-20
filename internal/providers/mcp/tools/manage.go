@@ -1,11 +1,13 @@
-package mcp
+package tools
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -46,9 +48,10 @@ const manageMcpSchema = `
 `
 
 const (
-	actionAdd    = "add"
-	actionRemove = "remove"
-	actionReload = "reload"
+	actionAdd      = "add"
+	actionRemove   = "remove"
+	actionReload   = "reload"
+	connectTimeout = 30 * time.Second
 )
 
 type managementInput struct {
@@ -61,23 +64,22 @@ type managementInput struct {
 }
 
 type ManageTool struct {
-	registry *Registry
-	pool     ConnectionPool
-	cache    *ToolCache
-	timeouts *Timeouts
+	registry *mcp.Registry
+	pool     mcp.ConnectionPool
+	cache    *mcp.ToolCache
+	timeout  time.Duration
 }
 
 func NewManageTool(
-	registry *Registry,
-	pool ConnectionPool,
-	cache *ToolCache,
-	timeouts *Timeouts,
+	registry *mcp.Registry,
+	pool mcp.ConnectionPool,
+	cache *mcp.ToolCache,
 ) *ManageTool {
 	return &ManageTool{
 		registry: registry,
 		pool:     pool,
 		cache:    cache,
-		timeouts: timeouts,
+		timeout:  connectTimeout,
 	}
 }
 
@@ -110,7 +112,7 @@ func (t *ManageTool) handleAdd(ctx context.Context, input managementInput) (stri
 		cleanEnv[cleanKey] = v
 	}
 
-	newCfg := ServerConfig{
+	newCfg := mcp.ServerConfig{
 		Command: input.Command,
 		Args:    input.Args,
 		Env:     cleanEnv,
@@ -118,7 +120,7 @@ func (t *ManageTool) handleAdd(ctx context.Context, input managementInput) (stri
 	}
 
 	// 1. Add to Pool (Handles connection and verification)
-	connectCtx, cancel := context.WithTimeout(ctx, t.timeouts.Connect)
+	connectCtx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
 
 	if _, err := t.pool.Add(connectCtx, input.ServerName, newCfg); err != nil {
@@ -158,7 +160,7 @@ func (t *ManageTool) handleReload(ctx context.Context, input managementInput) (s
 	}
 
 	// Pool.Add handles closing the old connection if it exists
-	connectCtx, cancel := context.WithTimeout(ctx, t.timeouts.Connect)
+	connectCtx, cancel := context.WithTimeout(ctx, t.timeout)
 	defer cancel()
 
 	if _, err := t.pool.Add(connectCtx, input.ServerName, srvCfg); err != nil {
@@ -168,4 +170,18 @@ func (t *ManageTool) handleReload(ctx context.Context, input managementInput) (s
 	t.cache.Invalidate()
 
 	return fmt.Sprintf("Server %s reloaded", input.ServerName), nil
+}
+
+func (t *ManageTool) GetDefinitions() map[string]struct {
+	Description string
+	Schema      string
+	Handler     func(context.Context, json.RawMessage) (string, error)
+} {
+	return map[string]struct {
+		Description string
+		Schema      string
+		Handler     func(context.Context, json.RawMessage) (string, error)
+	}{
+		"manage_mcp": {"Manage MCP servers (add, remove, reload)", manageMcpSchema, t.ManageMCP},
+	}
 }

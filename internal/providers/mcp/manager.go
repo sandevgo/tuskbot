@@ -16,18 +16,9 @@ type NativeHandler func(ctx context.Context, args json.RawMessage) (string, erro
 
 var _ core.MCPServer = (*Manager)(nil)
 
-type ConnectionPool interface {
-	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
-	Get(name string) (*ManagedClient, bool)
-	Del(name string) error
-	All() map[string]*ManagedClient
-	Close() error
-}
-
 type Manager struct {
 	registry *Registry
 	pool     ConnectionPool
-	timeouts *Timeouts
 	cache    *ToolCache
 
 	// Native tools support
@@ -39,13 +30,11 @@ func NewManager(
 	ctx context.Context,
 	pool ConnectionPool,
 	registry *Registry,
-	timeouts *Timeouts,
 	cache *ToolCache,
 ) (*Manager, error) {
 	mgr := &Manager{
 		pool:           pool,
 		registry:       registry,
-		timeouts:       timeouts,
 		cache:          cache,
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
