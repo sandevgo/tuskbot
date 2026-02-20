@@ -113,10 +113,11 @@ func initStorage(ctx context.Context, cfg *config.AppConfig) (*sql.DB, core.Mess
 	return db, sqlite.NewMessagesRepo(db), nil
 }
 
-func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
+func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	filStorage := mcp.NewFileStorage(cfg.GetMCPConfigPath())
-	mgr, err := mcp.NewManager(
+	mgr, err := mcp.NewService(
 		ctx,
+		cfg.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
 		mcp.NewToolCache(),

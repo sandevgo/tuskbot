@@ -29,9 +29,9 @@ func NewDefaultTimeouts() *Timeouts {
 // NativeHandler defines a function signature for internal tools
 type NativeHandler func(ctx context.Context, args json.RawMessage) (string, error)
 
-var _ core.MCPServer = (*Manager)(nil)
+var _ core.MCPServer = (*Service)(nil)
 
-type Manager struct {
+type Service struct {
 	registry *Registry
 	pool     ConnectionPool
 	cache    *ToolCache
@@ -42,16 +42,16 @@ type Manager struct {
 	nativeToolDefs []core.Tool
 }
 
-func NewManager(
+func NewService(
 	ctx context.Context,
 	runtimePath string,
 	pool ConnectionPool,
 	registry *Registry,
 	cache *ToolCache,
-) (*Manager, error) {
+) (*Service, error) {
 	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath, registry, pool, cache)
 
-	mgr := &Manager{
+	mgr := &Service{
 		pool:           pool,
 		registry:       registry,
 		cache:          cache,
@@ -68,25 +68,25 @@ func NewManager(
 	return mgr, nil
 }
 
-func (m *Manager) Start(ctx context.Context) error {
-	servers := m.registry.List()
+func (s *Service) Start(ctx context.Context) error {
+	servers := s.registry.List()
 
 	// Start servers in parallel background goroutines
 	for name, srv := range servers {
-		go func(n string, s ServerConfig) {
+		go func(n string, c ServerConfig) {
 			// Use a timeout derived from the parent context
-			connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
+			connectCtx, cancel := context.WithTimeout(ctx, s.timeouts.Connect)
 			defer cancel()
 
 			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
 			logger.Info().Msg("starting mcp server")
 
-			if _, err := m.pool.Add(connectCtx, n, s); err != nil {
+			if _, err := s.pool.Add(connectCtx, n, c); err != nil {
 				logger.Error().Err(err).Msg("failed to start mcp server")
 				return
 			}
 
-			m.cache.Invalidate()
+			s.cache.Invalidate()
 
 			logger.Info().Msg("mcp server connected")
 		}(name, srv)
@@ -95,21 +95,21 @@ func (m *Manager) Start(ctx context.Context) error {
 	return nil
 }
 
-func (m *Manager) Shutdown(ctx context.Context) error {
-	return m.pool.Close()
+func (s *Service) Shutdown(ctx context.Context) error {
+	return s.pool.Close()
 }
 
-func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
-	if tools, _, ok := m.cache.Get(); ok {
+func (s *Service) GetTools(ctx context.Context) ([]core.Tool, error) {
+	if tools, _, ok := s.cache.Get(); ok {
 		return tools, nil
 	}
 
 	// Start with native tools (already in memory)
-	allTools := make([]core.Tool, len(m.nativeToolDefs))
-	copy(allTools, m.nativeToolDefs)
+	allTools := make([]core.Tool, len(s.nativeToolDefs))
+	copy(allTools, s.nativeToolDefs)
 
 	// Fetch from external servers concurrently
-	serverTools, routing := m.fetchToolsFromServers(ctx)
+	serverTools, routing := s.fetchToolsFromServers(ctx)
 
 	// Aggregate
 	for _, tools := range serverTools {
@@ -117,19 +117,19 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 	}
 
 	// Update Cache
-	m.cache.Update(allTools, routing)
+	s.cache.Update(allTools, routing)
 
 	return allTools, nil
 }
 
-func (m *Manager) fetchToolsFromServers(ctx context.Context) (map[string][]core.Tool, map[string]string) {
+func (s *Service) fetchToolsFromServers(ctx context.Context) (map[string][]core.Tool, map[string]string) {
 	type toolResult struct {
 		serverName string
 		tools      []core.Tool
 		err        error
 	}
 
-	clients := m.pool.All()
+	clients := s.pool.All()
 	results := make(chan toolResult, len(clients))
 	var wg sync.WaitGroup
 
@@ -137,7 +137,7 @@ func (m *Manager) fetchToolsFromServers(ctx context.Context) (map[string][]core.
 		wg.Add(1)
 		go func(n string, c *ManagedClient) {
 			defer wg.Done()
-			tools, err := m.listToolsFromServer(ctx, n, c)
+			tools, err := s.listToolsFromServer(ctx, n, c)
 			results <- toolResult{serverName: n, tools: tools, err: err}
 		}(name, cli)
 	}
@@ -164,8 +164,8 @@ func (m *Manager) fetchToolsFromServers(ctx context.Context) (map[string][]core.
 	return serverTools, routing
 }
 
-func (m *Manager) listToolsFromServer(ctx context.Context, name string, cli *ManagedClient) ([]core.Tool, error) {
-	tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolList)
+func (s *Service) listToolsFromServer(ctx context.Context, name string, cli *ManagedClient) ([]core.Tool, error) {
+	tCtx, cancel := context.WithTimeout(ctx, s.timeouts.ToolList)
 	defer cancel()
 
 	resp, err := cli.ListTools(tCtx, mcpproto.ListToolsRequest{})
@@ -188,16 +188,16 @@ func (m *Manager) listToolsFromServer(ctx context.Context, name string, cli *Man
 	return tools, nil
 }
 
-func (m *Manager) CallTool(ctx context.Context, name string, args string) (string, error) {
+func (s *Service) CallTool(ctx context.Context, name string, args string) (string, error) {
 	log.FromCtx(ctx).Info().Str("tool", name).Str("args", args).Msg("executing tool")
 
 	// 1. Check Native Tools first
-	if handler, ok := m.nativeTools[name]; ok {
+	if handler, ok := s.nativeTools[name]; ok {
 		return handler(ctx, json.RawMessage(args))
 	}
 
 	// 2. Resolve Server
-	_, routing, _ := m.cache.Get()
+	_, routing, _ := s.cache.Get()
 	serverName, ok := routing[name]
 
 	if !ok {
@@ -205,7 +205,7 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	// 3. Get Client from Pool
-	cli, ok := m.pool.Get(serverName)
+	cli, ok := s.pool.Get(serverName)
 	if !ok {
 		return "", fmt.Errorf("server %s is not available", serverName)
 	}
@@ -221,7 +221,7 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	req.Params.Arguments = argsMap
 
 	// Set a reasonable timeout for tool execution
-	tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolCall)
+	tCtx, cancel := context.WithTimeout(ctx, s.timeouts.ToolCall)
 	defer cancel()
 
 	res, err := cli.CallTool(tCtx, req)
