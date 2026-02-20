@@ -118,6 +118,7 @@ func TestEmbedder_EncodeQuery(t *testing.T) {
 			embedder := &Embedder{
 				model:   mock,
 				timeout: tt.timeout,
+				chunkConf: E5BaseChunkerConfig(),
 			}
 
 			ctx := context.Background()
@@ -151,7 +152,6 @@ func TestEmbedder_EncodeQuery(t *testing.T) {
 				}
 			}
 
-			// Verify the text was passed to the mock
 			if len(mock.queryCalls) != 1 || mock.queryCalls[0] != tt.text {
 				t.Errorf("EncodeQuery() did not call model with correct text, got calls: %v", mock.queryCalls)
 			}
@@ -164,18 +164,19 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 		name          string
 		text          string
 		timeout       time.Duration
+		chunkConf     ChunkerConfig
 		mockSetup     func(*mockDualEncoder)
 		wantChunks    int
 		wantErr       bool
 		errContains   string
-		errIndexCheck bool // if true, verify error contains chunk index
+		errIndexCheck bool
 	}{
 		{
-			name:    "empty text returns empty embeddings",
-			text:    "",
-			timeout: 5 * time.Second,
+			name:      "empty text returns empty embeddings",
+			text:      "",
+			timeout:   5 * time.Second,
+			chunkConf: E5BaseChunkerConfig(),
 			mockSetup: func(m *mockDualEncoder) {
-				// Should not be called for empty text
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
 					return nil, errors.New("should not be called")
 				}
@@ -184,9 +185,10 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:    "short text produces single chunk",
-			text:    "Short text.",
-			timeout: 5 * time.Second,
+			name:      "short text produces single chunk",
+			text:      "Short text.",
+			timeout:     5 * time.Second,
+			chunkConf:   E5BaseChunkerConfig(),
 			mockSetup: func(m *mockDualEncoder) {
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
 					return []float32{0.1, 0.2}, nil
@@ -196,13 +198,13 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name: "long text produces multiple chunks",
-			text: "This is a long text that should be split into multiple chunks because it exceeds the token limit for a single chunk. " +
-				"We need to make sure it is long enough to trigger the chunking logic in the system. " +
-				"Adding more sentences here to ensure we hit the threshold. " +
-				"Another sentence here for good measure. " +
-				"And yet another one to be absolutely sure we have enough content.",
+			name:    "long text produces multiple chunks",
+			text:    "First chunk of text. Second chunk of text here.",
 			timeout: 5 * time.Second,
+			chunkConf: ChunkerConfig{
+				MaxTokens:     10,
+				OverlapTokens: 2,
+			},
 			mockSetup: func(m *mockDualEncoder) {
 				callCount := 0
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
@@ -210,13 +212,17 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 					return []float32{float32(callCount)}, nil
 				}
 			},
-			wantChunks: 2, // Based on E5BaseChunkerConfig with 400 max tokens
+			wantChunks: 2,
 			wantErr:    false,
 		},
 		{
 			name:    "returns error on chunk failure",
-			text:    "First chunk. Second chunk here that is longer and should fail.",
+			text:    "First chunk. Second chunk here.",
 			timeout: 5 * time.Second,
+			chunkConf: ChunkerConfig{
+				MaxTokens:     10,
+				OverlapTokens: 2,
+			},
 			mockSetup: func(m *mockDualEncoder) {
 				callCount := 0
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
@@ -234,8 +240,12 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 		},
 		{
 			name:    "timeout during chunk processing",
-			text:    "First sentence. Second sentence that takes too long to process.",
+			text:    "First sentence. Second sentence.",
 			timeout: 50 * time.Millisecond,
+			chunkConf: ChunkerConfig{
+				MaxTokens:     10,
+				OverlapTokens: 2,
+			},
 			mockSetup: func(m *mockDualEncoder) {
 				callCount := 0
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
@@ -265,8 +275,9 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 			}
 
 			embedder := &Embedder{
-				model:   mock,
-				timeout: tt.timeout,
+				model:     mock,
+				timeout:   tt.timeout,
+				chunkConf: tt.chunkConf,
 			}
 
 			ctx := context.Background()
@@ -280,11 +291,8 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 				if tt.errContains != "" && !strings.Contains(err.Error(), tt.errContains) {
 					t.Errorf("EncodePassage() error = %v, should contain %v", err, tt.errContains)
 				}
-				if tt.errIndexCheck && tt.name == "returns error on chunk failure" {
-					// Verify error mentions chunk index 1 (second chunk, 0-indexed)
-					if !strings.Contains(err.Error(), "chunk 1") {
-						t.Errorf("EncodePassage() error should contain chunk index, got: %v", err)
-					}
+				if tt.errIndexCheck && !strings.Contains(err.Error(), "chunk 1") {
+					t.Errorf("EncodePassage() error should contain chunk index, got: %v", err)
 				}
 				return
 			}
@@ -298,7 +306,6 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 				t.Errorf("EncodePassage() got %d chunks, want %d", len(got), tt.wantChunks)
 			}
 
-			// Verify all chunks were embedded
 			if len(mock.passageCalls) != tt.wantChunks {
 				t.Errorf("EncodePassage() called model %d times, want %d", len(mock.passageCalls), tt.wantChunks)
 			}
@@ -309,13 +316,11 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 func TestEmbedder_EncodeQuery_CallsModelWithCorrectContext(t *testing.T) {
 	mock := &mockDualEncoder{
 		encodeQueryFunc: func(ctx context.Context, text string) ([]float32, error) {
-			// Verify context has deadline
 			deadline, ok := ctx.Deadline()
 			if !ok {
 				t.Error("Expected context to have deadline")
 			}
 
-			// Verify deadline is approximately timeout duration from now
 			expectedDeadline := time.Now().Add(100 * time.Millisecond)
 			if deadline.After(expectedDeadline.Add(10*time.Millisecond)) || deadline.Before(expectedDeadline.Add(-10*time.Millisecond)) {
 				t.Errorf("Deadline %v not within expected range of %v", deadline, expectedDeadline)
@@ -326,8 +331,9 @@ func TestEmbedder_EncodeQuery_CallsModelWithCorrectContext(t *testing.T) {
 	}
 
 	embedder := &Embedder{
-		model:   mock,
-		timeout: 100 * time.Millisecond,
+		model:     mock,
+		timeout:   100 * time.Millisecond,
+		chunkConf: E5BaseChunkerConfig(),
 	}
 
 	ctx := context.Background()
