@@ -205,6 +205,10 @@ func (fs *Filesystem) SearchFiles(ctx context.Context, args json.RawMessage) (st
 
 	// Walk the directory
 	err := filepath.WalkDir(searchPath, func(path string, d os.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		if err != nil {
 			return nil // Skip errors accessing files
 		}
