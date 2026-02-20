@@ -6,21 +6,16 @@ import (
 	"testing"
 )
 
-// TODO: download https://huggingface.co/LLukas22/all-MiniLM-L6-v2-GGUF/resolve/main/all-minilm-l6-v2_q8_0.gguf
 func TestLlamaEmbedder(t *testing.T) {
 	// Suppress llama.cpp logs for cleaner test output
 	//SetSilentLogger()
 
 	// 1. Determine model path
-	modelPath := os.Getenv("TUSKBOT_TEST_MODEL")
+	modelPath := "../../test/models/stsb-bert-tiny.i1-Q6_K.gguf"
 
 	// 2. Check if model exists
-	if modelPath == "" {
-		t.Skip("Skipping TestLlamaEmbedder: no model found. Set TUSKBOT_TEST_MODEL env var.")
-		return
-	}
 	if _, err := os.Stat(modelPath); os.IsNotExist(err) {
-		t.Skipf("Skipping TestLlamaEmbedder: model not found at %s", modelPath)
+		t.Fatalf("Skipping TestLlamaEmbedder: model not found at %s", modelPath)
 		return
 	}
 
