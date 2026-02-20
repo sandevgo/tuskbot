@@ -5,7 +5,7 @@ import "context"
 type TransportType string
 
 const (
-	TransportHTTP  TransportType = "http" // Future support
+	TransportHTTP  TransportType = "http"
 	TransportStdio TransportType = "stdio"
 )
 

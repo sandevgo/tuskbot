@@ -15,7 +15,7 @@ type Transport interface {
 
 type StdioTransport struct{}
 
-func (t *StdioTransport) Connect(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error) {
+func (t *StdioTransport) Connect(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
 	var env []string
 	for k, v := range cfg.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
@@ -43,8 +43,5 @@ func (t *StdioTransport) Connect(ctx context.Context, name string, cfg ServerCon
 		return nil, fmt.Errorf("failed to initialize client: %w", err)
 	}
 
-	return &ManagedClient{
-		Client: cli,
-		name:   name,
-	}, nil
+	return cli, nil
 }
