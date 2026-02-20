@@ -402,3 +402,11 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		return "", fmt.Errorf("unknown action: %s", input.Action)
 	}
 }
+
+func (m *Manager) invalidateCache() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.cacheValid = false
+	m.cachedTools = nil
+	m.toolToServer = make(map[string]string)
+}
