@@ -100,28 +100,36 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 }
 
 func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
-	// 1. Check Cache
-	if tools, _, _, ok := m.cache.Get(); ok {
+	if tools, _, ok := m.cache.Get(); ok {
 		return tools, nil
 	}
 
-	// --- Cache Miss: Fetch from Servers ---
+	// Start with native tools (already in memory)
+	allTools := make([]core.Tool, len(m.nativeToolDefs))
+	copy(allTools, m.nativeToolDefs)
 
-	// Start with native tools
-	var allTools []core.Tool
-	for _, t := range m.nativeToolDefs {
-		allTools = append(allTools, t)
+	// Fetch from external servers concurrently
+	serverTools, routing := m.fetchToolsFromServers(ctx)
+
+	// Aggregate
+	for _, tools := range serverTools {
+		allTools = append(allTools, tools...)
 	}
 
-	// Get all active clients from pool
-	clients := m.pool.All()
+	// Update Cache
+	m.cache.Update(allTools, routing)
 
-	// Prepare for parallel fetching
+	return allTools, nil
+}
+
+func (m *Manager) fetchToolsFromServers(ctx context.Context) (map[string][]core.Tool, map[string]string) {
 	type toolResult struct {
 		serverName string
-		tools      []mcpproto.Tool
+		tools      []core.Tool
 		err        error
 	}
+
+	clients := m.pool.All()
 	results := make(chan toolResult, len(clients))
 	var wg sync.WaitGroup
 
@@ -129,53 +137,55 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		wg.Add(1)
 		go func(n string, c *ManagedClient) {
 			defer wg.Done()
-			tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolList)
-			defer cancel()
-
-			resp, err := c.ListTools(tCtx, mcpproto.ListToolsRequest{})
-			if err != nil {
-				results <- toolResult{serverName: n, err: err}
-				return
-			}
-			results <- toolResult{serverName: n, tools: resp.Tools}
+			tools, err := m.listToolsFromServer(ctx, n, c)
+			results <- toolResult{serverName: n, tools: tools, err: err}
 		}(name, cli)
 	}
 
-	wg.Wait()
-	close(results)
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
 
-	// Aggregate results
-	newToolToServer := make(map[string]string)
+	serverTools := make(map[string][]core.Tool)
+	routing := make(map[string]string)
 
 	for res := range results {
 		if res.err != nil {
 			log.FromCtx(ctx).Error().Err(res.err).Str("server", res.serverName).Msg("failed to list tools")
 			continue
 		}
-
+		serverTools[res.serverName] = res.tools
 		for _, t := range res.tools {
-			// example: "filesystem.read_file"
-			qualifiedName := fmt.Sprintf("%s.%s", res.serverName, t.Name)
-
-			// Map tool name to server name for routing
-			newToolToServer[qualifiedName] = res.serverName
-
-			schemaBytes, _ := json.Marshal(t.InputSchema)
-			allTools = append(allTools, core.Tool{
-				Type: "function",
-				Function: core.Function{
-					Name:        qualifiedName,
-					Description: t.Description,
-					Parameters:  schemaBytes,
-				},
-			})
+			routing[t.Function.Name] = res.serverName
 		}
 	}
 
-	// Update Cache
-	m.cache.Update(allTools, newToolToServer)
+	return serverTools, routing
+}
 
-	return allTools, nil
+func (m *Manager) listToolsFromServer(ctx context.Context, name string, cli *ManagedClient) ([]core.Tool, error) {
+	tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolList)
+	defer cancel()
+
+	resp, err := cli.ListTools(tCtx, mcpproto.ListToolsRequest{})
+	if err != nil {
+		return nil, err
+	}
+
+	tools := make([]core.Tool, 0, len(resp.Tools))
+	for _, t := range resp.Tools {
+		schemaBytes, _ := json.Marshal(t.InputSchema)
+		tools = append(tools, core.Tool{
+			Type: "function",
+			Function: core.Function{
+				Name:        fmt.Sprintf("%s.%s", name, t.Name),
+				Description: t.Description,
+				Parameters:  schemaBytes,
+			},
+		})
+	}
+	return tools, nil
 }
 
 func (m *Manager) CallTool(ctx context.Context, name string, args string) (string, error) {
@@ -187,7 +197,7 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	// 2. Resolve Server
-	_, routing, _, _ := m.cache.Get()
+	_, routing, _ := m.cache.Get()
 	serverName, ok := routing[name]
 
 	if !ok {
