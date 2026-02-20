@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TODO: download https://huggingface.co/LLukas22/all-MiniLM-L6-v2-GGUF/resolve/main/all-minilm-l6-v2_q8_0.gguf
 func TestLlamaEmbedder(t *testing.T) {
 	// Suppress llama.cpp logs for cleaner test output
 	//SetSilentLogger()
