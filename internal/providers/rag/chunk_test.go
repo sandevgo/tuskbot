@@ -206,7 +206,7 @@ func TestCornerCases(t *testing.T) {
 			expectedChunks: []string{
 				"Mr. Smith met Dr. Jones at the U.S.A. embassy.",
 			},
-			expectFailure: true,
+			expectFailure: false,
 		},
 		{
 			name: "Overlap within a single long sentence",
