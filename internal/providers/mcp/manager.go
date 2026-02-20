@@ -83,9 +83,17 @@ func NewDefaultTimeouts() *Timeouts {
 	}
 }
 
+type ConnectionPool interface {
+	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
+	Get(name string) (*ManagedClient, bool)
+	Del(name string) error
+	All() map[string]*ManagedClient
+	Close() error
+}
+
 type Manager struct {
 	registry *Registry
-	pool     *Pool
+	pool     ConnectionPool
 	timeouts *Timeouts
 	cache    *ToolCache
 
@@ -96,7 +104,7 @@ type Manager struct {
 
 func NewManager(
 	ctx context.Context,
-	pool *Pool,
+	pool ConnectionPool,
 	registry *Registry,
 	timeouts *Timeouts,
 	cache *ToolCache,
@@ -361,7 +369,7 @@ func (m *Manager) handleAdd(ctx context.Context, input managementInput) (string,
 
 func (m *Manager) handleRemove(ctx context.Context, input managementInput) (string, error) {
 	// 1. Remove from Pool
-	if err := m.pool.Remove(input.ServerName); err != nil {
+	if err := m.pool.Del(input.ServerName); err != nil {
 		log.FromCtx(ctx).Warn().Err(err).Str("server", input.ServerName).Msg("error closing server during removal")
 	}
 

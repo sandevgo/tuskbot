@@ -6,14 +6,6 @@ import (
 	"sync"
 )
 
-type ConnectionPool interface {
-	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
-	Get(name string) (*ManagedClient, bool)
-	Del(name string) error
-	All() map[string]*ManagedClient
-	Close() error
-}
-
 type Pool struct {
 	mu      sync.RWMutex
 	clients map[string]*ManagedClient
