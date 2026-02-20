@@ -71,12 +71,7 @@ type Manager struct {
 	timeouts *Timeouts
 	cache    *ToolCache
 
-	mu           sync.RWMutex
-	toolToServer map[string]string // Maps tool name -> server name
-
-	// Caching
-	cachedTools []core.Tool
-	cacheValid  bool
+	mu sync.RWMutex
 
 	// Native tools support
 	nativeTools    map[string]NativeHandler
