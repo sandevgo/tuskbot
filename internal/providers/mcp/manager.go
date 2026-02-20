@@ -148,9 +148,7 @@ func (m *Manager) Start(ctx context.Context) error {
 				return
 			}
 
-			m.mu.Lock()
-			m.cacheValid = false
-			m.mu.Unlock()
+			m.cache.Invalidate()
 
 			logger.Info().Msg("mcp server connected")
 		}(name, srv)
@@ -165,13 +163,9 @@ func (m *Manager) Shutdown(ctx context.Context) error {
 
 func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 	// 1. Check Cache
-	m.mu.RLock()
-	if m.cacheValid {
-		tools := m.cachedTools
-		m.mu.RUnlock()
+	if tools, _, _, ok := m.cache.Get(); ok {
 		return tools, nil
 	}
-	m.mu.RUnlock()
 
 	// --- Cache Miss: Fetch from Servers ---
 
@@ -241,11 +235,7 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 	}
 
 	// Update Cache
-	m.mu.Lock()
-	m.cachedTools = allTools
-	m.toolToServer = newToolToServer
-	m.cacheValid = true
-	m.mu.Unlock()
+	m.cache.Update(allTools, newToolToServer)
 
 	return allTools, nil
 }
@@ -259,9 +249,8 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	// 2. Resolve Server
-	m.mu.RLock()
-	serverName, ok := m.toolToServer[name]
-	m.mu.RUnlock()
+	_, routing, _, _ := m.cache.Get()
+	serverName, ok := routing[name]
 
 	if !ok {
 		return "", fmt.Errorf("tool not found: %s", name)
@@ -348,8 +337,9 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		// 2. Update MCPConfig
 		m.mu.Lock()
 		m.config.MCPServers[input.ServerName] = newCfg
-		m.cacheValid = false
 		m.mu.Unlock()
+
+		m.cache.Invalidate()
 
 		if err := m.storage.Save(ctx, &m.config); err != nil {
 			return "", fmt.Errorf("server started but config save failed: %w", err)
@@ -365,8 +355,9 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 		// 2. Update MCPConfig
 		m.mu.Lock()
 		delete(m.config.MCPServers, input.ServerName)
-		m.cacheValid = false
 		m.mu.Unlock()
+
+		m.cache.Invalidate()
 
 		if err := m.storage.Save(ctx, &m.config); err != nil {
 			return "", err
@@ -390,21 +381,11 @@ func (m *Manager) ManageMCP(ctx context.Context, args json.RawMessage) (string, 
 			return "", fmt.Errorf("failed to reload server: %w", err)
 		}
 
-		m.mu.Lock()
-		m.cacheValid = false
-		m.mu.Unlock()
+		m.cache.Invalidate()
 
 		return fmt.Sprintf("Server %s reloaded", input.ServerName), nil
 
 	default:
 		return "", fmt.Errorf("unknown action: %s", input.Action)
 	}
-}
-
-func (m *Manager) invalidateCache() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.cacheValid = false
-	m.cachedTools = nil
-	m.toolToServer = make(map[string]string)
 }
