@@ -41,5 +41,4 @@ type StoredKnowledge struct {
 	Embedding []float32  `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
-	FactHash  string     `json:"fact_hash"`
 }

@@ -32,8 +32,8 @@ func (r *KnowledgeRepo) SaveFact(ctx context.Context, fact core.StoredKnowledge)
 
 	// 1. Insert Metadata
 	res, err := tx.ExecContext(ctx,
-		`INSERT INTO knowledge (fact, category, source, fact_hash) VALUES (?, ?, ?, ?)`,
-		fact.Fact, fact.Category, fact.Source, fact.FactHash,
+		`INSERT INTO knowledge (fact, category, source) VALUES (?, ?, ?)`,
+		fact.Fact, fact.Category, fact.Source,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to insert knowledge metadata: %w", err)
