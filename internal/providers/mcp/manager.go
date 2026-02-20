@@ -5,11 +5,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	mcpproto "github.com/mark3labs/mcp-go/mcp"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
+
+type Timeouts struct {
+	Connect  time.Duration
+	ToolList time.Duration
+	ToolCall time.Duration
+}
+
+func NewDefaultTimeouts() *Timeouts {
+	return &Timeouts{
+		Connect:  30 * time.Second,
+		ToolList: 5 * time.Second,
+		ToolCall: 2 * time.Minute,
+	}
+}
 
 // NativeHandler defines a function signature for internal tools
 type NativeHandler func(ctx context.Context, args json.RawMessage) (string, error)
@@ -20,6 +35,7 @@ type Manager struct {
 	registry *Registry
 	pool     ConnectionPool
 	cache    *ToolCache
+	timeouts *Timeouts
 
 	// Native tools support
 	nativeTools    map[string]NativeHandler
@@ -28,16 +44,20 @@ type Manager struct {
 
 func NewManager(
 	ctx context.Context,
+	runtimePath string,
 	pool ConnectionPool,
 	registry *Registry,
 	cache *ToolCache,
 ) (*Manager, error) {
+	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath, registry, pool, cache)
+
 	mgr := &Manager{
 		pool:           pool,
 		registry:       registry,
 		cache:          cache,
-		nativeTools:    make(map[string]NativeHandler),
-		nativeToolDefs: make([]core.Tool, 0),
+		timeouts:       NewDefaultTimeouts(),
+		nativeTools:    nativeTools,
+		nativeToolDefs: nativeToolDefs,
 	}
 
 	// Load initial config
@@ -45,31 +65,7 @@ func NewManager(
 		return nil, err
 	}
 
-	// Initialize management tool
-	manageTool := NewManageTool(registry, pool, cache, timeouts)
-
-	// Register the manage_mcp tool
-	mgr.RegisterNativeTool(
-		"manage_mcp",
-		"Manage MCP servers (add, remove, reload)",
-		json.RawMessage(manageMcpSchema),
-		manageTool.ManageMCP,
-	)
-
 	return mgr, nil
-}
-
-// RegisterNativeTool allows adding hardcoded Go functions as tools
-func (m *Manager) RegisterNativeTool(name, description string, schema json.RawMessage, handler NativeHandler) {
-	m.nativeTools[name] = handler
-	m.nativeToolDefs = append(m.nativeToolDefs, core.Tool{
-		Type: "function",
-		Function: core.Function{
-			Name:        name,
-			Description: description,
-			Parameters:  schema,
-		},
-	})
 }
 
 func (m *Manager) Start(ctx context.Context) error {

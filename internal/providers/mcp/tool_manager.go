@@ -1,4 +1,4 @@
-package tools
+package mcp
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -64,16 +63,16 @@ type managementInput struct {
 }
 
 type ManageTool struct {
-	registry *mcp.Registry
-	pool     mcp.ConnectionPool
-	cache    *mcp.ToolCache
+	registry *Registry
+	pool     ConnectionPool
+	cache    *ToolCache
 	timeout  time.Duration
 }
 
 func NewManageTool(
-	registry *mcp.Registry,
-	pool mcp.ConnectionPool,
-	cache *mcp.ToolCache,
+	registry *Registry,
+	pool ConnectionPool,
+	cache *ToolCache,
 ) *ManageTool {
 	return &ManageTool{
 		registry: registry,
@@ -112,7 +111,7 @@ func (t *ManageTool) handleAdd(ctx context.Context, input managementInput) (stri
 		cleanEnv[cleanKey] = v
 	}
 
-	newCfg := mcp.ServerConfig{
+	newCfg := ServerConfig{
 		Command: input.Command,
 		Args:    input.Args,
 		Env:     cleanEnv,

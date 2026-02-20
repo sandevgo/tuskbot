@@ -1,11 +1,10 @@
-package tools
+package mcp
 
 import (
 	"context"
 	"encoding/json"
 
 	"github.com/sandevgo/tuskbot/internal/core"
-	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 )
 
 type tool interface {
@@ -18,11 +17,11 @@ type tool interface {
 
 func RegisterNativeTools(
 	runtimePath string,
-	registry *mcp.Registry,
-	pool mcp.ConnectionPool,
-	cache *mcp.ToolCache,
-) (map[string]mcp.NativeHandler, []core.Tool) {
-	handlers := make(map[string]mcp.NativeHandler)
+	registry *Registry,
+	pool ConnectionPool,
+	cache *ToolCache,
+) (map[string]NativeHandler, []core.Tool) {
+	handlers := make(map[string]NativeHandler)
 	var defs []core.Tool
 
 	register := func(t tool) {
