@@ -3,7 +3,6 @@ package llamacpp
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"testing"
 )
 
@@ -13,19 +12,6 @@ func TestLlamaEmbedder(t *testing.T) {
 
 	// 1. Determine model path
 	modelPath := os.Getenv("TUSKBOT_TEST_MODEL")
-	if modelPath == "" {
-		// Check default runtime location relative to this package
-		candidates := []string{
-			"/Users/sandevgo/.tuskbot/models/e5-base-v2-q8_0.gguf",
-		}
-		for _, p := range candidates {
-			if _, err := os.Stat(p); err == nil {
-				abs, _ := filepath.Abs(p)
-				modelPath = abs
-				break
-			}
-		}
-	}
 
 	// 2. Check if model exists
 	if modelPath == "" {
