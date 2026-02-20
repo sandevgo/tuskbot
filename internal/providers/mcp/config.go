@@ -28,18 +28,18 @@ type Storage interface {
 	Watch(ctx context.Context) (<-chan Config, error)
 }
 
-type FileConfig struct {
+type FileStorage struct {
 	path string
 	mu   sync.RWMutex
 }
 
-func NewFileConfig(path string) *FileConfig {
-	return &FileConfig{
+func NewFileStorage(path string) *FileStorage {
+	return &FileStorage{
 		path: path,
 	}
 }
 
-func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
+func (c *FileStorage) Load(ctx context.Context) (*Config, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -68,7 +68,7 @@ func (c *FileConfig) Load(ctx context.Context) (*Config, error) {
 	return config, nil
 }
 
-func (c *FileConfig) Save(ctx context.Context, cfg *Config) error {
+func (c *FileStorage) Save(ctx context.Context, cfg *Config) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -84,7 +84,7 @@ func (c *FileConfig) Save(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (c *FileConfig) Watch(ctx context.Context) (<-chan Config, error) {
+func (c *FileStorage) Watch(ctx context.Context) (<-chan Config, error) {
 	updates := make(chan Config)
 
 	info, err := os.Stat(c.path)

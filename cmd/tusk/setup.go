@@ -119,7 +119,7 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Manager, error) {
 	mgr, err := mcp.NewManager(
 		ctx,
 		mcp.NewStdioConnectionPool(),
-		mcp.NewFileConfig(cfg.GetMCPConfigPath()),
+		mcp.NewFileStorage(cfg.GetMCPConfigPath()),
 	)
 	if err != nil {
 		return nil, err
