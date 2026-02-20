@@ -56,12 +56,15 @@ func NewManager(
 		return nil, err
 	}
 
+	// Initialize management tool
+	manageTool := NewManageTool(registry, pool, cache, timeouts)
+
 	// Register the manage_mcp tool
 	mgr.RegisterNativeTool(
 		"manage_mcp",
 		"Manage MCP servers (add, remove, reload)",
 		json.RawMessage(manageMcpSchema),
-		mgr.ManageMCP,
+		manageTool.ManageMCP,
 	)
 
 	return mgr, nil
