@@ -17,14 +17,16 @@ type DualEncoder interface {
 }
 
 type Embedder struct {
-	model   DualEncoder
-	timeout time.Duration
+	model     DualEncoder
+	timeout   time.Duration
+	chunkConf ChunkerConfig
 }
 
 func NewEmbedder(model DualEncoder) *Embedder {
 	return &Embedder{
-		model:   model,
-		timeout: embeddingTimeout,
+		model:     model,
+		timeout:   embeddingTimeout,
+		chunkConf: E5BaseChunkerConfig(),
 	}
 }
 
@@ -46,7 +48,7 @@ func (e *Embedder) EncodeQuery(ctx context.Context, text string) ([]float32, err
 }
 
 func (e *Embedder) EncodePassage(ctx context.Context, text string) ([][]float32, error) {
-	chunks := ChunkText(text, E5BaseChunkerConfig())
+	chunks := ChunkText(text, e.chunkConf)
 
 	log.FromCtx(ctx).Debug().
 		Int("chunks", len(chunks)).
