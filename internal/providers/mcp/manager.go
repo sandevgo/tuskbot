@@ -56,10 +56,25 @@ var (
 	ToolCallTimeout = 2 * time.Minute
 )
 
+type Timeouts struct {
+	Connect  time.Duration
+	ToolList time.Duration
+	ToolCall time.Duration
+}
+
+func NewDefaultTimeouts() *Timeouts {
+	return &Timeouts{
+		Connect:  30 * time.Second,
+		ToolList: 5 * time.Second,
+		ToolCall: 2 * time.Minute,
+	}
+}
+
 type Manager struct {
-	config  Config
-	storage Storage
-	pool    ConnectionPool
+	config   Config
+	storage  Storage
+	pool     ConnectionPool
+	timeouts *Timeouts
 
 	mu           sync.RWMutex
 	toolToServer map[string]string // Maps tool name -> server name
@@ -77,10 +92,12 @@ func NewManager(
 	ctx context.Context,
 	pool ConnectionPool,
 	storage Storage,
+	timeouts *Timeouts,
 ) (*Manager, error) {
 	mgr := &Manager{
 		pool:           pool,
 		storage:        storage,
+		timeouts:       timeouts,
 		nativeTools:    make(map[string]NativeHandler),
 		nativeToolDefs: make([]core.Tool, 0),
 	}
@@ -128,7 +145,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	for name, srv := range servers {
 		go func(n string, s ServerConfig) {
 			// Use a timeout derived from the parent context
-			connectCtx, cancel := context.WithTimeout(ctx, ConnectTimeout)
+			connectCtx, cancel := context.WithTimeout(ctx, m.timeouts.Connect)
 			defer cancel()
 
 			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
@@ -188,7 +205,7 @@ func (m *Manager) GetTools(ctx context.Context) ([]core.Tool, error) {
 		wg.Add(1)
 		go func(n string, c *ManagedClient) {
 			defer wg.Done()
-			tCtx, cancel := context.WithTimeout(ctx, ToolListTimeout)
+			tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolList)
 			defer cancel()
 
 			resp, err := c.ListTools(tCtx, mcpproto.ListToolsRequest{})
@@ -275,7 +292,7 @@ func (m *Manager) CallTool(ctx context.Context, name string, args string) (strin
 	req.Params.Arguments = argsMap
 
 	// Set a reasonable timeout for tool execution
-	tCtx, cancel := context.WithTimeout(ctx, ToolCallTimeout)
+	tCtx, cancel := context.WithTimeout(ctx, m.timeouts.ToolCall)
 	defer cancel()
 
 	res, err := cli.CallTool(tCtx, req)
