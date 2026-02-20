@@ -5,6 +5,12 @@ import (
 	"sync"
 )
 
+type Storage interface {
+	Load(ctx context.Context) (*Config, error)
+	Save(ctx context.Context, cfg *Config) error
+	Watch(ctx context.Context) (<-chan Config, error)
+}
+
 type Registry struct {
 	storage Storage
 	mu      sync.RWMutex

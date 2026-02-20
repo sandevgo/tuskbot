@@ -1,7 +1,5 @@
 package mcp
 
-import "context"
-
 type TransportType string
 
 const (
@@ -11,12 +9,6 @@ const (
 
 type Config struct {
 	MCPServers map[string]ServerConfig `json:"mcpServers"`
-}
-
-type Storage interface {
-	Load(ctx context.Context) (*Config, error)
-	Save(ctx context.Context, cfg *Config) error
-	Watch(ctx context.Context) (<-chan Config, error)
 }
 
 // ServerConfig represents an entry in mcp_config.json
