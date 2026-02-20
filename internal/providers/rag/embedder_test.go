@@ -116,8 +116,8 @@ func TestEmbedder_EncodeQuery(t *testing.T) {
 			}
 
 			embedder := &Embedder{
-				model:   mock,
-				timeout: tt.timeout,
+				model:     mock,
+				timeout:   tt.timeout,
 				chunkConf: E5BaseChunkerConfig(),
 			}
 
@@ -187,8 +187,8 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 		{
 			name:      "short text produces single chunk",
 			text:      "Short text.",
-			timeout:     5 * time.Second,
-			chunkConf:   E5BaseChunkerConfig(),
+			timeout:   5 * time.Second,
+			chunkConf: E5BaseChunkerConfig(),
 			mockSetup: func(m *mockDualEncoder) {
 				m.encodePassageFunc = func(ctx context.Context, text string) ([]float32, error) {
 					return []float32{0.1, 0.2}, nil
@@ -217,7 +217,7 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 		},
 		{
 			name:    "returns error on chunk failure",
-			text:    "First chunk. Second chunk here.",
+			text:    "First chunk of text. Second chunk of text here.",
 			timeout: 5 * time.Second,
 			chunkConf: ChunkerConfig{
 				MaxTokens:     10,
@@ -240,7 +240,7 @@ func TestEmbedder_EncodePassage(t *testing.T) {
 		},
 		{
 			name:    "timeout during chunk processing",
-			text:    "First sentence. Second sentence.",
+			text:    "First chunk of text. Second chunk of text here.",
 			timeout: 50 * time.Millisecond,
 			chunkConf: ChunkerConfig{
 				MaxTokens:     10,
