@@ -57,7 +57,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	}
 
 	// Sanitize history to prevent provider errors (orphaned tool calls)
-	messages = sanitizeToolCalls(messages)
+	messages = sanitizeToolCalls(ctx, messages)
 
 	// 3. Prepare Tools
 	tools, err := a.mcp.GetTools(ctx)
@@ -124,11 +124,12 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 
 // sanitizeToolCalls ensures the message history is valid for LLM consumption.
 // It removes Tool messages that do not have a corresponding preceding Assistant tool call.
-func sanitizeToolCalls(messages []core.Message) []core.Message {
+func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
+	logger := log.FromCtx(ctx)
 	var sanitized []core.Message
 	var validToolCallIDs map[string]bool
 
-	for _, msg := range messages {
+	for i, msg := range messages {
 		switch msg.Role {
 		case core.RoleUser, core.RoleSystem:
 			// User/System messages reset the tool context
@@ -148,7 +149,12 @@ func sanitizeToolCalls(messages []core.Message) []core.Message {
 			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
 				sanitized = append(sanitized, msg)
 			}
-			// Else: Drop orphaned tool message
+
+			logger.Warn().
+				Int("msg_index", i).
+				Str("tool_call_id", msg.ToolCallID).
+				Interface("valid_ids_in_context", validToolCallIDs).
+				Msg("dropping invalid tool message (orphaned or ID mismatch)")
 
 		default:
 			// Keep other message types
