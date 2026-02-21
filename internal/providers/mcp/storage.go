@@ -23,29 +23,36 @@ func NewFileStorage(path string) *FileStorage {
 }
 
 func (c *FileStorage) Load(ctx context.Context) (*Config, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	config := &Config{
-		MCPServers: make(map[string]ServerConfig),
-	}
-
+	c.mu.RLock()
 	data, err := os.ReadFile(c.path)
+	c.mu.RUnlock()
+
 	if err != nil {
 		if os.IsNotExist(err) {
 			log.FromCtx(ctx).Info().Msg("mcp_config.json not found, creating default")
+
+			config := &Config{
+				MCPServers: make(map[string]ServerConfig),
+			}
 
 			// Save empty (default) config
 			if err = c.Save(ctx, config); err != nil {
 				return nil, fmt.Errorf("failed to create default config: %w", err)
 			}
-		} else {
-			return nil, fmt.Errorf("failed to read mcp config: %w", err)
+			return config, nil
 		}
+		return nil, fmt.Errorf("failed to read mcp config: %w", err)
 	}
 
+	config := &Config{
+		MCPServers: make(map[string]ServerConfig),
+	}
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse mcp config: %w", err)
+	}
+
+	if config.MCPServers == nil {
+		config.MCPServers = make(map[string]ServerConfig)
 	}
 
 	return config, nil
