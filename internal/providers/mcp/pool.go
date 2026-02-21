@@ -6,6 +6,16 @@ import (
 	"sync"
 )
 
+type ConnectionPool interface {
+	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
+	Del(name string) error
+	Get(name string) (*ManagedClient, bool)
+	All() map[string]*ManagedClient
+	Close() error
+}
+
+var _ ConnectionPool = (*Pool)(nil)
+
 type TransportFactory func(TransportType) (Transport, error)
 
 type Pool struct {

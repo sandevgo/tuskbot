@@ -20,6 +20,9 @@ func (mc *ManagedClient) Close() error {
 		return nil
 	}
 	mc.closed = true
+	if mc.Client == nil {
+		return nil
+	}
 	return mc.Client.Close()
 }
 
