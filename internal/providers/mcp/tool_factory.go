@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/internal/providers/mcp/tools"
 )
 
 type tool interface {
@@ -34,9 +35,9 @@ func RegisterNativeTools(runtimePath string) (map[string]NativeHandler, []core.T
 	}
 
 	// Register Core Tools
-	register(NewFilesystem(runtimePath))
-	register(NewShell(runtimePath))
-	register(NewFetch())
+	register(tools.NewFilesystem(runtimePath))
+	register(tools.NewShell(runtimePath))
+	register(tools.NewFetch())
 
 	return handlers, defs
 }
