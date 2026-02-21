@@ -16,12 +16,13 @@ import (
 
 func TestFetch_FetchURL(t *testing.T) {
 	tests := []struct {
-		name         string
-		args         json.RawMessage
-		mockServer   func() *httptest.Server
-		wantErr      bool
-		wantContains string
-		wantErrMsg   string
+		name            string
+		args            json.RawMessage
+		mockServer      func() *httptest.Server
+		useShortTimeout bool
+		wantErr         bool
+		wantContains    string
+		wantErrMsg      string
 	}{
 		{
 			name: "successful HTML fetch",
@@ -101,12 +102,13 @@ func TestFetch_FetchURL(t *testing.T) {
 			args: json.RawMessage(`{"url": "REPLACE_URL"}`),
 			mockServer: func() *httptest.Server {
 				return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// Sleep longer than client timeout
-					time.Sleep(20 * time.Second)
+					// Sleep longer than the short test timeout (100ms)
+					time.Sleep(500 * time.Millisecond)
 				}))
 			},
-			wantErr:    true,
-			wantErrMsg: "failed to fetch url",
+			useShortTimeout: true,
+			wantErr:         true,
+			wantErrMsg:      "failed to fetch url",
 		},
 		{
 			name: "preserves links in HTML",
@@ -162,7 +164,12 @@ func TestFetch_FetchURL(t *testing.T) {
 			}
 
 			// Create fetch instance
-			fetch := NewFetch()
+			var fetch *Fetch
+			if tt.useShortTimeout {
+				fetch = NewFetchWithTimeout(100 * time.Millisecond)
+			} else {
+				fetch = NewFetch()
+			}
 
 			// Execute
 			ctx := context.Background()
