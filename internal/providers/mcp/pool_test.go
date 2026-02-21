@@ -54,6 +54,14 @@ func TestPool_Add(t *testing.T) {
 			wantInPool: true,
 		},
 		{
+			name:       "invalid_config_no_command_or_url",
+			factory:    mockTransportFactory(successTransport, nil),
+			serverName: "server1",
+			serverCfg:  ServerConfig{}, // Empty config
+			wantErr:    true,
+			wantInPool: false,
+		},
+		{
 			name:       "transport_factory_error",
 			factory:    mockTransportFactory(nil, errors.New("unsupported transport")),
 			serverName: "server1",
