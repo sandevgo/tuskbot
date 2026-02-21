@@ -14,11 +14,11 @@ Here are the MCP tools you have access to:
 - **get_file_info** - Get metadata about a file (size, mode, modtime)
 - **execute_command** - Execute a shell command
 - **fetch_url** - Fetch content from a URL (HTTP GET)
-- **manage_mcp** - Manage MCP servers (add, remove, reload)
 
 ## Self Improvement
 
-- You can add the tools as mcp servers
-- Use `manage_mcp` to configure custom MCP servers
-- You will not lose access to Core tools during adding or updating  MCP servers.
-- When updating environment variables (like API keys), always use `action: add` with the EXACT same server_name. The system will handle the restart automatically.
+Manage all MCP servers exclusively by editing mcp_config.json. Do not attempt manual installation via shell or specialized tools. 
+The system Watcher automatically detects file changes, reloads the Worker Pool, and initializes servers.
+
+Local: Use command with uvx or npx.
+Remote: Use url for SSE/HTTP connections.
