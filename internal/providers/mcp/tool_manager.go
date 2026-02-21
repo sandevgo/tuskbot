@@ -153,6 +153,11 @@ func (t *ManageTool) handleRemove(ctx context.Context, input managementInput) (s
 }
 
 func (t *ManageTool) handleReload(ctx context.Context, input managementInput) (string, error) {
+	// Refresh registry from storage in case of manual edits
+	if err := t.registry.Load(ctx); err != nil {
+		return "", fmt.Errorf("failed to load registry: %w", err)
+	}
+
 	srvCfg, exists := t.registry.Get(input.ServerName)
 	if !exists {
 		return "", fmt.Errorf("server %s not found in registry", input.ServerName)

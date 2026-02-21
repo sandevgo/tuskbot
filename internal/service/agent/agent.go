@@ -148,13 +148,13 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 			// Tool message must match a valid ID from the immediate preceding assistant turn
 			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
 				sanitized = append(sanitized, msg)
+			} else {
+				logger.Warn().
+					Int("msg_index", i).
+					Str("tool_call_id", msg.ToolCallID).
+					Interface("valid_ids_in_context", validToolCallIDs).
+					Msg("dropping invalid tool message (orphaned or ID mismatch)")
 			}
-
-			logger.Warn().
-				Int("msg_index", i).
-				Str("tool_call_id", msg.ToolCallID).
-				Interface("valid_ids_in_context", validToolCallIDs).
-				Msg("dropping invalid tool message (orphaned or ID mismatch)")
 
 		default:
 			// Keep other message types
