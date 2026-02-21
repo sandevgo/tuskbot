@@ -18,10 +18,10 @@ type Config struct {
 
 func NewDefaultConfig() *Config {
 	return &Config{
-		MaxRetries:    3,
-		BackoffFactor: 2.0,
-		InitialDelay:  100 * time.Millisecond,
-		MaxDelay:      5 * time.Second,
+		MaxRetries:    5,
+		BackoffFactor: 2.15,
+		InitialDelay:  300 * time.Millisecond,
+		MaxDelay:      20 * time.Second,
 		Jitter:        50 * time.Millisecond,
 	}
 }
