@@ -39,7 +39,12 @@ func NewPoolWithFactory(factory TransportFactory) *Pool {
 }
 
 func (p *Pool) Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error) {
-	transport, err := p.transportFactory(cfg.GetTransport())
+	tType, err := cfg.GetTransport()
+	if err != nil {
+		return nil, err
+	}
+
+	transport, err := p.transportFactory(tType)
 	if err != nil {
 		return nil, err
 	}
