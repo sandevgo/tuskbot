@@ -18,7 +18,7 @@ type ServerConfig struct {
 	Command string            `json:"command"`
 	Args    []string          `json:"args"`
 	Env     map[string]string `json:"env"`
-	URL     string            `json:"serverUrl,omitempty"`
+	URL     string            `json:"url,omitempty"`
 }
 
 func (c *ServerConfig) GetTransport() (TransportType, error) {
@@ -28,5 +28,5 @@ func (c *ServerConfig) GetTransport() (TransportType, error) {
 	if c.Command != "" {
 		return TransportStdio, nil
 	}
-	return "", fmt.Errorf("invalid config: neither serverUrl nor command provided")
+	return "", fmt.Errorf("invalid config: neither url nor command provided")
 }
