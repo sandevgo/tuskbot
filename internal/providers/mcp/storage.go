@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -29,13 +30,17 @@ func (c *FileStorage) Load(ctx context.Context) (*Config, error) {
 
 	if err != nil {
 		if os.IsNotExist(err) {
+			dir := filepath.Dir(c.path)
+			if _, statErr := os.Stat(dir); os.IsNotExist(statErr) {
+				return nil, fmt.Errorf("config directory does not exist: %w", err)
+			}
+
 			log.FromCtx(ctx).Info().Msg("mcp_config.json not found, creating default")
 
 			config := &Config{
 				MCPServers: make(map[string]ServerConfig),
 			}
 
-			// Save empty (default) config
 			if err = c.Save(ctx, config); err != nil {
 				return nil, fmt.Errorf("failed to create default config: %w", err)
 			}
