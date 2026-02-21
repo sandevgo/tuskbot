@@ -21,7 +21,5 @@ Manage all MCP servers exclusively by editing mcp_config.json. Do not attempt ma
 The system Watcher automatically detects file changes, reloads the Worker Pool, and initializes servers.
 Prefer uvx over npx if available for specific tool.
 
-
-
-Local: Use "command" with uvx or npx.
-Remote: Use "url" for SSE/HTTP connections.
+- For Local MCP: Use "command" with uvx or npx.
+- For Remote MCP: Use "url" for SSE/HTTP connections.
