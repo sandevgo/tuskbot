@@ -41,16 +41,43 @@ func (r *Registry) Add(ctx context.Context, name string, cfg ServerConfig) error
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.servers[name] = cfg
-	return r.save(ctx)
+	// Create new state
+	newServers := make(map[string]ServerConfig, len(r.servers)+1)
+	for k, v := range r.servers {
+		newServers[k] = v
+	}
+	newServers[name] = cfg
+
+	// Try to save first
+	if err := r.storage.Save(ctx, &Config{MCPServers: newServers}); err != nil {
+		return err
+	}
+
+	// Only update in-memory state if save succeeded
+	r.servers = newServers
+	return nil
 }
 
 func (r *Registry) Remove(ctx context.Context, name string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	delete(r.servers, name)
-	return r.save(ctx)
+	// Create new state without the removed server
+	newServers := make(map[string]ServerConfig, len(r.servers))
+	for k, v := range r.servers {
+		if k != name {
+			newServers[k] = v
+		}
+	}
+
+	// Try to save first
+	if err := r.storage.Save(ctx, &Config{MCPServers: newServers}); err != nil {
+		return err
+	}
+
+	// Only update in-memory state if save succeeded
+	r.servers = newServers
+	return nil
 }
 
 func (r *Registry) Get(name string) (ServerConfig, bool) {
