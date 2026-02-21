@@ -15,12 +15,7 @@ type tool interface {
 	}
 }
 
-func RegisterNativeTools(
-	runtimePath string,
-	registry *Registry,
-	pool ConnectionPool,
-	cache *ToolCache,
-) (map[string]NativeHandler, []core.Tool) {
+func RegisterNativeTools(runtimePath string) (map[string]NativeHandler, []core.Tool) {
 	handlers := make(map[string]NativeHandler)
 	var defs []core.Tool
 
@@ -39,7 +34,6 @@ func RegisterNativeTools(
 	}
 
 	// Register Core Tools
-	register(NewManageTool(registry, pool, cache))
 	register(NewFilesystem(runtimePath))
 	register(NewShell(runtimePath))
 	register(NewFetch())

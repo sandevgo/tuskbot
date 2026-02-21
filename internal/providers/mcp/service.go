@@ -48,7 +48,7 @@ func NewService(
 	registry *Registry,
 	cache *ToolCache,
 ) (*Service, error) {
-	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath, registry, pool, cache)
+	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath)
 
 	return &Service{
 		pool:           pool,
