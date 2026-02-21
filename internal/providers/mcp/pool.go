@@ -6,27 +6,30 @@ import (
 	"sync"
 )
 
-type ConnectionPool interface {
-	Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error)
-	Get(name string) (*ManagedClient, bool)
-	Del(name string) error
-	All() map[string]*ManagedClient
-	Close() error
-}
+type TransportFactory func(TransportType) (Transport, error)
 
 type Pool struct {
-	mu      sync.RWMutex
-	clients map[string]*ManagedClient
+	mu               sync.RWMutex
+	clients          map[string]*ManagedClient
+	transportFactory TransportFactory
 }
 
 func NewPool() *Pool {
 	return &Pool{
-		clients: make(map[string]*ManagedClient),
+		clients:          make(map[string]*ManagedClient),
+		transportFactory: NewTransport,
+	}
+}
+
+func NewPoolWithFactory(factory TransportFactory) *Pool {
+	return &Pool{
+		clients:          make(map[string]*ManagedClient),
+		transportFactory: factory,
 	}
 }
 
 func (p *Pool) Add(ctx context.Context, name string, cfg ServerConfig) (*ManagedClient, error) {
-	transport, err := NewTransport(cfg.GetTransport())
+	transport, err := p.transportFactory(cfg.GetTransport())
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +78,6 @@ func (p *Pool) All() map[string]*ManagedClient {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	// Return a copy to be safe
 	result := make(map[string]*ManagedClient, len(p.clients))
 	for k, v := range p.clients {
 		result[k] = v
@@ -93,7 +95,6 @@ func (p *Pool) Close() error {
 			errs = append(errs, err)
 		}
 	}
-	// Clear map
 	p.clients = make(map[string]*ManagedClient)
 
 	return errors.Join(errs...)
