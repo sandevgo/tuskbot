@@ -39,7 +39,7 @@ func RegisterNativeTools(
 	}
 
 	// Register Core Tools
-	register(NewManageTool(registry, pool, cache))
+	// register(NewManageTool(registry, pool, cache)) // TODO: Temporary disabled
 	register(NewFilesystem(runtimePath))
 	register(NewShell(runtimePath))
 	register(NewFetch())
