@@ -18,6 +18,16 @@ const (
 	defaultFetchTimeout = 15 * time.Second
 )
 
+const fetchURLSchema = `
+{
+  "type": "object",
+  "properties": {
+    "url": { "type": "string", "description": "The URL to fetch" }
+  },
+  "required": ["url"]
+}
+`
+
 type Fetch struct {
 	client  *http.Client
 	retrier *retry.Retrier
@@ -76,4 +86,18 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 	}
 
 	return body, nil
+}
+
+func (f *Fetch) GetDefinitions() map[string]struct {
+	Description string
+	Schema      string
+	Handler     func(context.Context, json.RawMessage) (string, error)
+} {
+	return map[string]struct {
+		Description string
+		Schema      string
+		Handler     func(context.Context, json.RawMessage) (string, error)
+	}{
+		"fetch_url": {"Fetch content from a URL (HTTP GET)", fetchURLSchema, f.FetchURL},
+	}
 }
