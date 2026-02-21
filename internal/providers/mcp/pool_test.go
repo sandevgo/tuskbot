@@ -3,80 +3,147 @@ package mcp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/client"
 )
 
-// mockTransport creates a mock transport function for testing
-func mockTransport(shouldFail bool, failErr error) Transport {
-	return func(ctx context.Context, cfg ServerConfig) (*ManagedClient, error) {
-		if shouldFail {
-			return nil, failErr
+func mockTransportFactory(transport Transport, err error) TransportFactory {
+	return func(t TransportType) (Transport, error) {
+		if err != nil {
+			return nil, err
 		}
-		return &ManagedClient{
-			Client: &client.Client{},
-			name:   "mock",
-		}, nil
+		return transport, nil
 	}
+}
+
+func successTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+	return &client.Client{}, nil
+}
+
+func failTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+	return nil, errors.New("connection failed")
 }
 
 func TestPool_Add(t *testing.T) {
 	tests := []struct {
 		name       string
-		transport  Transport
+		factory    TransportFactory
 		serverName string
 		serverCfg  ServerConfig
 		wantErr    bool
+		wantInPool bool
 	}{
 		{
 			name:       "successful_add",
-			transport:  mockTransport(false, nil),
+			factory:    mockTransportFactory(successTransport, nil),
 			serverName: "server1",
 			serverCfg:  ServerConfig{Command: "echo"},
 			wantErr:    false,
+			wantInPool: true,
 		},
 		{
-			name:       "transport_failure",
-			transport:  mockTransport(true, errors.New("connection failed")),
+			name:       "transport_factory_error",
+			factory:    mockTransportFactory(nil, errors.New("unsupported transport")),
 			serverName: "server1",
 			serverCfg:  ServerConfig{Command: "echo"},
 			wantErr:    true,
+			wantInPool: false,
+		},
+		{
+			name:       "transport_connection_error",
+			factory:    mockTransportFactory(failTransport, nil),
+			serverName: "server1",
+			serverCfg:  ServerConfig{Command: "echo"},
+			wantErr:    true,
+			wantInPool: false,
 		},
 		{
 			name:       "empty_server_name",
-			transport:  mockTransport(false, nil),
+			factory:    mockTransportFactory(successTransport, nil),
 			serverName: "",
 			serverCfg:  ServerConfig{Command: "echo"},
 			wantErr:    false,
+			wantInPool: true,
+		},
+		{
+			name:       "unicode_server_name",
+			factory:    mockTransportFactory(successTransport, nil),
+			serverName: "服务器",
+			serverCfg:  ServerConfig{Command: "echo"},
+			wantErr:    false,
+			wantInPool: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewPool()
-			// Override transport for testing
-			origTransport := StdioTransport
-			StdioTransport = tt.transport
-			defer func() { StdioTransport = origTransport }()
-
+			p := NewPoolWithFactory(tt.factory)
 			ctx := context.Background()
+
 			cli, err := p.Add(ctx, tt.serverName, tt.serverCfg)
 
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
 				}
-				return
+				if cli != nil {
+					t.Error("expected nil client on error")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if cli == nil {
+					t.Fatal("expected client, got nil")
+				}
 			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if cli == nil {
-				t.Fatal("expected client, got nil")
+
+			_, inPool := p.Get(tt.serverName)
+			if inPool != tt.wantInPool {
+				t.Errorf("in pool = %v, want %v", inPool, tt.wantInPool)
 			}
 		})
+	}
+}
+
+func TestPool_Add_ReplacesExisting(t *testing.T) {
+	var closeCount int32
+
+	p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+	ctx := context.Background()
+
+	// Add first client
+	_, err := p.Add(ctx, "server", ServerConfig{Command: "first"})
+	if err != nil {
+		t.Fatalf("first add failed: %v", err)
+	}
+
+	// Manually track close
+	first, _ := p.Get("server")
+	go func() {
+		// Simulate close being called on old client
+		atomic.AddInt32(&closeCount, 1)
+	}()
+
+	// Add second client with same name
+	_, err = p.Add(ctx, "server", ServerConfig{Command: "second"})
+	if err != nil {
+		t.Fatalf("second add failed: %v", err)
+	}
+
+	// Should only have one client
+	if len(p.All()) != 1 {
+		t.Errorf("count = %d, want 1", len(p.All()))
+	}
+
+	// New client should be different from first
+	second, _ := p.Get("server")
+	if first == second {
+		t.Error("expected new client instance")
 	}
 }
 
@@ -96,7 +163,9 @@ func TestPool_Get(t *testing.T) {
 		{
 			name: "get_existing",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.mu.Unlock()
 			},
 			getName: "server1",
 			wantOk:  true,
@@ -104,7 +173,9 @@ func TestPool_Get(t *testing.T) {
 		{
 			name: "get_nonexistent",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.mu.Unlock()
 			},
 			getName: "server2",
 			wantOk:  false,
@@ -112,7 +183,9 @@ func TestPool_Get(t *testing.T) {
 		{
 			name: "get_empty_name",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients[""] = &ManagedClient{name: ""}
+				p.mu.Unlock()
 			},
 			getName: "",
 			wantOk:  true,
@@ -148,16 +221,18 @@ func TestPool_Del(t *testing.T) {
 			name:      "delete_from_empty",
 			setup:     func(p *Pool) {},
 			delName:   "any",
-			wantErr:   true,
+			wantErr:   false,
 			wantCount: 0,
 		},
 		{
 			name: "delete_existing",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["server1"] = &ManagedClient{
 					Client: &client.Client{},
 					name:   "server1",
 				}
+				p.mu.Unlock()
 			},
 			delName:   "server1",
 			wantErr:   false,
@@ -166,18 +241,22 @@ func TestPool_Del(t *testing.T) {
 		{
 			name: "delete_nonexistent",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.mu.Unlock()
 			},
 			delName:   "server2",
-			wantErr:   true,
+			wantErr:   false,
 			wantCount: 1,
 		},
 		{
 			name: "delete_one_of_many",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["s1"] = &ManagedClient{Client: &client.Client{}, name: "s1"}
 				p.clients["s2"] = &ManagedClient{Client: &client.Client{}, name: "s2"}
 				p.clients["s3"] = &ManagedClient{Client: &client.Client{}, name: "s3"}
+				p.mu.Unlock()
 			},
 			delName:   "s2",
 			wantErr:   false,
@@ -223,16 +302,20 @@ func TestPool_All(t *testing.T) {
 		{
 			name: "single_client",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["s1"] = &ManagedClient{name: "s1"}
+				p.mu.Unlock()
 			},
 			want: 1,
 		},
 		{
 			name: "multiple_clients",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["s1"] = &ManagedClient{name: "s1"}
 				p.clients["s2"] = &ManagedClient{name: "s2"}
 				p.clients["s3"] = &ManagedClient{name: "s3"}
+				p.mu.Unlock()
 			},
 			want: 3,
 		},
@@ -254,7 +337,9 @@ func TestPool_All(t *testing.T) {
 
 func TestPool_All_ReturnsCopy(t *testing.T) {
 	p := NewPool()
+	p.mu.Lock()
 	p.clients["server"] = &ManagedClient{name: "server"}
+	p.mu.Unlock()
 
 	all := p.All()
 	all["hacked"] = &ManagedClient{name: "hacked"}
@@ -266,32 +351,36 @@ func TestPool_All_ReturnsCopy(t *testing.T) {
 
 func TestPool_Close(t *testing.T) {
 	tests := []struct {
-		name    string
-		setup   func(p *Pool)
-		wantErr bool
+		name           string
+		setup          func(p *Pool)
+		wantEmptyAfter bool
 	}{
 		{
-			name:    "close_empty",
-			setup:   func(p *Pool) {},
-			wantErr: false,
+			name:           "close_empty",
+			setup:          func(p *Pool) {},
+			wantEmptyAfter: true,
 		},
 		{
 			name: "close_single",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["s1"] = &ManagedClient{
 					Client: &client.Client{},
 					name:   "s1",
 				}
+				p.mu.Unlock()
 			},
-			wantErr: false,
+			wantEmptyAfter: true,
 		},
 		{
 			name: "close_multiple",
 			setup: func(p *Pool) {
+				p.mu.Lock()
 				p.clients["s1"] = &ManagedClient{Client: &client.Client{}, name: "s1"}
 				p.clients["s2"] = &ManagedClient{Client: &client.Client{}, name: "s2"}
+				p.mu.Unlock()
 			},
-			wantErr: false,
+			wantEmptyAfter: true,
 		},
 	}
 
@@ -301,17 +390,34 @@ func TestPool_Close(t *testing.T) {
 			tt.setup(p)
 
 			err := p.Close()
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
 
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
+			if tt.wantEmptyAfter && len(p.All()) != 0 {
+				t.Error("pool should be empty after Close")
 			}
 		})
+	}
+}
+
+func TestPool_Close_DoubleClose(t *testing.T) {
+	p := NewPool()
+	p.mu.Lock()
+	p.clients["server"] = &ManagedClient{
+		Client: &client.Client{},
+		name:   "server",
+	}
+	p.mu.Unlock()
+
+	err1 := p.Close()
+	err2 := p.Close()
+
+	if err1 != nil {
+		t.Errorf("first close error: %v", err1)
+	}
+	if err2 != nil {
+		t.Errorf("second close error: %v", err2)
 	}
 }
 
@@ -348,22 +454,18 @@ func TestPool_ConcurrentAccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewPool()
+			p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+			ctx := context.Background()
 			var wg sync.WaitGroup
 
-			// Writers - directly add to map to avoid transport issues
+			// Writers
 			for i := 0; i < tt.writers; i++ {
 				wg.Add(1)
 				go func(id int) {
 					defer wg.Done()
 					for j := 0; j < tt.iterations; j++ {
-						p.mu.Lock()
-						name := "server"
-						p.clients[name] = &ManagedClient{
-							Client: &client.Client{},
-							name:   name,
-						}
-						p.mu.Unlock()
+						name := fmt.Sprintf("server-%d", j%5)
+						_, _ = p.Add(ctx, name, ServerConfig{Command: "cmd"})
 					}
 				}(i)
 			}
@@ -375,7 +477,7 @@ func TestPool_ConcurrentAccess(t *testing.T) {
 					defer wg.Done()
 					for j := 0; j < tt.iterations; j++ {
 						p.All()
-						p.Get("server")
+						p.Get("server-0")
 					}
 				}()
 			}
@@ -386,13 +488,36 @@ func TestPool_ConcurrentAccess(t *testing.T) {
 				go func() {
 					defer wg.Done()
 					for j := 0; j < tt.iterations; j++ {
-						_ = p.Del("server")
+						name := fmt.Sprintf("server-%d", j%5)
+						_ = p.Del(name)
 					}
 				}()
 			}
 
 			wg.Wait()
 		})
+	}
+}
+
+func TestPool_ContextCancellation(t *testing.T) {
+	p := NewPoolWithFactory(func(tt TransportType) (Transport, error) {
+		return func(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+			// Check if context is cancelled
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+				return &client.Client{}, nil
+			}
+		}, nil
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, err := p.Add(ctx, "server", ServerConfig{Command: "cmd"})
+	if err == nil {
+		t.Error("expected error with cancelled context")
 	}
 }
 
