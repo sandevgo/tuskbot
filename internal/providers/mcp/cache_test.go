@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -435,6 +436,205 @@ func TestToolCache_ConcurrentAccess(t *testing.T) {
 			}
 
 			wg.Wait()
+		})
+	}
+}
+
+func TestToolCache_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name  string
+		setup func(c *ToolCache)
+		check func(t *testing.T, c *ToolCache)
+	}{
+		{
+			name: "tools_with_same_name_different_servers",
+			setup: func(c *ToolCache) {
+				tools := makeTools("shared.tool", "shared.tool")
+				routing := makeRouting("shared.tool", "server2") // last write wins
+				c.Update(tools, routing)
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if len(tools) != 2 {
+					t.Errorf("tools count = %d, want 2", len(tools))
+				}
+				// Routing map can only hold one entry per key
+				if len(routing) != 1 {
+					t.Errorf("routing count = %d, want 1", len(routing))
+				}
+			},
+		},
+		{
+			name: "empty_tool_name",
+			setup: func(c *ToolCache) {
+				c.Update(makeTools(""), makeRouting("", "server"))
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if tools[0].Function.Name != "" {
+					t.Error("empty name should be preserved")
+				}
+				if routing[""] != "server" {
+					t.Error("empty key routing should work")
+				}
+			},
+		},
+		{
+			name: "routing_without_matching_tool",
+			setup: func(c *ToolCache) {
+				tools := makeTools("tool1")
+				routing := makeRouting("tool1", "s1", "orphan", "s2")
+				c.Update(tools, routing)
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				_, routing, _ := c.Get()
+				if routing["orphan"] != "s2" {
+					t.Error("orphan routing should be preserved")
+				}
+			},
+		},
+		{
+			name: "tool_without_routing",
+			setup: func(c *ToolCache) {
+				tools := makeTools("tool1", "tool2")
+				routing := makeRouting("tool1", "server1")
+				c.Update(tools, routing)
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, _ := c.Get()
+				if len(tools) != 2 {
+					t.Errorf("tools count = %d, want 2", len(tools))
+				}
+				if routing["tool2"] != "" {
+					t.Errorf("tool2 routing = %s, want empty", routing["tool2"])
+				}
+			},
+		},
+		{
+			name: "large_dataset",
+			setup: func(c *ToolCache) {
+				names := make([]string, 1000)
+				pairs := make([]string, 2000)
+				for i := 0; i < 1000; i++ {
+					names[i] = fmt.Sprintf("tool%d", i)
+					pairs[i*2] = names[i]
+					pairs[i*2+1] = fmt.Sprintf("server%d", i%10)
+				}
+				c.Update(makeTools(names...), makeRouting(pairs...))
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if len(tools) != 1000 {
+					t.Errorf("tools count = %d, want 1000", len(tools))
+				}
+				if len(routing) != 1000 {
+					t.Errorf("routing count = %d, want 1000", len(routing))
+				}
+			},
+		},
+		{
+			name: "special_characters_in_names",
+			setup: func(c *ToolCache) {
+				c.Update(
+					makeTools("tool/with/slashes", "tool.with.dots", "tool:with:colons", "tool with spaces"),
+					makeRouting(
+						"tool/with/slashes", "s1",
+						"tool.with.dots", "s2",
+						"tool:with:colons", "s3",
+						"tool with spaces", "s4",
+					),
+				)
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if len(tools) != 4 {
+					t.Errorf("tools count = %d, want 4", len(tools))
+				}
+				if routing["tool/with/slashes"] != "s1" {
+					t.Error("slash routing failed")
+				}
+				if routing["tool with spaces"] != "s4" {
+					t.Error("space routing failed")
+				}
+			},
+		},
+		{
+			name: "unicode_names",
+			setup: func(c *ToolCache) {
+				c.Update(
+					makeTools("工具", "инструмент", "🔧"),
+					makeRouting("工具", "服务器", "инструмент", "сервер", "🔧", "🖥️"),
+				)
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if len(tools) != 3 {
+					t.Errorf("tools count = %d, want 3", len(tools))
+				}
+				if routing["工具"] != "服务器" {
+					t.Error("chinese routing failed")
+				}
+				if routing["🔧"] != "🖥️" {
+					t.Error("emoji routing failed")
+				}
+			},
+		},
+		{
+			name:  "get_on_fresh_cache_multiple_times",
+			setup: func(c *ToolCache) {},
+			check: func(t *testing.T, c *ToolCache) {
+				for i := 0; i < 3; i++ {
+					_, _, ok := c.Get()
+					if ok {
+						t.Errorf("iteration %d: fresh cache should return ok=false", i)
+					}
+				}
+			},
+		},
+		{
+			name: "rapid_invalidate_update_cycle",
+			setup: func(c *ToolCache) {
+				for i := 0; i < 100; i++ {
+					c.Update(makeTools("tool"), makeRouting("tool", "server"))
+					c.Invalidate()
+				}
+				c.Update(makeTools("final"), makeRouting("final", "last"))
+			},
+			check: func(t *testing.T, c *ToolCache) {
+				tools, routing, ok := c.Get()
+				if !ok {
+					t.Fatal("cache should be valid")
+				}
+				if len(tools) != 1 || tools[0].Function.Name != "final" {
+					t.Error("expected final tool")
+				}
+				if routing["final"] != "last" {
+					t.Error("expected final routing")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := NewToolCache()
+			tt.setup(c)
+			tt.check(t, c)
 		})
 	}
 }
