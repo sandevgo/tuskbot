@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jaytaylor/html2text"
+	"github.com/inbucket/html2text"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/retry"
 )
