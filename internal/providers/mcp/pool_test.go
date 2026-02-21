@@ -623,6 +623,48 @@ func TestPool_EdgeCases(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "empty_server_name",
+			test: func(t *testing.T) {
+				p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+				ctx := context.Background()
+
+				_, err := p.Add(ctx, "", ServerConfig{Command: "cmd"})
+				if err != nil {
+					t.Fatalf("add failed: %v", err)
+				}
+
+				_, ok := p.Get("")
+				if !ok {
+					t.Error("empty name should be valid")
+				}
+
+				err = p.Del("")
+				if err != nil {
+					t.Errorf("del failed: %v", err)
+				}
+			},
+		},
+		{
+			name: "del_then_add_same_name",
+			test: func(t *testing.T) {
+				p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+				ctx := context.Background()
+
+				p.Add(ctx, "server", ServerConfig{Command: "first"})
+				p.Del("server")
+				p.Add(ctx, "server", ServerConfig{Command: "second"})
+
+				if len(p.All()) != 1 {
+					t.Errorf("count = %d, want 1", len(p.All()))
+				}
+
+				_, ok := p.Get("server")
+				if !ok {
+					t.Error("server should exist after re-add")
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
