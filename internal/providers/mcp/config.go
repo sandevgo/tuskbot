@@ -1,5 +1,7 @@
 package mcp
 
+import "fmt"
+
 type TransportType string
 
 const (
@@ -19,9 +21,12 @@ type ServerConfig struct {
 	URL     string            `json:"serverUrl,omitempty"`
 }
 
-func (c *ServerConfig) GetTransport() TransportType {
+func (c *ServerConfig) GetTransport() (TransportType, error) {
 	if c.URL != "" {
-		return TransportHTTP
+		return TransportHTTP, nil
 	}
-	return TransportStdio
+	if c.Command != "" {
+		return TransportStdio, nil
+	}
+	return "", fmt.Errorf("invalid config: neither serverUrl nor command provided")
 }
