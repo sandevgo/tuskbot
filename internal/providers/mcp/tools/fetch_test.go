@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sandevgo/tuskbot/pkg/retry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -164,11 +165,19 @@ func TestFetch_FetchURL(t *testing.T) {
 			}
 
 			// Create fetch instance
+			// Create fetch instance
+			retryCfg := &retry.Config{
+				MaxRetries:    2,
+				InitialDelay:  time.Millisecond,
+				MaxDelay:      time.Millisecond,
+				BackoffFactor: 1.0,
+			}
+
 			var fetch *Fetch
 			if tt.useShortTimeout {
-				fetch = NewFetchWithTimeout(100 * time.Millisecond)
+				fetch = NewFetchWithTimeout(100*time.Millisecond, retryCfg)
 			} else {
-				fetch = NewFetch()
+				fetch = NewFetchWithTimeout(defaultFetchTimeout, retryCfg)
 			}
 
 			// Execute
