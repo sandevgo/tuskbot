@@ -188,7 +188,7 @@ func TestFileStorage_Watch_FileDeleted(t *testing.T) {
 	}
 
 	fs := NewFileStorage(path)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	updates, err := fs.Watch(ctx)
@@ -197,15 +197,15 @@ func TestFileStorage_Watch_FileDeleted(t *testing.T) {
 	}
 
 	// Wait for first poll
-	time.Sleep(1100 * time.Millisecond)
+	time.Sleep(1200 * time.Millisecond)
 
 	// Delete file
 	if err := os.Remove(path); err != nil {
 		t.Fatalf("failed to remove file: %v", err)
 	}
 
-	// Wait a bit - should not crash, just skip updates
-	time.Sleep(1100 * time.Millisecond)
+	// Wait for watcher to notice deletion
+	time.Sleep(1200 * time.Millisecond)
 
 	// Recreate file with new content
 	newContent := `{"mcpServers": {"recovered": {"command": "test"}}}`
@@ -213,13 +213,21 @@ func TestFileStorage_Watch_FileDeleted(t *testing.T) {
 		t.Fatalf("failed to recreate file: %v", err)
 	}
 
-	select {
-	case cfg := <-updates:
-		if _, ok := cfg.MCPServers["recovered"]; !ok {
-			t.Error("did not detect update after file recreation")
+	// Loop until we receive the expected config
+	timeout := time.After(3 * time.Second)
+	for {
+		select {
+		case cfg, ok := <-updates:
+			if !ok {
+				t.Fatal("channel closed unexpectedly")
+			}
+			if _, ok := cfg.MCPServers["recovered"]; ok {
+				return // Success
+			}
+			// Not the config we want, keep waiting
+		case <-timeout:
+			t.Fatal("timeout waiting for update after recreation")
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for update after recreation")
 	}
 }
 

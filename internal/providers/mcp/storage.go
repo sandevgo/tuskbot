@@ -23,13 +23,23 @@ func NewFileStorage(path string) *FileStorage {
 	}
 }
 
+// Load reads the config. If the file is missing, it creates a default one.
 func (c *FileStorage) Load(ctx context.Context) (*Config, error) {
+	return c.load(ctx, true)
+}
+
+// load reads the config. If createIfMissing is false, it returns an error for missing files.
+func (c *FileStorage) load(ctx context.Context, createIfMissing bool) (*Config, error) {
 	c.mu.RLock()
 	data, err := os.ReadFile(c.path)
 	c.mu.RUnlock()
 
 	if err != nil {
 		if os.IsNotExist(err) {
+			if !createIfMissing {
+				return nil, fmt.Errorf("config file not found: %w", err)
+			}
+
 			dir := filepath.Dir(c.path)
 			if _, statErr := os.Stat(dir); os.IsNotExist(statErr) {
 				return nil, fmt.Errorf("config directory does not exist: %w", err)
@@ -91,7 +101,6 @@ func (c *FileStorage) Watch(ctx context.Context) (<-chan Config, error) {
 	go func() {
 		defer close(updates)
 
-		// Poll for changes every second
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -100,25 +109,42 @@ func (c *FileStorage) Watch(ctx context.Context) (<-chan Config, error) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				info, err = os.Stat(c.path)
+				// Read file directly - this is atomic
+				c.mu.RLock()
+				data, err := os.ReadFile(c.path)
+				c.mu.RUnlock()
+
 				if err != nil {
-					// File might be temporarily missing during atomic write or deleted
+					lastMod = time.Time{}
 					continue
 				}
 
-				if info.ModTime().After(lastMod) {
-					lastMod = info.ModTime()
-					newCfg, err := c.Load(ctx)
-					if err != nil {
-						log.FromCtx(ctx).Error().Err(err).Msg("failed to reload mcp config")
-						continue
-					}
+				info, err = os.Stat(c.path)
+				if err != nil {
+					lastMod = time.Time{}
+					continue
+				}
 
-					select {
-					case updates <- *newCfg:
-					case <-ctx.Done():
-						return
-					}
+				if !info.ModTime().After(lastMod) {
+					continue
+				}
+
+				var config Config
+				if err := json.Unmarshal(data, &config); err != nil {
+					log.FromCtx(ctx).Error().Err(err).Msg("failed to parse mcp config")
+					continue
+				}
+
+				if config.MCPServers == nil {
+					config.MCPServers = make(map[string]ServerConfig)
+				}
+
+				lastMod = info.ModTime()
+
+				select {
+				case updates <- config:
+				case <-ctx.Done():
+					return
 				}
 			}
 		}
