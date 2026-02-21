@@ -56,6 +56,9 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
 
+	// Sanitize history to prevent provider errors (orphaned tool calls)
+	messages = sanitizeToolCalls(messages)
+
 	// 3. Prepare Tools
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {
@@ -84,7 +87,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 
 		// Save Assistant Response and update local context
 		if err := a.memory.SaveMessage(ctx, sessionID, responseMsg); err != nil {
-			logger.Error().Err(err).Msg("failed to save assistant message")
+			return "", fmt.Errorf("failed to save assistant message: %w", err)
 		}
 		messages = append(messages, responseMsg)
 
@@ -110,11 +113,47 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 
 		for _, toolMsg := range toolResults {
 			if err := a.memory.SaveMessage(ctx, sessionID, toolMsg); err != nil {
-				logger.Error().Err(err).Msg("failed to save tool message")
+				return "", fmt.Errorf("failed to save tool message: %w", err)
 			}
 			messages = append(messages, toolMsg)
 		}
 	}
 
 	return finalContent, nil
+}
+
+// sanitizeToolCalls ensures the message history is valid for LLM consumption.
+// It removes Tool messages that do not have a corresponding preceding Assistant tool call.
+func sanitizeToolCalls(messages []core.Message) []core.Message {
+	var sanitized []core.Message
+	var validToolCallIDs map[string]bool
+
+	for _, msg := range messages {
+		switch msg.Role {
+		case core.RoleUser, core.RoleSystem:
+			// User/System messages reset the tool context
+			validToolCallIDs = nil
+			sanitized = append(sanitized, msg)
+
+		case core.RoleAssistant:
+			// Assistant message establishes new tool context
+			validToolCallIDs = make(map[string]bool)
+			for _, tc := range msg.ToolCalls {
+				validToolCallIDs[tc.ID] = true
+			}
+			sanitized = append(sanitized, msg)
+
+		case core.RoleTool:
+			// Tool message must match a valid ID from the immediate preceding assistant turn
+			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
+				sanitized = append(sanitized, msg)
+			}
+			// Else: Drop orphaned tool message
+
+		default:
+			// Keep other message types
+			sanitized = append(sanitized, msg)
+		}
+	}
+	return sanitized
 }
