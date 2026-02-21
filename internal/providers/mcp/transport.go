@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/mark3labs/mcp-go/client"
 	mcpproto "github.com/mark3labs/mcp-go/mcp"
@@ -16,7 +17,7 @@ func NewTransport(t TransportType) (Transport, error) {
 	case TransportStdio:
 		return StdioTransport, nil
 	case TransportHTTP:
-		return nil, fmt.Errorf("not implemented yet")
+		return SSETransport, nil
 	}
 
 	return nil, fmt.Errorf("unsupported transport type: %s", t)
@@ -33,7 +34,36 @@ func StdioTransport(ctx context.Context, cfg ServerConfig) (*client.Client, erro
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
-	if err := cli.Start(ctx); err != nil {
+	if err = cli.Start(ctx); err != nil {
+		return nil, fmt.Errorf("failed to start client: %w", err)
+	}
+
+	req := mcpproto.InitializeRequest{}
+	req.Params.ProtocolVersion = mcpproto.LATEST_PROTOCOL_VERSION
+	req.Params.Capabilities = mcpproto.ClientCapabilities{}
+	req.Params.ClientInfo = mcpproto.Implementation{
+		Name:    core.TuskName,
+		Version: core.TaskVersion,
+	}
+
+	if _, err := cli.Initialize(ctx, req); err != nil {
+		_ = cli.Close()
+		return nil, fmt.Errorf("failed to initialize client: %w", err)
+	}
+
+	return cli, nil
+}
+
+func SSETransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+
+	options := client.WithHTTPClient(http.DefaultClient)
+
+	cli, err := client.NewSSEMCPClient(cfg.URL, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create client: %w", err)
+	}
+
+	if err = cli.Start(ctx); err != nil {
 		return nil, fmt.Errorf("failed to start client: %w", err)
 	}
 
