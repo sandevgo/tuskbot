@@ -43,7 +43,6 @@ type Service struct {
 }
 
 func NewService(
-	ctx context.Context,
 	runtimePath string,
 	pool ConnectionPool,
 	registry *Registry,
@@ -51,24 +50,22 @@ func NewService(
 ) (*Service, error) {
 	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath, registry, pool, cache)
 
-	mgr := &Service{
+	return &Service{
 		pool:           pool,
 		registry:       registry,
 		cache:          cache,
 		timeouts:       NewDefaultTimeouts(),
 		nativeTools:    nativeTools,
 		nativeToolDefs: nativeToolDefs,
-	}
-
-	// Load initial config
-	if err := mgr.registry.Load(ctx); err != nil {
-		return nil, err
-	}
-
-	return mgr, nil
+	}, nil
 }
 
 func (s *Service) Start(ctx context.Context) error {
+	// Load initial config
+	if err := s.registry.Load(ctx); err != nil {
+		return err
+	}
+
 	servers := s.registry.List()
 
 	// Start servers in parallel background goroutines

@@ -116,7 +116,6 @@ func initStorage(ctx context.Context, cfg *config.AppConfig) (*sql.DB, core.Mess
 func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	filStorage := mcp.NewFileStorage(cfg.GetMCPConfigPath())
 	mgr, err := mcp.NewService(
-		ctx,
 		cfg.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
