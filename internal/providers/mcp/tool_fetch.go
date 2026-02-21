@@ -9,27 +9,25 @@ import (
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/pkg/retry"
 )
 
-const fetchURLSchema = `
-{
-  "type": "object",
-  "properties": {
-    "url": { "type": "string", "description": "The URL to fetch" }
-  },
-  "required": ["url"]
-}
-`
+const (
+	maxResponseSize     = 1 << 20 // 1MB limit
+	defaultFetchTimeout = 15 * time.Second
+)
 
 type Fetch struct {
-	client *http.Client
+	client  *http.Client
+	retrier *retry.Retrier
 }
 
 func NewFetch() *Fetch {
 	return &Fetch{
 		client: &http.Client{
-			Timeout: 10 * time.Second,
+			Timeout: defaultFetchTimeout,
 		},
+		retrier: retry.NewRetrier(retry.NewDefaultConfig()),
 	}
 }
 
@@ -41,38 +39,37 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 		return "", fmt.Errorf("invalid arguments: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, input.URL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
+	var body []byte
+	err := f.retrier.Do(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, input.URL, nil)
+		if err != nil {
+			return fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("User-Agent", core.TuskUserAgent)
 
-	// Mimic a browser to avoid some basic blocking
-	req.Header.Set("User-Agent", core.TuskUserAgent)
+		resp, err := f.client.Do(req)
+		if err != nil {
+			return fmt.Errorf("failed to fetch url: %w", err)
+		}
+		defer resp.Body.Close()
 
-	resp, err := f.client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch url: %w", err)
-	}
-	defer resp.Body.Close()
+		if resp.StatusCode >= 400 {
+			return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+		}
 
-	body, err := io.ReadAll(resp.Body)
+		// Limit response size
+		limitedReader := io.LimitReader(resp.Body, maxResponseSize)
+		body, err = io.ReadAll(limitedReader)
+		if err != nil {
+			return fmt.Errorf("failed to read body: %w", err)
+		}
+
+		return nil
+	})
+
 	if err != nil {
-		return "", fmt.Errorf("failed to read body: %w", err)
+		return "", err
 	}
 
 	return string(body), nil
-}
-
-func (f *Fetch) GetDefinitions() map[string]struct {
-	Description string
-	Schema      string
-	Handler     func(context.Context, json.RawMessage) (string, error)
-} {
-	return map[string]struct {
-		Description string
-		Schema      string
-		Handler     func(context.Context, json.RawMessage) (string, error)
-	}{
-		"fetch_url": {"Fetch content from a URL (HTTP GET)", fetchURLSchema, f.FetchURL},
-	}
 }

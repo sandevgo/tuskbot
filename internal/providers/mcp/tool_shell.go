@@ -22,8 +22,8 @@ const executeCommandSchema = `
 `
 
 const (
-	maxOutputLines = 200
-	defaultTimeout = 5 * time.Minute
+	maxOutputLines     = 200
+	defaultExecTimeout = 5 * time.Minute
 )
 
 type Shell struct {
@@ -43,7 +43,7 @@ func (s *Shell) ExecuteCommand(ctx context.Context, args json.RawMessage) (strin
 	}
 
 	// Create a child context with a timeout to prevent hanging commands
-	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, defaultExecTimeout)
 	defer cancel()
 
 	var cmd *exec.Cmd
@@ -69,7 +69,7 @@ func (s *Shell) ExecuteCommand(ctx context.Context, args json.RawMessage) (strin
 	if err != nil {
 		// Check if it was a timeout
 		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Sprintf("Command timed out after %v\nSTDOUT:\n%s\nSTDERR:\n%s", defaultTimeout, output, errOutput), nil
+			return fmt.Sprintf("Command timed out after %v\nSTDOUT:\n%s\nSTDERR:\n%s", defaultExecTimeout, output, errOutput), nil
 		}
 		return fmt.Sprintf("Command failed: %v\nSTDOUT:\n%s\nSTDERR:\n%s", err, output, errOutput), nil
 	}
