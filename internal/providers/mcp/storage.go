@@ -59,13 +59,13 @@ func (c *FileStorage) Load(ctx context.Context) (*Config, error) {
 }
 
 func (c *FileStorage) Save(ctx context.Context, cfg *Config) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	if err := os.WriteFile(c.path, data, 0644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
