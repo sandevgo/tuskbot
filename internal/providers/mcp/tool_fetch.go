@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jaytaylor/html2text"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/retry"
 )
@@ -39,7 +40,7 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 		return "", fmt.Errorf("invalid arguments: %w", err)
 	}
 
-	var body []byte
+	var body string
 	err := f.retrier.Do(ctx, func() error {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, input.URL, nil)
 		if err != nil {
@@ -58,7 +59,11 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 		}
 
 		limitedReader := io.LimitReader(resp.Body, maxResponseSize)
-		body, err = io.ReadAll(limitedReader)
+
+		body, err = html2text.FromReader(limitedReader, html2text.Options{
+			OmitLinks:    false,
+			PrettyTables: true,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to read body: %w", err)
 		}
@@ -70,5 +75,5 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 		return "", err
 	}
 
-	return string(body), nil
+	return body, nil
 }
