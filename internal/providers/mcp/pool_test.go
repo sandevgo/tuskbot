@@ -11,6 +11,14 @@ import (
 	"github.com/mark3labs/mcp-go/client"
 )
 
+// mockManagedClient creates a ManagedClient safe for testing (no real connection)
+func mockManagedClient(name string) *ManagedClient {
+	return &ManagedClient{
+		Client: nil,
+		name:   name,
+	}
+}
+
 func mockTransportFactory(transport Transport, err error) TransportFactory {
 	return func(t TransportType) (Transport, error) {
 		if err != nil {
@@ -21,7 +29,7 @@ func mockTransportFactory(transport Transport, err error) TransportFactory {
 }
 
 func successTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
-	return &client.Client{}, nil
+	return nil, nil
 }
 
 func failTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
@@ -164,7 +172,7 @@ func TestPool_Get(t *testing.T) {
 			name: "get_existing",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.clients["server1"] = mockManagedClient("server1")
 				p.mu.Unlock()
 			},
 			getName: "server1",
@@ -174,7 +182,7 @@ func TestPool_Get(t *testing.T) {
 			name: "get_nonexistent",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.clients["server1"] = mockManagedClient("server1")
 				p.mu.Unlock()
 			},
 			getName: "server2",
@@ -184,7 +192,7 @@ func TestPool_Get(t *testing.T) {
 			name: "get_empty_name",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients[""] = &ManagedClient{name: ""}
+				p.clients[""] = mockManagedClient("")
 				p.mu.Unlock()
 			},
 			getName: "",
@@ -228,10 +236,7 @@ func TestPool_Del(t *testing.T) {
 			name: "delete_existing",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["server1"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "server1",
-				}
+				p.clients["server1"] = mockManagedClient("server1")
 				p.mu.Unlock()
 			},
 			delName:   "server1",
@@ -242,7 +247,7 @@ func TestPool_Del(t *testing.T) {
 			name: "delete_nonexistent",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["server1"] = &ManagedClient{name: "server1"}
+				p.clients["server1"] = mockManagedClient("server1")
 				p.mu.Unlock()
 			},
 			delName:   "server2",
@@ -253,9 +258,9 @@ func TestPool_Del(t *testing.T) {
 			name: "delete_one_of_many",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["s1"] = &ManagedClient{Client: &client.Client{}, name: "s1"}
-				p.clients["s2"] = &ManagedClient{Client: &client.Client{}, name: "s2"}
-				p.clients["s3"] = &ManagedClient{Client: &client.Client{}, name: "s3"}
+				p.clients["s1"] = mockManagedClient("s1")
+				p.clients["s2"] = mockManagedClient("s2")
+				p.clients["s3"] = mockManagedClient("s3")
 				p.mu.Unlock()
 			},
 			delName:   "s2",
@@ -303,7 +308,7 @@ func TestPool_All(t *testing.T) {
 			name: "single_client",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["s1"] = &ManagedClient{name: "s1"}
+				p.clients["s1"] = mockManagedClient("s1")
 				p.mu.Unlock()
 			},
 			want: 1,
@@ -312,9 +317,9 @@ func TestPool_All(t *testing.T) {
 			name: "multiple_clients",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["s1"] = &ManagedClient{name: "s1"}
-				p.clients["s2"] = &ManagedClient{name: "s2"}
-				p.clients["s3"] = &ManagedClient{name: "s3"}
+				p.clients["s1"] = mockManagedClient("s1")
+				p.clients["s2"] = mockManagedClient("s2")
+				p.clients["s3"] = mockManagedClient("s3")
 				p.mu.Unlock()
 			},
 			want: 3,
@@ -338,11 +343,11 @@ func TestPool_All(t *testing.T) {
 func TestPool_All_ReturnsCopy(t *testing.T) {
 	p := NewPool()
 	p.mu.Lock()
-	p.clients["server"] = &ManagedClient{name: "server"}
+	p.clients["server"] = mockManagedClient("server")
 	p.mu.Unlock()
 
 	all := p.All()
-	all["hacked"] = &ManagedClient{name: "hacked"}
+	all["hacked"] = mockManagedClient("hacked")
 
 	if len(p.All()) != 1 {
 		t.Error("All() should return a copy, not reference")
@@ -364,10 +369,7 @@ func TestPool_Close(t *testing.T) {
 			name: "close_single",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["s1"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "s1",
-				}
+				p.clients["s1"] = mockManagedClient("s1")
 				p.mu.Unlock()
 			},
 			wantEmptyAfter: true,
@@ -376,8 +378,8 @@ func TestPool_Close(t *testing.T) {
 			name: "close_multiple",
 			setup: func(p *Pool) {
 				p.mu.Lock()
-				p.clients["s1"] = &ManagedClient{Client: &client.Client{}, name: "s1"}
-				p.clients["s2"] = &ManagedClient{Client: &client.Client{}, name: "s2"}
+				p.clients["s1"] = mockManagedClient("s1")
+				p.clients["s2"] = mockManagedClient("s2")
 				p.mu.Unlock()
 			},
 			wantEmptyAfter: true,
@@ -404,10 +406,7 @@ func TestPool_Close(t *testing.T) {
 func TestPool_Close_DoubleClose(t *testing.T) {
 	p := NewPool()
 	p.mu.Lock()
-	p.clients["server"] = &ManagedClient{
-		Client: &client.Client{},
-		name:   "server",
-	}
+	p.clients["server"] = mockManagedClient("server")
 	p.mu.Unlock()
 
 	err1 := p.Close()
@@ -507,7 +506,7 @@ func TestPool_ContextCancellation(t *testing.T) {
 			case <-ctx.Done():
 				return nil, ctx.Err()
 			default:
-				return &client.Client{}, nil
+				return nil, nil
 			}
 		}, nil
 	})
@@ -529,22 +528,22 @@ func TestPool_EdgeCases(t *testing.T) {
 		{
 			name: "add_same_name_twice",
 			test: func(t *testing.T) {
-				p := NewPool()
-				p.clients["server"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "server",
-				}
+				p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+				ctx := context.Background()
 
-				// Add again with same name
-				p.mu.Lock()
-				p.clients["server"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "server-new",
-				}
-				p.mu.Unlock()
+				first, _ := p.Add(ctx, "server", ServerConfig{Command: "first"})
+				second, _ := p.Add(ctx, "server", ServerConfig{Command: "second"})
 
 				if len(p.All()) != 1 {
 					t.Errorf("count = %d, want 1", len(p.All()))
+				}
+
+				current, _ := p.Get("server")
+				if current == first {
+					t.Error("should have replaced with new client")
+				}
+				if current != second {
+					t.Error("should return second client")
 				}
 			},
 		},
@@ -552,17 +551,16 @@ func TestPool_EdgeCases(t *testing.T) {
 			name: "get_after_close",
 			test: func(t *testing.T) {
 				p := NewPool()
-				p.clients["server"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "server",
-				}
+				p.mu.Lock()
+				p.clients["server"] = mockManagedClient("server")
+				p.mu.Unlock()
 
 				_ = p.Close()
 
-				// Should still be able to get (though client is closed)
+				// Pool is emptied after Close
 				_, ok := p.Get("server")
-				if !ok {
-					t.Error("Get should return client even after Close")
+				if ok {
+					t.Error("Get should return false after Close")
 				}
 			},
 		},
@@ -570,10 +568,9 @@ func TestPool_EdgeCases(t *testing.T) {
 			name: "double_close",
 			test: func(t *testing.T) {
 				p := NewPool()
-				p.clients["server"] = &ManagedClient{
-					Client: &client.Client{},
-					name:   "server",
-				}
+				p.mu.Lock()
+				p.clients["server"] = mockManagedClient("server")
+				p.mu.Unlock()
 
 				err1 := p.Close()
 				err2 := p.Close()
@@ -589,21 +586,29 @@ func TestPool_EdgeCases(t *testing.T) {
 		{
 			name: "unicode_server_name",
 			test: func(t *testing.T) {
-				p := NewPool()
-				p.clients["服务器"] = &ManagedClient{name: "服务器"}
+				p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+				ctx := context.Background()
+
+				_, err := p.Add(ctx, "服务器", ServerConfig{Command: "cmd"})
+				if err != nil {
+					t.Fatalf("add failed: %v", err)
+				}
 
 				cli, ok := p.Get("服务器")
 				if !ok {
 					t.Error("unicode name should work")
 				}
-				if cli.name != "服务器" {
-					t.Errorf("name = %s, want 服务器", cli.name)
+				if cli == nil {
+					t.Error("expected client")
 				}
 			},
 		},
 		{
 			name: "special_characters_in_name",
 			test: func(t *testing.T) {
+				p := NewPoolWithFactory(mockTransportFactory(successTransport, nil))
+				ctx := context.Background()
+
 				names := []string{
 					"server/with/slashes",
 					"server.with.dots",
@@ -611,9 +616,10 @@ func TestPool_EdgeCases(t *testing.T) {
 					"server with spaces",
 				}
 
-				p := NewPool()
 				for _, name := range names {
-					p.clients[name] = &ManagedClient{name: name}
+					if _, err := p.Add(ctx, name, ServerConfig{Command: "cmd"}); err != nil {
+						t.Errorf("failed to add %q: %v", name, err)
+					}
 				}
 
 				for _, name := range names {
