@@ -33,17 +33,20 @@ type Fetch struct {
 	retrier *retry.Retrier
 }
 
-func NewFetchWithTimeout(timeout time.Duration) *Fetch {
+func NewFetchWithTimeout(timeout time.Duration, retryCfg *retry.Config) *Fetch {
+	if retryCfg == nil {
+		retryCfg = retry.NewDefaultConfig()
+	}
 	return &Fetch{
 		client: &http.Client{
 			Timeout: timeout,
 		},
-		retrier: retry.NewRetrier(retry.NewDefaultConfig()),
+		retrier: retry.NewRetrier(retryCfg),
 	}
 }
 
 func NewFetch() *Fetch {
-	return NewFetchWithTimeout(defaultFetchTimeout)
+	return NewFetchWithTimeout(defaultFetchTimeout, nil)
 }
 
 func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, error) {

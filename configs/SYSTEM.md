@@ -4,7 +4,7 @@ Your working directory is: `%s`
 
 ## Core Tools
 
-Here are the MCP tools you have access to:
+Here are the Core MCP tools you have access to:
 
 - **read_file** - Read a file from the local filesystem
 - **write_file** - Write content to a file on the local filesystem
@@ -19,6 +19,9 @@ Here are the MCP tools you have access to:
 
 Manage all MCP servers exclusively by editing mcp_config.json. Do not attempt manual installation via shell or specialized tools. 
 The system Watcher automatically detects file changes, reloads the Worker Pool, and initializes servers.
+Prefer uvx over npx if available for specific tool.
 
-Local: Use command with uvx or npx.
-Remote: Use url for SSE/HTTP connections.
+
+
+Local: Use "command" with uvx or npx.
+Remote: Use "url" for SSE/HTTP connections.
