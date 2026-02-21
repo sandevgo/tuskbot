@@ -27,7 +27,7 @@ func (e *Executor) Execute(ctx context.Context, toolCalls []core.ToolCall) []cor
 
 		results = append(results, core.Message{
 			Role:       core.RoleTool,
-			Content:    e.truncate(res),
+			Content:    res, // TODO: enable truncate only for specific tools
 			ToolCallID: tc.ID,
 		})
 	}
