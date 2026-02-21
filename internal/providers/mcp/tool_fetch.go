@@ -57,7 +57,6 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 			return fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 		}
 
-		// Limit response size
 		limitedReader := io.LimitReader(resp.Body, maxResponseSize)
 		body, err = io.ReadAll(limitedReader)
 		if err != nil {
