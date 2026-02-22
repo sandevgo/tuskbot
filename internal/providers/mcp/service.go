@@ -62,6 +62,7 @@ func NewService(
 		timeouts:       NewDefaultTimeouts(),
 		nativeTools:    nativeTools,
 		nativeToolDefs: nativeToolDefs,
+		activeConfigs:  make(map[string]ServerConfig),
 	}, nil
 }
 
