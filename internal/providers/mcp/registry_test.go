@@ -9,12 +9,14 @@ import (
 )
 
 type mockStorage struct {
-	mu       sync.Mutex
-	config   *Config
-	loadErr  error
-	saveErr  error
-	loadFunc func(ctx context.Context) (*Config, error)
-	saveFunc func(ctx context.Context, cfg *Config) error
+	mu        sync.Mutex
+	config    *Config
+	loadErr   error
+	saveErr   error
+	watchErr  error
+	loadFunc  func(ctx context.Context) (*Config, error)
+	saveFunc  func(ctx context.Context, cfg *Config) error
+	watchFunc func(ctx context.Context) (<-chan Config, error)
 }
 
 func newMockStorage() *mockStorage {
@@ -58,6 +60,12 @@ func (m *mockStorage) Save(ctx context.Context, cfg *Config) error {
 }
 
 func (m *mockStorage) Watch(ctx context.Context) (<-chan Config, error) {
+	if m.watchFunc != nil {
+		return m.watchFunc(ctx)
+	}
+	if m.watchErr != nil {
+		return nil, m.watchErr
+	}
 	return nil, nil
 }
 
@@ -677,6 +685,98 @@ func TestRegistry_EdgeCases(t *testing.T) {
 
 			tt.setup(r, storage, ctx)
 			tt.check(t, r)
+		})
+	}
+}
+
+func TestRegistry_Watch(t *testing.T) {
+	tests := []struct {
+		name     string
+		watchErr error
+		updates  []Config
+		wantErr  bool
+	}{
+		{
+			name:     "watch_error",
+			watchErr: errors.New("watch failed"),
+			wantErr:  true,
+		},
+		{
+			name: "receive_updates",
+			updates: []Config{
+				{MCPServers: map[string]ServerConfig{"s1": {Command: "c1"}}},
+				{MCPServers: map[string]ServerConfig{"s1": {Command: "c1"}, "s2": {Command: "c2"}}},
+			},
+			wantErr: false,
+		},
+		{
+			name:    "channel_closed",
+			updates: []Config{},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := newMockStorage()
+			storage.watchErr = tt.watchErr
+
+			if tt.watchErr == nil {
+				storage.watchFunc = func(ctx context.Context) (<-chan Config, error) {
+					ch := make(chan Config)
+					go func() {
+						defer close(ch)
+						for _, update := range tt.updates {
+							select {
+							case ch <- update:
+							case <-ctx.Done():
+								return
+							}
+						}
+					}()
+					return ch, nil
+				}
+			}
+
+			r := NewRegistry(storage)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ch, err := r.Watch(ctx)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Verify updates
+			for i, wantCfg := range tt.updates {
+				gotCfg, ok := <-ch
+				if !ok {
+					t.Fatalf("channel closed unexpectedly at index %d", i)
+				}
+
+				if len(gotCfg.MCPServers) != len(wantCfg.MCPServers) {
+					t.Errorf("update %d: servers count = %d, want %d", i, len(gotCfg.MCPServers), len(wantCfg.MCPServers))
+				}
+
+				// Verify internal state was updated
+				rServers := r.List()
+				if len(rServers) != len(wantCfg.MCPServers) {
+					t.Errorf("update %d: internal state count = %d, want %d", i, len(rServers), len(wantCfg.MCPServers))
+				}
+			}
+
+			// Verify channel closes
+			_, ok := <-ch
+			if ok {
+				t.Error("channel should be closed")
+			}
 		})
 	}
 }
