@@ -12,14 +12,15 @@ import (
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
-	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 func TestTavily(t *testing.T) {
 	ctx := context.Background()
 
-	initEnv(ctx, config.GetRuntimePath())
+	if err := initEnv(ctx, config.GetRuntimePath()); err != nil {
+		t.Fatal(err)
+	}
 
 	var flushLog func()
 	ctx, flushLog = log.NewContextWithLogger(ctx, true)
@@ -46,42 +47,43 @@ func TestTavily(t *testing.T) {
 
 	time.Sleep(5 * time.Second)
 
-	_, err = mcpService.GetTools(ctx)
+	tools, err := mcpService.GetTools(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	//var toolName string
-	//for _, tool := range tools {
-	//	t.Log(tool)
-	//	if tool.Function.Name == "tavily" || tool.Function.Name == "tavily.search" {
-	//		toolName = tool.Function.Name
-	//		break
-	//	}
-	//}
-	//if toolName == "" && len(tools) > 0 {
-	//	toolName = tools[len(tools)-1].Function.Name
-	//}
-	//if toolName == "" {
-	//	t.Fatal("no tools found")
-	//}
-	//t.Logf("using tool: %s", toolName)
+	var toolName string
+	for _, tool := range tools {
+		t.Log(tool)
+		if tool.Function.Name == "tavily" || tool.Function.Name == "tavily.search" {
+			toolName = tool.Function.Name
+			break
+		}
+	}
+	if toolName == "" && len(tools) > 0 {
+		toolName = tools[len(tools)-1].Function.Name
+	}
+	if toolName == "" {
+		t.Fatal("no tools found")
+	}
+	t.Logf("using tool: %s", toolName)
 
 	call := core.ToolCall{
 		ID:   "call_function_7wjc8y3tq85m_1",
 		Type: "function",
 		Function: core.FunctionCall{
-			Name:      "tavily.search",
+			Name:      toolName,
 			Arguments: "{\"query\": \"OpenAI o1 model features summary\"}",
 		},
 	}
 
 	calls := []core.ToolCall{call}
 
-	executor := agent.NewExecutor(mcpService)
-	messages := executor.Execute(ctx, calls)
-	fmt.Println(messages[0].Content)
-
+	result, err := mcpService.CallTool(ctx, toolName, calls[0].Function.Arguments)
+	if err != nil {
+		t.Fatalf("tool execution failed: %v", err)
+	}
+	fmt.Println(result)
 }
 
 func initEnv(ctx context.Context, runtimePath string) error {
