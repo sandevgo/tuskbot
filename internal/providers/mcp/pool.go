@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -51,7 +52,7 @@ func (p *Pool) Add(ctx context.Context, name string, cfg ServerConfig) (*Managed
 
 	client, err := transport(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("transport creation failed: %w", err)
 	}
 
 	managed := &ManagedClient{
