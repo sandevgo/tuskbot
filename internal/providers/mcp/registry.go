@@ -105,3 +105,37 @@ func (r *Registry) save(ctx context.Context) error {
 		MCPServers: r.servers,
 	})
 }
+
+func (r *Registry) Watch(ctx context.Context) (<-chan Config, error) {
+	ch, err := r.storage.Watch(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(chan Config)
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case cfg, ok := <-ch:
+				if !ok {
+					return
+				}
+
+				r.mu.Lock()
+				r.servers = cfg.MCPServers
+				r.mu.Unlock()
+
+				select {
+				case out <- cfg:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+
+	return out, nil
+}

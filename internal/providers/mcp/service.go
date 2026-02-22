@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -40,6 +41,10 @@ type Service struct {
 	// Native tools support
 	nativeTools    map[string]NativeHandler
 	nativeToolDefs []core.Tool
+
+	// State tracking
+	activeConfigs map[string]ServerConfig
+	mu            sync.RWMutex
 }
 
 func NewService(
@@ -68,28 +73,92 @@ func (s *Service) Start(ctx context.Context) error {
 
 	servers := s.registry.List()
 
+	// Initialize active configs
+	s.mu.Lock()
+	for k, v := range servers {
+		s.activeConfigs[k] = v
+	}
+	s.mu.Unlock()
+
 	// Start servers in parallel background goroutines
 	for name, srv := range servers {
-		go func(n string, c ServerConfig) {
-			// Use a timeout derived from the parent context
-			connectCtx, cancel := context.WithTimeout(ctx, s.timeouts.Connect)
-			defer cancel()
-
-			logger := log.FromCtx(ctx).With().Str("server", n).Logger()
-			logger.Info().Msg("starting mcp server")
-
-			if _, err := s.pool.Add(connectCtx, n, c); err != nil {
-				logger.Error().Err(err).Msg("failed to start mcp server")
-				return
-			}
-
-			s.cache.Invalidate()
-
-			logger.Info().Msg("mcp server connected")
-		}(name, srv)
+		go s.connectServer(ctx, name, srv)
 	}
 
+	// Watch for config changes
+	updates, err := s.registry.Watch(ctx)
+	if err != nil {
+		return fmt.Errorf("watch registry: %w", err)
+	}
+	go s.watchConfig(ctx, updates)
+
 	return nil
+}
+
+func (s *Service) connectServer(ctx context.Context, name string, cfg ServerConfig) {
+	// Use a timeout derived from the parent context
+	connectCtx, cancel := context.WithTimeout(ctx, s.timeouts.Connect)
+	defer cancel()
+
+	logger := log.FromCtx(ctx).With().Str("server", name).Logger()
+	logger.Info().Msg("starting mcp server")
+
+	if _, err := s.pool.Add(connectCtx, name, cfg); err != nil {
+		logger.Error().Err(err).Msg("failed to start mcp server")
+		return
+	}
+
+	s.cache.Invalidate()
+
+	logger.Info().Msg("mcp server connected")
+}
+
+func (s *Service) watchConfig(ctx context.Context, updates <-chan Config) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case cfg, ok := <-updates:
+			if !ok {
+				return
+			}
+			s.syncServers(ctx, cfg.MCPServers)
+		}
+	}
+}
+
+func (s *Service) syncServers(ctx context.Context, desired map[string]ServerConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// 1. Check for removals or updates
+	for name, activeCfg := range s.activeConfigs {
+		newCfg, exists := desired[name]
+		if !exists {
+			log.FromCtx(ctx).Info().Str("server", name).Msg("removing mcp server")
+			s.pool.Del(name)
+			delete(s.activeConfigs, name)
+			s.cache.Invalidate()
+			continue
+		}
+
+		if !reflect.DeepEqual(activeCfg, newCfg) {
+			log.FromCtx(ctx).Info().Str("server", name).Msg("restarting mcp server")
+			s.connectServer(ctx, name, newCfg)
+			s.activeConfigs[name] = newCfg
+			s.cache.Invalidate()
+		}
+	}
+
+	// 2. Check for additions
+	for name, newCfg := range desired {
+		if _, exists := s.activeConfigs[name]; !exists {
+			log.FromCtx(ctx).Info().Str("server", name).Msg("adding mcp server")
+			s.connectServer(ctx, name, newCfg)
+			s.activeConfigs[name] = newCfg
+			s.cache.Invalidate()
+		}
+	}
 }
 
 func (s *Service) Shutdown(ctx context.Context) error {
