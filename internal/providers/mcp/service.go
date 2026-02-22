@@ -98,12 +98,14 @@ func (s *Service) Start(ctx context.Context) error {
 }
 
 func (s *Service) connectServer(ctx context.Context, name string, cfg ServerConfig) {
-	// Use a timeout derived from the parent context
 	connectCtx, cancel := context.WithTimeout(ctx, s.timeouts.Connect)
 	defer cancel()
 
 	logger := log.FromCtx(ctx).With().Str("server", name).Logger()
-	logger.Info().Msg("starting mcp server")
+	logger.Info().
+		Str("url", cfg.URL).
+		Str("command", cfg.Command).
+		Msg("starting mcp server")
 
 	if _, err := s.pool.Add(connectCtx, name, cfg); err != nil {
 		logger.Error().Err(err).Msg("failed to start mcp server")
@@ -111,7 +113,6 @@ func (s *Service) connectServer(ctx context.Context, name string, cfg ServerConf
 	}
 
 	s.cache.Invalidate()
-
 	logger.Info().Msg("mcp server connected")
 }
 
@@ -279,9 +280,11 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	// 4. Execute
-	var argsMap map[string]interface{}
-	if err := json.Unmarshal([]byte(args), &argsMap); err != nil {
-		return "", fmt.Errorf("invalid json arguments: %w", err)
+	argsMap := make(map[string]any)
+	if args != "" {
+		if err := json.Unmarshal([]byte(args), &argsMap); err != nil {
+			return "", fmt.Errorf("invalid json arguments: %w", err)
+		}
 	}
 
 	req := mcpproto.CallToolRequest{}
