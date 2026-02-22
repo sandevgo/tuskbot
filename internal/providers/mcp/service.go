@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -284,7 +285,7 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	req := mcpproto.CallToolRequest{}
-	req.Params.Name = name
+	req.Params.Name = strings.TrimPrefix(name, serverName+".")
 	req.Params.Arguments = argsMap
 
 	// Set a reasonable timeout for tool execution
@@ -296,10 +297,6 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 		return "", err
 	}
 
-	if res.IsError {
-		return "", fmt.Errorf("tool execution failed")
-	}
-
 	var output string
 	for _, content := range res.Content {
 		if text, ok := content.(mcpproto.TextContent); ok {
@@ -308,5 +305,10 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 			output += textPtr.Text + "\n"
 		}
 	}
+
+	if res.IsError {
+		return "", fmt.Errorf("tool execution failed: %s", output)
+	}
+
 	return output, nil
 }
