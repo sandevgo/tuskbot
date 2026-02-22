@@ -93,7 +93,7 @@ TuskBot uses environment variables for configuration.
 ### AI & Memory
 
 *   `TUSK_MAIN_MODEL`: Main LLM model (format: `provider/model`).
-*   `TUSK_EMBEDDING_MODEL_PATH`: Path to the local GGUF embedding model.
+*   `TUSK_EMBEDDING_MODEL`: Embedding model file name (gguf).
 *   `TUSK_CONTEXT_WINDOW_SIZE`: Number of messages in active context (default: `30`).
 
 ### Providers
