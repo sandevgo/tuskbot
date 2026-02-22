@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/mark3labs/mcp-go/client"
+	mcptransport "github.com/mark3labs/mcp-go/client/transport"
 	mcpproto "github.com/mark3labs/mcp-go/mcp"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -17,7 +19,7 @@ func NewTransport(t TransportType) (Transport, error) {
 	case TransportStdio:
 		return StdioTransport, nil
 	case TransportHTTP:
-		return SSETransport, nil
+		return HttpTransport, nil
 	}
 
 	return nil, fmt.Errorf("unsupported transport type: %s", t)
@@ -54,23 +56,30 @@ func StdioTransport(ctx context.Context, cfg ServerConfig) (*client.Client, erro
 	return cli, nil
 }
 
-func SSETransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
-	httpClient := http.DefaultClient
-
-	if len(cfg.Headers) > 0 {
-		httpClient = &http.Client{
-			Transport: &headerTransport{
-				transport: http.DefaultTransport,
-				headers:   cfg.Headers,
-			},
-		}
+func HttpTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+	// Create fresh transport to avoid shared state issues
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
 	}
 
-	options := client.WithHTTPClient(httpClient)
+	headers := make(map[string]string)
+	for k, v := range cfg.Headers {
+		headers[k] = v
+	}
 
-	cli, err := client.NewSSEMCPClient(cfg.URL, options)
+	cli, err := client.NewStreamableHttpClient(
+		cfg.URL,
+		mcptransport.WithHTTPHeaders(headers),
+		mcptransport.WithHTTPBasicClient(httpClient),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create client: %w", err)
+		return nil, fmt.Errorf("failed to create SSE transport: %w", err)
 	}
 
 	if err = cli.Start(ctx); err != nil {
@@ -91,17 +100,4 @@ func SSETransport(ctx context.Context, cfg ServerConfig) (*client.Client, error)
 	}
 
 	return cli, nil
-}
-
-type headerTransport struct {
-	transport http.RoundTripper
-	headers   map[string]string
-}
-
-func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req = req.Clone(req.Context())
-	for k, v := range t.headers {
-		req.Header.Set(k, v)
-	}
-	return t.transport.RoundTrip(req)
 }
