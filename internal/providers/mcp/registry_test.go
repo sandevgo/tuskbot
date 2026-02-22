@@ -721,14 +721,32 @@ func TestRegistry_Watch(t *testing.T) {
 			storage := newMockStorage()
 			storage.watchErr = tt.watchErr
 
+			// Channel to synchronize updates to prevent race conditions in tests
+			nextUpdate := make(chan struct{})
+
 			if tt.watchErr == nil {
 				storage.watchFunc = func(ctx context.Context) (<-chan Config, error) {
 					ch := make(chan Config)
 					go func() {
 						defer close(ch)
-						for _, update := range tt.updates {
+						for i, update := range tt.updates {
+							// Wait for signal before sending subsequent updates
+							if i > 0 {
+								select {
+								case <-nextUpdate:
+								case <-ctx.Done():
+									return
+								}
+							}
+
+							// Deep copy to simulate storage behavior
+							cfg := Config{MCPServers: make(map[string]ServerConfig)}
+							for k, v := range update.MCPServers {
+								cfg.MCPServers[k] = v
+							}
+
 							select {
-							case ch <- update:
+							case ch <- cfg:
 							case <-ctx.Done():
 								return
 							}
@@ -756,6 +774,15 @@ func TestRegistry_Watch(t *testing.T) {
 
 			// Verify updates
 			for i, wantCfg := range tt.updates {
+				if i > 0 {
+					// Signal that we are ready for the next update
+					select {
+					case nextUpdate <- struct{}{}:
+					case <-ctx.Done():
+						t.Fatal("context cancelled")
+					}
+				}
+
 				gotCfg, ok := <-ch
 				if !ok {
 					t.Fatalf("channel closed unexpectedly at index %d", i)

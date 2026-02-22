@@ -125,7 +125,11 @@ func (r *Registry) Watch(ctx context.Context) (<-chan Config, error) {
 				}
 
 				r.mu.Lock()
-				r.servers = cfg.MCPServers
+				if cfg.MCPServers == nil {
+					r.servers = make(map[string]ServerConfig)
+				} else {
+					r.servers = cfg.MCPServers
+				}
 				r.mu.Unlock()
 
 				select {
