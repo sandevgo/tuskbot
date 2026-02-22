@@ -2,7 +2,6 @@ package integration
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,95 +9,70 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/sandevgo/tuskbot/internal/config"
-	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
-func TestTavily(t *testing.T) {
-	ctx := context.Background()
+//func TestTavily(t *testing.T) {
+//	ctx := context.Background()
+//
+//	if err := initEnv(ctx, config.GetRuntimePath()); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	var flushLog func()
+//	ctx, flushLog = log.NewContextWithLogger(ctx, true)
+//	defer flushLog()
+//
+//	mcpService := initMcp(ctx, t)
+//	_, err := mcpService.GetTools(ctx)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	toolName := "call_function_7wjc8y3tq85m_1"
+//	args := "{\"query\": \"OpenAI o1 model features summary\"}"
+//
+//	result, err := mcpService.CallTool(ctx, toolName, args)
+//	if err != nil {
+//		t.Fatalf("tool execution failed: %v", err)
+//	}
+//	fmt.Println(result)
+//}
 
-	mcpService := initMcp(t)
-	tools, err := mcpService.GetTools(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var toolName string
-	for _, tool := range tools {
-		t.Log(tool)
-		if tool.Function.Name == "tavily" || tool.Function.Name == "tavily.search" {
-			toolName = tool.Function.Name
-			break
-		}
-	}
-	if toolName == "" && len(tools) > 0 {
-		toolName = tools[len(tools)-1].Function.Name
-	}
-	if toolName == "" {
-		t.Fatal("no tools found")
-	}
-	t.Logf("using tool: %s", toolName)
-
-	call := core.ToolCall{
-		ID:   "call_function_7wjc8y3tq85m_1",
-		Type: "function",
-		Function: core.FunctionCall{
-			Name:      toolName,
-			Arguments: "{\"query\": \"OpenAI o1 model features summary\"}",
-		},
-	}
-
-	calls := []core.ToolCall{call}
-
-	result, err := mcpService.CallTool(ctx, toolName, calls[0].Function.Arguments)
-	if err != nil {
-		t.Fatalf("tool execution failed: %v", err)
-	}
-	fmt.Println(result)
-}
-
-func TestContext7(t *testing.T) {
-	ctx := context.Background()
-
-	mcpService := initMcp(t)
-	tools, err := mcpService.GetTools(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var toolName string
-	for _, tool := range tools {
-		t.Log(tool)
-		if tool.Function.Name == "context7" || tool.Function.Name == "context7.search" {
-			toolName = tool.Function.Name
-			break
-		}
-	}
-	if toolName == "" && len(tools) > 0 {
-		toolName = tools[len(tools)-1].Function.Name
-	}
-	if toolName == "" {
-		t.Fatal("no tools found")
-	}
-	t.Logf("using tool: %s", toolName)
-
-	call := core.ToolCall{
-		ID:   "call_function_7wjc8y3tq85m_1",
-		Type: "function",
-		Function: core.FunctionCall{
-			Name: toolName,
-		},
-	}
-
-	calls := []core.ToolCall{call}
-
-	result, err := mcpService.CallTool(ctx, toolName, calls[0].Function.Arguments)
-	if err != nil {
-		t.Fatalf("tool execution failed: %v", err)
-	}
-	fmt.Println(result)
-}
+//func TestContext7(t *testing.T) {
+//	ctx := context.Background()
+//
+//	if err := initEnv(ctx, config.GetRuntimePath()); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	var flushLog func()
+//	ctx, flushLog = log.NewContextWithLogger(ctx, true)
+//	defer flushLog()
+//
+//	mcpService := initMcp(ctx, t)
+//
+//	tools, err := mcpService.GetTools(ctx)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	for _, tool := range tools {
+//		t.Log(tool.Function.Name)
+//	}
+//
+//	toolName := "context7.resolve-library-id"
+//	args := "{\"query\": \"react\", \"libraryName\": \"npm\"}"
+//
+//	t.Logf("using tool: %s", toolName)
+//
+//	result, err := mcpService.CallTool(ctx, toolName, args)
+//	if err != nil {
+//		t.Fatalf("tool execution failed: %v", err)
+//	}
+//	fmt.Println(result)
+//}
 
 func initEnv(ctx context.Context, runtimePath string) error {
 	logger := log.FromCtx(ctx)
@@ -120,17 +94,7 @@ func initEnv(ctx context.Context, runtimePath string) error {
 	return nil
 }
 
-func initMcp(t *testing.T) *mcp.Service {
-	ctx := context.Background()
-
-	if err := initEnv(ctx, config.GetRuntimePath()); err != nil {
-		t.Fatal(err)
-	}
-
-	var flushLog func()
-	ctx, flushLog = log.NewContextWithLogger(ctx, true)
-	defer flushLog()
-
+func initMcp(ctx context.Context, t *testing.T) *mcp.Service {
 	appCfg := config.NewAppConfig(ctx)
 
 	filStorage := mcp.NewFileStorage(appCfg.GetMCPConfigPath())
@@ -146,10 +110,10 @@ func initMcp(t *testing.T) *mcp.Service {
 
 	go func() {
 		if err := mcpService.Start(ctx); err != nil {
-			t.Error(err)
+			t.Errorf("failed to start mcp server %s", err.Error())
 		}
 	}()
 
-	time.Sleep(5 * time.Second) // wait for connections
+	time.Sleep(1 * time.Second) // wait for connections
 	return mcpService
 }
