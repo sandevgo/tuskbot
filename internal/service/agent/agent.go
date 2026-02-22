@@ -117,6 +117,12 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 			}
 			messages = append(messages, toolMsg)
 		}
+
+		// Update tool set (if model added new tools)
+		tools, err = a.mcp.GetTools(ctx)
+		if err != nil {
+			return "", fmt.Errorf("failed to get tools: %w", err)
+		}
 	}
 
 	return finalContent, nil
