@@ -55,8 +55,18 @@ func StdioTransport(ctx context.Context, cfg ServerConfig) (*client.Client, erro
 }
 
 func SSETransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+	httpClient := http.DefaultClient
 
-	options := client.WithHTTPClient(http.DefaultClient)
+	if len(cfg.Headers) > 0 {
+		httpClient = &http.Client{
+			Transport: &headerTransport{
+				transport: http.DefaultTransport,
+				headers:   cfg.Headers,
+			},
+		}
+	}
+
+	options := client.WithHTTPClient(httpClient)
 
 	cli, err := client.NewSSEMCPClient(cfg.URL, options)
 	if err != nil {
@@ -81,4 +91,17 @@ func SSETransport(ctx context.Context, cfg ServerConfig) (*client.Client, error)
 	}
 
 	return cli, nil
+}
+
+type headerTransport struct {
+	transport http.RoundTripper
+	headers   map[string]string
+}
+
+func (t *headerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	for k, v := range t.headers {
+		req.Header.Set(k, v)
+	}
+	return t.transport.RoundTrip(req)
 }
