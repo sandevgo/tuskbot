@@ -19,6 +19,7 @@ type ServerConfig struct {
 	Args    []string          `json:"args"`
 	Env     map[string]string `json:"env"`
 	URL     string            `json:"url,omitempty"`
+	Headers map[string]string `json:"headers,omitempty"`
 }
 
 func (c *ServerConfig) GetTransport() (TransportType, error) {
