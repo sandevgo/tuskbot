@@ -11,6 +11,7 @@ import (
 )
 
 func TestFileStorage_Load_MissingDirectory(t *testing.T) {
+	t.Parallel()
 	fs := NewFileStorage("/nonexistent/path/config.json")
 	ctx := context.Background()
 
@@ -21,6 +22,7 @@ func TestFileStorage_Load_MissingDirectory(t *testing.T) {
 }
 
 func TestFileStorage_Load_NullMCPServers(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -46,6 +48,7 @@ func TestFileStorage_Load_NullMCPServers(t *testing.T) {
 }
 
 func TestFileStorage_Save_FilePermissions(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 	fs := NewFileStorage(path)
@@ -69,6 +72,7 @@ func TestFileStorage_Save_FilePermissions(t *testing.T) {
 }
 
 func TestFileStorage_Save_ReadOnlyDirectory(t *testing.T) {
+	t.Parallel()
 	if os.Getuid() == 0 {
 		t.Skip("skipping permission test when running as root")
 	}
@@ -82,7 +86,8 @@ func TestFileStorage_Save_ReadOnlyDirectory(t *testing.T) {
 	if err := os.Chmod(tmpDir, 0555); err != nil {
 		t.Fatalf("failed to chmod: %v", err)
 	}
-	defer os.Chmod(tmpDir, 0755) // Cleanup
+	// Cleanup is handled by t.TempDir cleanup, but we might need to restore perms to delete
+	t.Cleanup(func() { os.Chmod(tmpDir, 0755) })
 
 	cfg := &Config{MCPServers: map[string]ServerConfig{"test": {Command: "echo"}}}
 	err := fs.Save(ctx, cfg)
@@ -92,6 +97,7 @@ func TestFileStorage_Save_ReadOnlyDirectory(t *testing.T) {
 }
 
 func TestFileStorage_Save_SpecialCharacters(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 	fs := NewFileStorage(path)
@@ -134,6 +140,7 @@ func TestFileStorage_Save_SpecialCharacters(t *testing.T) {
 }
 
 func TestFileStorage_Watch_AtomicWrite(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -150,9 +157,6 @@ func TestFileStorage_Watch_AtomicWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
-
-	// Wait for first poll
-	time.Sleep(1100 * time.Millisecond)
 
 	// Simulate atomic write (write to temp, rename)
 	tmpPath := path + ".tmp"
@@ -179,6 +183,7 @@ func TestFileStorage_Watch_AtomicWrite(t *testing.T) {
 }
 
 func TestFileStorage_Watch_FileDeleted(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -196,16 +201,10 @@ func TestFileStorage_Watch_FileDeleted(t *testing.T) {
 		t.Fatalf("Watch failed: %v", err)
 	}
 
-	// Wait for first poll
-	time.Sleep(1200 * time.Millisecond)
-
 	// Delete file
 	if err := os.Remove(path); err != nil {
 		t.Fatalf("failed to remove file: %v", err)
 	}
-
-	// Wait for watcher to notice deletion
-	time.Sleep(1200 * time.Millisecond)
 
 	// Recreate file with new content
 	newContent := `{"mcpServers": {"recovered": {"command": "test"}}}`
@@ -232,6 +231,7 @@ func TestFileStorage_Watch_FileDeleted(t *testing.T) {
 }
 
 func TestFileStorage_Watch_RapidUpdates(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -248,9 +248,6 @@ func TestFileStorage_Watch_RapidUpdates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Watch failed: %v", err)
 	}
-
-	// Wait for first poll
-	time.Sleep(1100 * time.Millisecond)
 
 	// Send 5 rapid updates
 	for i := 0; i < 5; i++ {
@@ -289,6 +286,7 @@ done:
 }
 
 func TestFileStorage_ConcurrentWatchAndSave(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -327,7 +325,8 @@ func TestFileStorage_ConcurrentWatchAndSave(t *testing.T) {
 		if err := fs.Save(ctx, cfg); err != nil {
 			t.Errorf("Save failed: %v", err)
 		}
-		time.Sleep(200 * time.Millisecond)
+		// Reduced sleep to just cover the 1s tick interval (10 * 120ms = 1.2s)
+		time.Sleep(120 * time.Millisecond)
 	}
 
 	cancel()
@@ -340,6 +339,7 @@ func TestFileStorage_ConcurrentWatchAndSave(t *testing.T) {
 }
 
 func TestFileStorage_Load_InvalidJSONTypes(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		content string
@@ -373,7 +373,9 @@ func TestFileStorage_Load_InvalidJSONTypes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			tmpDir := t.TempDir()
 			path := filepath.Join(tmpDir, "mcp_config.json")
 
@@ -396,6 +398,7 @@ func TestFileStorage_Load_InvalidJSONTypes(t *testing.T) {
 }
 
 func TestFileStorage_Save_EmptyConfig(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 	fs := NewFileStorage(path)
@@ -452,6 +455,7 @@ func (m *MockStorage) Watch(ctx context.Context) (<-chan Config, error) {
 }
 
 func TestFileStorage_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "mcp_config.json")
 	if err := os.WriteFile(path, []byte(`{}`), 0644); err != nil {
