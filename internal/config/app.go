@@ -38,7 +38,6 @@ func NewAppConfig(ctx context.Context, runtimePath string) *AppConfig {
 		log.FromCtx(ctx).Fatal().Err(err).Msg("failed to parse App config")
 	}
 
-	// как-то не красиво в конструктора сетить на самого себя же
 	c.SetModel(c.MainModel)
 	c.runtimePath = runtimePath
 	return c
