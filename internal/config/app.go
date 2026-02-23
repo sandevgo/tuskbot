@@ -76,6 +76,10 @@ func (c *AppConfig) GetMCPConfigPath() string {
 	return filepath.Join(c.runtimePath, "mcp_config.json")
 }
 
+func (c *AppConfig) GetContextWindowSize() int {
+	return c.ContextWindowSize
+}
+
 func (c *AppConfig) IsTelegramSelected() bool {
 	return strings.ToLower(c.ChatChannel) == "telegram"
 }

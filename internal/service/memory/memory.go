@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 type Memory struct {
-	cfg      *config.AppConfig
+	cfg      core.AppConfig
 	msgRepo  core.MessagesRepository
 	knowRepo core.KnowledgeRepository
 	embedder core.Embedder
@@ -19,7 +18,7 @@ type Memory struct {
 }
 
 func NewMemory(
-	cfg *config.AppConfig,
+	cfg core.AppConfig,
 	msgRepo core.MessagesRepository,
 	knowRepo core.KnowledgeRepository,
 	embedder core.Embedder,
@@ -44,7 +43,7 @@ func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string
 		})
 	}
 
-	history, err := s.msgRepo.GetMessages(ctx, sessionID, s.cfg.ContextWindowSize)
+	history, err := s.msgRepo.GetMessages(ctx, sessionID, s.cfg.GetContextWindowSize())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get history: %w", err)
 	}

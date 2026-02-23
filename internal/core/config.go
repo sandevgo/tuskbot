@@ -12,6 +12,7 @@ type AppConfig interface {
 	GetMemoryPath() string
 	GetDatabasePath() string
 	GetMCPConfigPath() string
+	GetContextWindowSize() int
 	GetModel() string
 	GetProvider() string
 	GetAnthropicAPIKey() string
