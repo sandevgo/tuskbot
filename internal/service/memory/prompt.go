@@ -3,15 +3,14 @@ package memory
 import (
 	"os"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type SysPrompt struct {
-	cfg *config.AppConfig
+	cfg core.AppConfig
 }
 
-func NewSysPrompt(cfg *config.AppConfig) *SysPrompt {
+func NewSysPrompt(cfg core.AppConfig) *SysPrompt {
 	return &SysPrompt{
 		cfg: cfg,
 	}
