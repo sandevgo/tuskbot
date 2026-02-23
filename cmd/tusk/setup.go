@@ -36,8 +36,6 @@ func NewServices(ctx context.Context) []srv.Service {
 	appCfg := config.NewAppConfig(ctx, config.GetRuntimePath())
 	ragCfg := config.NewRAGConfig(ctx)
 
-	globState := state.NewGlobalState(appCfg)
-
 	// 2. Storage
 	db, messagesRepo, err := initStorage(ctx, appCfg)
 	if err != nil {
@@ -49,10 +47,12 @@ func NewServices(ctx context.Context) []srv.Service {
 	knowledgeRepo := sqlite.NewKnowledgeRepo(db)
 
 	// 3. AI Provider
-	aiProvider, err := llm.NewProvider(ctx, appCfg)
+	aiProvider, err := llm.NewDynamicProvider(ctx, appCfg)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize LLM provider")
 	}
+
+	globState := state.NewGlobalState(aiProvider)
 
 	// 4. RAG Provider (Embedder)
 	embedModel, err := rag.NewEmbeddingModel(ragCfg)
