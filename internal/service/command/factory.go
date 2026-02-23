@@ -5,11 +5,12 @@ import (
 )
 
 func NewCommands(
-	ai core.AIProvider,
+	appCfg core.AppConfig,
+	state core.GlobalState,
 	mcp core.MCPServer,
 ) []core.Command {
 	return []core.Command{
-		NewModelCommand(ai),
+		NewModelCommand(appCfg, state),
 		NewMCPCommand(mcp),
 	}
 }

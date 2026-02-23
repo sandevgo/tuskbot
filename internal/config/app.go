@@ -116,8 +116,9 @@ func (c *AppConfig) GetModel() string {
 	return c.model
 }
 
-func (c *AppConfig) SetModel(model string) {
+func (c *AppConfig) SetModel(model string) error {
 	c.model = model
+	return c.persist()
 }
 
 func (c *AppConfig) GetProvider() string {
@@ -128,6 +129,6 @@ func (c *AppConfig) SetProvider(provider string) {
 	c.provider = provider
 }
 
-func (c *AppConfig) Persist(ctx context.Context) error {
+func (c *AppConfig) persist() error {
 	return fmt.Errorf("persistance not implemented")
 }

@@ -6,7 +6,6 @@ import (
 
 type configWriter interface {
 	SetModel(string) error
-	Pesrist() error
 }
 
 type GlobalState struct {

@@ -15,6 +15,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
+	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
 	"github.com/sandevgo/tuskbot/pkg/log"
@@ -34,6 +35,8 @@ func NewServices(ctx context.Context) []srv.Service {
 	// 1. Configuration
 	appCfg := config.NewAppConfig(ctx, config.GetRuntimePath())
 	ragCfg := config.NewRAGConfig(ctx)
+
+	globState := state.NewGlobalState(appCfg)
 
 	// 2. Storage
 	db, messagesRepo, err := initStorage(ctx, appCfg)
@@ -96,7 +99,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	)
 
 	// commands
-	commands := command.NewCommands(aiProvider, mcpManager)
+	commands := command.NewCommands(appCfg, globState, mcpManager)
 	cmdRouter := command.New(commands)
 
 	// 8. Transports
