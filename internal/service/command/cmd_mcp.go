@@ -4,21 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sandevgo/tuskbot/internal/config"
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type MCPCommand struct {
-	cfg *config.AppConfig
+	mcp core.MCPServer
 }
 
-func (c *ModelCommand) Name() string {
-	return "model"
+func NewMCPCommand(mcp core.MCPServer) core.Command {
+	return &MCPCommand{
+		mcp: mcp,
+	}
 }
 
-func (c *ModelCommand) Description() string {
-	return "Show list of commands"
+func (c *MCPCommand) Name() string {
+	return "mcp"
 }
 
-func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
+func (c *MCPCommand) Description() string {
+	return "Show connected MCP servers"
+}
+
+func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	return fmt.Sprintf("Current model: %s\n", c.cfg.MainModel), nil
 }

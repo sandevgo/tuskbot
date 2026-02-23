@@ -96,7 +96,8 @@ func NewServices(ctx context.Context) []srv.Service {
 	)
 
 	// commands
-	cmdRouter := command.New(appCfg, mem)
+	commands := command.NewCommands(appCfg, mcpManager)
+	cmdRouter := command.New(commands)
 
 	// 8. Transports
 	transports, err := initTransports(ctx, appCfg, ag, cmdRouter)

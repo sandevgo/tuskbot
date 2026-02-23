@@ -11,6 +11,12 @@ type ModelCommand struct {
 	cfg *config.AppConfig
 }
 
+func NewModelCommand(cfg *config.AppConfig) *ModelCommand {
+	return &ModelCommand{
+		cfg: cfg,
+	}
+}
+
 func (c *ModelCommand) Name() string {
 	return "model"
 }
