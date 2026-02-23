@@ -25,7 +25,7 @@ We follow a Hexagonal / Clean Architecture approach to ensure scalability and te
 ### 2. `internal/core/` (Domain)
 - Contains pure domain entities and business rules.
 - **No external dependencies** (no SQL, no HTTP, no LLM SDKs).
-- Examples: `User`, `Message`, `Config` structs.
+- Examples: `Tool`, `Message`, `Model` structs.
 
 ### 3. `internal/storage/` (Driven Adapters - Persistence)
 - Implementations of repositories for data storage.
@@ -34,21 +34,21 @@ We follow a Hexagonal / Clean Architecture approach to ensure scalability and te
 ### 4. `internal/providers/` (Driven Adapters - External Services)
 - Clients for external APIs and tools.
 - **Responsibility**: Adapt external libraries/APIs to our internal interfaces.
-- Examples: `llm` (OpenRouter, OpenAI), `mcp` (Tool Managers), `embedding`.
+- Currently: `llm` (OpenRouter, OpenAI, etc), `mcp` (Tool Managers), `rag` (Embedding management).
 
 ### 5. `internal/transport/` (Driving Adapters - Inputs)
 - The "Ports" through which the outside world interacts with the application.
 - **Responsibility**: Receive input, call the appropriate Service, and return output.
-- Examples: `telegram`, `cli` (readline), `http` (REST/WebSocket), `cron`.
+- Currently: only `telegram`. Examples: `cli` (readline), `http` (REST/WebSocket), `cron`.
 
 ### 6. `internal/service/` (Application Logic)
 - The "Glue" that orchestrates the flow between Transports, Providers, and Storage.
 - **Responsibility**: Implement business use cases.
-- Examples:
+- Currently:
     - `agent`: The core ReAct loop.
-    - `commander`: Slash-command routing (e.g., `/reset`, `/help`).
-    - `knowledge`: RAG logic (ingestion, retrieval).
-    - `orchestrator`: Managing multiple agents.
+    - `command`: Slash-command routing (e.g., `/reset`, `/help`).
+    - `installer`: TUI installer.
+    - `memory`: Memory management (short-term and long-term).
 
 ### Dependency Flow
 `Transport` -> `Service` -> `Core` <- `Storage` / `Providers`
