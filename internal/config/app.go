@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/caarlos0/env/v9"
 	"github.com/sandevgo/tuskbot/pkg/log"
@@ -25,6 +26,7 @@ type AppConfig struct {
 	CustomOpenAIAPIKey  string `env:"TUSK_CUSTOM_OPENAI_API_KEY"`
 
 	// runtime state
+	mu          sync.Mutex
 	runtimePath string
 	provider    string
 	model       string
