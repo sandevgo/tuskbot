@@ -76,8 +76,20 @@ func (c *AppConfig) IsTelegramSelected() bool {
 	return strings.ToLower(c.ChatChannel) == "telegram"
 }
 
+func (c *AppConfig) GetModel() string {
+	return c.model
+}
+
 func (c *AppConfig) SetModel(model string) {
 	c.model = model
+}
+
+func (c *AppConfig) GetProvider() string {
+	return c.provider
+}
+
+func (c *AppConfig) SetProvider(provider string) {
+	c.provider = provider
 }
 
 func (c *AppConfig) Persist(ctx context.Context) error {

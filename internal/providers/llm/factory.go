@@ -4,30 +4,31 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 // NewProvider creates the appropriate AIProvider based on configuration.
-func NewProvider(ctx context.Context, cfg *config.AppConfig) (core.AIProvider, error) {
+func NewProvider(ctx context.Context, cfg core.AppConfig) (core.AIProvider, error) {
+	provider, model := cfg.GetProvider(), cfg.GetModel()
+
 	log.FromCtx(ctx).Info().
-		Str("provider", cfg.Provider).
-		Str("model", cfg.Model).
+		Str("provider", provider).
+		Str("model", model).
 		Msg("starting llm provider")
 
-	switch cfg.Provider {
+	switch provider {
 	case "openai":
-		return NewOpenAI(cfg.OpenAIAPIKey, cfg.Model), nil
+		return NewOpenAI(cfg.OpenAIAPIKey, model), nil
 	case "anthropic":
-		return NewAnthropic(cfg.AnthropicAPIKey, cfg.Model), nil
+		return NewAnthropic(cfg.AnthropicAPIKey, model), nil
 	case "openrouter":
-		return NewOpenRouter(cfg.OpenRouterAPIKey, cfg.Model), nil
+		return NewOpenRouter(cfg.OpenRouterAPIKey, model), nil
 	case "ollama":
-		return NewOllama(cfg.OllamaBaseURL, cfg.OllamaAPIKey, cfg.Model), nil
+		return NewOllama(cfg.OllamaBaseURL, cfg.OllamaAPIKey, model), nil
 	case "custom":
-		return NewCustomOpenAI(cfg.CustomOpenAIBaseURL, cfg.CustomOpenAIAPIKey, cfg.Model), nil
+		return NewCustomOpenAI(cfg.CustomOpenAIBaseURL, cfg.CustomOpenAIAPIKey, model), nil
 	default:
-		return nil, fmt.Errorf("unknown llm provider: %s", cfg.Provider)
+		return nil, fmt.Errorf("unknown llm provider: %s", provider)
 	}
 }

@@ -13,6 +13,8 @@ type AppConfig interface {
 	GetDatabasePath() string
 	GetMCPConfigPath() string
 	IsTelegramSelected()
+	GetModel() string
+	GetProvider() string
 }
 
 type GlobalState interface {
