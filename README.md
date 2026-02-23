@@ -78,6 +78,13 @@ docker compose run tuskbot install
 docker compose up -d
 ```
 
+## ⌨️ Slash Commands
+
+TuskBot supports the following slash commands for direct interaction:
+
+- **/model** Display/Switch the currently active LLM provider and model.
+- **/mcp** List all currently connected MCP servers and their available tools.
+
 ## 🔧 Configuration
 
 TuskBot uses environment variables for configuration.
@@ -108,6 +115,7 @@ TuskBot uses environment variables for configuration.
 
 ## 🗺 Roadmap
 
-*   **[ ] Unified Command Interface:** Support of slash-commands (`/`).
+*   **[X] Unified Command Interface:** Support of slash-commands (`/`).
+*   **[ ] MCP Skills:** Skills for agents to perform specific actions.
 *   **[ ] Cron/heartbeat:** Scheduled tasks and periodic checks.
 *   **[ ] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
