@@ -71,8 +71,9 @@ func (b *baseProvider) doRequest(ctx context.Context, method, path string, body 
 
 		// Retry on server errors (5xx) and rate limiting (429)
 		if r.StatusCode >= 500 || r.StatusCode == 429 {
+			errBody, _ := io.ReadAll(io.LimitReader(r.Body, 1024))
 			r.Body.Close()
-			return fmt.Errorf("retryable status: %d", r.StatusCode)
+			return fmt.Errorf("retryable status %d: %s", r.StatusCode, string(errBody))
 		}
 
 		resp = r
