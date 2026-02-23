@@ -1,15 +1,18 @@
 package core
 
-import "context"
+import (
+	"context"
+)
 
-type ConfigReader interface {
-	GetModel() string
-	GetContextWindowSize() int
-}
-
-type ConfigWriter interface {
-	SetModel(model string) error
-	Persist() error
+type Config interface {
+	GetRuntimePath() string
+	GetSystemPath() string
+	GetIdentityPath() string
+	GetUserProfilePath() string
+	GetMemoryPath() string
+	GetDatabasePath() string
+	GetMCPConfigPath() string
+	IsTelegramSelected()
 }
 
 type GlobalState interface {

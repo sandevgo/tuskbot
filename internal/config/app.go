@@ -2,7 +2,7 @@ package config
 
 import (
 	"context"
-	"os"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -24,12 +24,13 @@ type AppConfig struct {
 	CustomOpenAIBaseURL string `env:"TUSK_CUSTOM_OPENAI_BASE_URL"`
 	CustomOpenAIAPIKey  string `env:"TUSK_CUSTOM_OPENAI_API_KEY"`
 
+	// runtime state
 	runtimePath string
-	Provider    string
-	Model       string
+	provider    string
+	model       string
 }
 
-func NewAppConfig(ctx context.Context) *AppConfig {
+func NewAppConfig(ctx context.Context, runtimePath string) *AppConfig {
 	c := &AppConfig{}
 	if err := env.Parse(c); err != nil {
 		log.FromCtx(ctx).Fatal().Err(err).Msg("failed to parse App config")
@@ -37,16 +38,12 @@ func NewAppConfig(ctx context.Context) *AppConfig {
 
 	i := strings.Index(c.MainModel, "/")
 	if i > 0 {
-		c.Provider = c.MainModel[:i]
-		c.Model = c.MainModel[i+1:]
+		c.provider = c.MainModel[:i]
+		c.model = c.MainModel[i+1:]
 	}
 
-	c.runtimePath = GetRuntimePath()
+	c.runtimePath = runtimePath
 	return c
-}
-
-func (c *AppConfig) GetRuntimePath() string {
-	return c.runtimePath
 }
 
 func (c *AppConfig) GetSystemPath() string {
@@ -77,16 +74,10 @@ func (c *AppConfig) IsTelegramSelected() bool {
 	return strings.ToLower(c.ChatChannel) == "telegram"
 }
 
-// GetRuntimePath can be used outside AppConfig
-func GetRuntimePath() string {
-	path := os.Getenv("TUSK_RUNTIME_PATH")
-	if path == "" {
-		path = ".tuskbot"
-	}
+func (c *AppConfig) SetModel(model string) {
+	c.model = model
+}
 
-	if !filepath.IsAbs(path) {
-		home, _ := os.UserHomeDir()
-		path = filepath.Join(home, path)
-	}
-	return path
+func (c *AppConfig) Persist(ctx context.Context) error {
+	return fmt.Errorf("persistance not implemented")
 }

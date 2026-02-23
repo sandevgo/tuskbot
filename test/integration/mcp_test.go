@@ -95,11 +95,11 @@ func initEnv(ctx context.Context, runtimePath string) error {
 }
 
 func initMcp(ctx context.Context, t *testing.T) *mcp.Service {
-	appCfg := config.NewAppConfig(ctx)
+	appCfg := config.NewAppConfig(ctx, config.GetRuntimePath())
 
 	filStorage := mcp.NewFileStorage(appCfg.GetMCPConfigPath())
 	mcpService, err := mcp.NewService(
-		appCfg.GetRuntimePath(),
+		config.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
 		mcp.NewToolCache(),
