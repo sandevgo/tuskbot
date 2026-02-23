@@ -27,4 +27,5 @@ type AppConfig interface {
 
 type GlobalState interface {
 	ChangeModel(ctx context.Context, model string) error
+	ChangeProvider(ctx context.Context, provider string) error
 }
