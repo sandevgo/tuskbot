@@ -4,16 +4,16 @@ import (
 	"context"
 )
 
-type configWriter interface {
+type persister interface {
 	SetModel(string) error
 }
 
 type GlobalState struct {
-	config configWriter
+	config persister
 }
 
 func NewGlobalState(
-	writer configWriter,
+	writer persister,
 ) *GlobalState {
 	return &GlobalState{
 		config: writer,
