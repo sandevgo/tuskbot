@@ -8,12 +8,17 @@ import (
 )
 
 type ModelCommand struct {
-	ai core.AIProvider
+	appCfg core.AppConfig
+	state  core.GlobalState
 }
 
-func NewModelCommand(ai core.AIProvider) *ModelCommand {
+func NewModelCommand(
+	appCfg core.AppConfig,
+	state core.GlobalState,
+) *ModelCommand {
 	return &ModelCommand{
-		ai: ai,
+		appCfg: appCfg,
+		state:  state,
 	}
 }
 
@@ -27,12 +32,12 @@ func (c *ModelCommand) Description() string {
 
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	if len(args) == 0 {
-		return fmt.Sprintf("Current model: %s\n", c.ai.GetModel()), nil
+		return fmt.Sprintf("Current model: %s\n", c.appCfg.GetModel()), nil
 	}
 
-	if err := c.ai.SetModel(args[0]); err != nil {
+	if err := c.state.ChangeModel(ctx, args[0]); err != nil {
 		return "", fmt.Errorf("failed to set model: %w", err)
 	}
 
-	return fmt.Sprintf("Model set to: %s\n", args[0]), nil
+	return fmt.Sprintf("Model set to: %s\n", c.appCfg.GetModel()), nil
 }

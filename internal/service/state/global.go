@@ -10,17 +10,17 @@ type configWriter interface {
 }
 
 type GlobalState struct {
-	writer configWriter
+	config configWriter
 }
 
 func NewGlobalState(
 	writer configWriter,
 ) *GlobalState {
 	return &GlobalState{
-		writer: writer,
+		config: writer,
 	}
 }
 
 func (s *GlobalState) ChangeModel(ctx context.Context, model string) error {
-	return s.writer.SetModel(model)
+	return s.config.SetModel(model)
 }
