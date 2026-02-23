@@ -32,6 +32,15 @@ type ProviderConfig interface {
 	GetCustomOpenAIAPIKey() string
 }
 
+type EmbeddingConfig interface {
+	GetEmbeddingModel() string
+}
+
+type TelegramConfig interface {
+	GetTelegramToken() string
+	GetTelegramOwnerID() int64
+}
+
 type GlobalState interface {
 	ChangeModel(ctx context.Context, model string) error
 }

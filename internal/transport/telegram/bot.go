@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/pkg/conv"
@@ -18,19 +17,19 @@ const baseContextKey = "base_context"
 
 type Bot struct {
 	bot     *tele.Bot
-	cfg     *config.TelegramConfig
+	cfg     core.TelegramConfig
 	agent   *agent.Agent
 	router  core.CmdRouter
 	ownerID int64
 }
 
 func NewBot(
-	cfg *config.TelegramConfig,
+	cfg core.TelegramConfig,
 	agent *agent.Agent,
 	router core.CmdRouter,
 ) (*Bot, error) {
 	pref := tele.Settings{
-		Token:  cfg.Token,
+		Token:  cfg.GetTelegramToken(),
 		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
 	}
 
@@ -44,7 +43,7 @@ func NewBot(
 		cfg:     cfg,
 		agent:   agent,
 		router:  router,
-		ownerID: cfg.OwnerID,
+		ownerID: cfg.GetTelegramOwnerID(),
 	}, nil
 }
 

@@ -34,7 +34,6 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	// 1. Configuration
 	appCfg := config.NewAppConfig(ctx, config.GetRuntimePath())
-	ragCfg := config.NewRAGConfig(ctx)
 
 	// 2. Storage
 	db, messagesRepo, err := initStorage(ctx, appCfg)
@@ -55,7 +54,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	globState := state.NewGlobalState(aiProvider)
 
 	// 4. RAG Provider (Embedder)
-	embedModel, err := rag.NewEmbeddingModel(ragCfg)
+	embedModel, err := rag.NewEmbeddingModel(appCfg)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize embedding model")
 	}
@@ -140,8 +139,7 @@ func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent,
 
 	// Telegram Bot
 	if cfg.IsTelegramSelected() {
-		tgCfg := config.NewTelegramConfig(ctx)
-		bot, err := telegram.NewBot(tgCfg, ag, router)
+		bot, err := telegram.NewBot(cfg, ag, router)
 		if err != nil {
 			return nil, err
 		}

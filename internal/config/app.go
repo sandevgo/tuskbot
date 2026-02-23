@@ -139,6 +139,18 @@ func (c *AppConfig) SetModel(model string) error {
 	return c.persist()
 }
 
+func (c *AppConfig) GetEmbeddingModel() string {
+	return c.EmbedModel
+}
+
+func (c *AppConfig) GetTelegramToken() string {
+	return c.TelegramToken
+}
+
+func (c *AppConfig) GetTelegramOwnerID() int64 {
+	return c.TelegramOwnerID
+}
+
 func (c *AppConfig) persist() error {
 	envPath := filepath.Join(c.runtimePath, ".env")
 
