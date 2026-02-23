@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -26,5 +27,15 @@ func (c *MCPCommand) Description() string {
 }
 
 func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
-	return fmt.Sprintf("Current model: %s\n", c.cfg.MainModel), nil
+	tools, err := c.mcp.GetTools(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	sb := strings.Builder{}
+	for _, tool := range tools {
+		sb.WriteString(fmt.Sprintf("- %s\n", tool.Function.Name))
+	}
+
+	return sb.String(), nil
 }
