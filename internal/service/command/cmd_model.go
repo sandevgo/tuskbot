@@ -7,6 +7,8 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
+const modelResponse = "Current model: %s/%s\n\nTo change use: /model <provider>/<model>"
+
 type ModelCommand struct {
 	cfg   core.ProviderConfig
 	state core.GlobalState
@@ -32,7 +34,7 @@ func (c *ModelCommand) Description() string {
 
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	if len(args) == 0 {
-		return fmt.Sprintf("Current model: %s/%s\n", c.cfg.GetProvider(), c.cfg.GetModel()), nil
+		return fmt.Sprintf(modelResponse, c.cfg.GetProvider(), c.cfg.GetModel()), nil
 	}
 
 	if err := c.state.ChangeModel(ctx, args[0]); err != nil {
