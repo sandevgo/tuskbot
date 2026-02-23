@@ -36,19 +36,6 @@ func NewAgent(
 	}
 }
 
-func (a *Agent) ListModels(ctx context.Context) ([]core.Model, error) {
-	return a.ai.Models(ctx)
-}
-
-func (a *Agent) GetCurrentModel() string {
-	return a.ai.GetModel()
-}
-
-func (a *Agent) SetModel(model string) error {
-	// TODO: Implement centralized configuration management
-	return a.ai.SetModel(model)
-}
-
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate func(core.Message)) (string, error) {
 	logger := log.FromCtx(ctx)
 
