@@ -43,3 +43,11 @@ func (c *Router) Execute(ctx context.Context, sessionID, input string) (string, 
 	}
 	return result, true
 }
+
+func (c *Router) ListCommands() []core.Command {
+	res := make([]core.Command, 0, len(c.commands))
+	for _, cmd := range c.commands {
+		res = append(res, cmd)
+	}
+	return res
+}

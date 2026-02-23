@@ -4,6 +4,7 @@ import "context"
 
 type CmdRouter interface {
 	Execute(ctx context.Context, sessionID, input string) (string, bool)
+	ListCommands() []Command
 }
 
 type Command interface {

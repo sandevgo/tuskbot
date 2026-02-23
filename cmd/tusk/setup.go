@@ -139,7 +139,7 @@ func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent,
 	// Telegram Bot
 	if cfg.IsTelegramSelected() {
 		tgCfg := config.NewTelegramConfig(ctx)
-		bot, err := telegram.NewBot(ctx, tgCfg, ag, router)
+		bot, err := telegram.NewBot(tgCfg, ag, router)
 		if err != nil {
 			return nil, err
 		}

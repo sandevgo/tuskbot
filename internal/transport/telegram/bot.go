@@ -25,7 +25,6 @@ type Bot struct {
 }
 
 func NewBot(
-	ctx context.Context,
 	cfg *config.TelegramConfig,
 	agent *agent.Agent,
 	router core.CmdRouter,
@@ -40,16 +39,20 @@ func NewBot(
 		return nil, fmt.Errorf("failed to create telegram bot: %w", err)
 	}
 
-	bot := &Bot{
+	return &Bot{
 		bot:     b,
 		cfg:     cfg,
 		agent:   agent,
 		router:  router,
 		ownerID: cfg.OwnerID,
-	}
+	}, nil
+}
+
+func (b *Bot) Start(ctx context.Context) error {
+	log.FromCtx(ctx).Info().Msg("starting telegram bot")
 
 	// Use context from Signal with logger
-	b.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
+	b.bot.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
 			c.Set(baseContextKey, ctx)
 			return next(c)
@@ -57,22 +60,34 @@ func NewBot(
 	})
 
 	// Middleware: Only allow the owner
-	b.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
+	b.bot.Use(func(next tele.HandlerFunc) tele.HandlerFunc {
 		return func(c tele.Context) error {
-			if c.Sender().ID != bot.ownerID {
+			if c.Sender().ID != b.ownerID {
 				return nil // Ignore unauthorized users
 			}
 			return next(c)
 		}
 	})
 
-	b.Handle(tele.OnText, bot.handleMessage)
+	b.bot.Handle(tele.OnText, b.handleMessage)
 
-	return bot, nil
-}
+	scope := tele.CommandScope{
+		UserID: b.ownerID,
+	}
 
-func (b *Bot) Start(ctx context.Context) error {
-	log.FromCtx(ctx).Info().Msg("starting telegram bot")
+	var cmds []tele.Command
+	for _, cmd := range b.router.ListCommands() {
+		cmds = append(cmds, tele.Command{
+			Text:        cmd.Name(),
+			Description: cmd.Description(),
+		})
+	}
+
+	err := b.bot.SetCommands(cmds, scope)
+	if err != nil {
+		return fmt.Errorf("failed to set telegram commands: %w", err)
+	}
+
 	b.bot.Start()
 	return nil
 }
