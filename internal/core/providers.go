@@ -5,6 +5,9 @@ import "context"
 type AIProvider interface {
 	Chat(ctx context.Context, history []Message, tools []Tool) (Message, error)
 	Models(ctx context.Context) ([]Model, error)
+}
+
+type DynamicProvider interface {
 	GetModel() string
 	SetModel(model string) error
 }
