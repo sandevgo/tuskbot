@@ -19,15 +19,15 @@ func NewProvider(ctx context.Context, cfg core.AppConfig) (core.AIProvider, erro
 
 	switch provider {
 	case "openai":
-		return NewOpenAI(cfg.OpenAIAPIKey, model), nil
+		return NewOpenAI(cfg.GetOpenAIAPIKey(), model), nil
 	case "anthropic":
-		return NewAnthropic(cfg.AnthropicAPIKey, model), nil
+		return NewAnthropic(cfg.GetAnthropicAPIKey(), model), nil
 	case "openrouter":
-		return NewOpenRouter(cfg.OpenRouterAPIKey, model), nil
+		return NewOpenRouter(cfg.GetOpenRouterAPIKey(), model), nil
 	case "ollama":
-		return NewOllama(cfg.OllamaBaseURL, cfg.OllamaAPIKey, model), nil
+		return NewOllama(cfg.GetOllamaBaseURL(), cfg.GetOllamaAPIKey(), model), nil
 	case "custom":
-		return NewCustomOpenAI(cfg.CustomOpenAIBaseURL, cfg.CustomOpenAIAPIKey, model), nil
+		return NewCustomOpenAI(cfg.GetCustomOpenAIBaseURL(), cfg.GetCustomOpenAIAPIKey(), model), nil
 	default:
 		return nil, fmt.Errorf("unknown llm provider: %s", provider)
 	}
