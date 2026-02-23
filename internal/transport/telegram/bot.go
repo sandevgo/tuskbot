@@ -88,6 +88,11 @@ func (b *Bot) handleMessage(c tele.Context) error {
 	logger := log.FromCtx(ctx)
 	sessionID := fmt.Sprintf("telegram-%d", c.Chat().ID)
 
+	// Check if it's a command
+	if response, isCmd := b.router.Execute(ctx, sessionID, c.Text()); isCmd {
+		return c.Send(response)
+	}
+
 	// Start background typing indicator
 	typingCtx, stopTyping := context.WithCancel(ctx)
 	defer stopTyping()

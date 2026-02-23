@@ -5,37 +5,27 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type Router struct {
 	commands map[string]core.Command
-	memory   core.Memory
-	cfg      *config.AppConfig
 }
 
-func New(cfg *config.AppConfig, memory core.Memory) *Router {
+func New(commands []core.Command) *Router {
 	c := &Router{
 		commands: make(map[string]core.Command),
-		memory:   memory,
-		cfg:      cfg,
 	}
-	// Register built-in commands
-	//c.Register(&ResetCommand{memory: memory})
-	//c.Register(&ClearCommand{memory: memory})
-	//c.Register(&StatusCommand{cfg: cfg})
-	//c.Register(&HelpCommand{commander: c})
-	return c
-}
 
-func (c *Router) Register(cmd core.Command) {
-	c.commands[cmd.Name()] = cmd
+	for _, cmd := range commands {
+		c.commands[cmd.Name()] = cmd
+	}
+	return c
 }
 
 func (c *Router) Execute(ctx context.Context, sessionID, input string) (string, bool) {
 	if !strings.HasPrefix(input, "/") {
-		return "", false // Not a command, pass to Agent
+		return "", false
 	}
 
 	parts := strings.Fields(input)
