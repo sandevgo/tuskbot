@@ -2,8 +2,8 @@ package core
 
 import "context"
 
-type CommandRouter interface {
-	GetCommands() ([]Command, error)
+type CmdRouter interface {
+	Execute(ctx context.Context, sessionID, input string) (string, bool)
 }
 
 type Command interface {
