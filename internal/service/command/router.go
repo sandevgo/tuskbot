@@ -15,7 +15,7 @@ type Router struct {
 	cfg      *config.AppConfig
 }
 
-func New(memory core.Memory, cfg *config.AppConfig) *Router {
+func New(cfg *config.AppConfig, memory core.Memory) *Router {
 	c := &Router{
 		commands: make(map[string]core.Command),
 		memory:   memory,

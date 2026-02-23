@@ -20,6 +20,7 @@ type Bot struct {
 	bot     *tele.Bot
 	cfg     *config.TelegramConfig
 	agent   *agent.Agent
+	router  core.CmdRouter
 	ownerID int64
 }
 
@@ -27,6 +28,7 @@ func NewBot(
 	ctx context.Context,
 	cfg *config.TelegramConfig,
 	agent *agent.Agent,
+	router core.CmdRouter,
 ) (*Bot, error) {
 	pref := tele.Settings{
 		Token:  cfg.Token,
@@ -42,6 +44,7 @@ func NewBot(
 		bot:     b,
 		cfg:     cfg,
 		agent:   agent,
+		router:  router,
 		ownerID: cfg.OwnerID,
 	}
 

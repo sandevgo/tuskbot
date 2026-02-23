@@ -13,6 +13,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
+	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
@@ -94,8 +95,11 @@ func NewServices(ctx context.Context) []srv.Service {
 		executor,
 	)
 
+	// commands
+	cmdRouter := command.New(appCfg, mem)
+
 	// 8. Transports
-	transports, err := initTransports(ctx, appCfg, ag)
+	transports, err := initTransports(ctx, appCfg, ag, cmdRouter)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize transports")
 	}
@@ -128,13 +132,13 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	return mgr, nil
 }
 
-func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent) ([]srv.Service, error) {
+func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent, router core.CmdRouter) ([]srv.Service, error) {
 	var services []srv.Service
 
 	// Telegram Bot
 	if cfg.IsTelegramSelected() {
 		tgCfg := config.NewTelegramConfig(ctx)
-		bot, err := telegram.NewBot(ctx, tgCfg, ag)
+		bot, err := telegram.NewBot(ctx, tgCfg, ag, router)
 		if err != nil {
 			return nil, err
 		}
