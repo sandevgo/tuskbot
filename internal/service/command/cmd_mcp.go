@@ -33,7 +33,7 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 	}
 
 	sb := strings.Builder{}
-	sb.WriteString("Connected MCP servers:\n\n")
+	sb.WriteString("Connected MCP tools:\n\n")
 	for _, tool := range tools {
 		sb.WriteString(fmt.Sprintf("- %s\n", tool.Function.Name))
 	}
