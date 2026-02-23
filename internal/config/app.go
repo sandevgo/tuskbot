@@ -76,6 +76,34 @@ func (c *AppConfig) IsTelegramSelected() bool {
 	return strings.ToLower(c.ChatChannel) == "telegram"
 }
 
+func (c *AppConfig) GetAnthropicAPIKey() string {
+	return c.AnthropicAPIKey
+}
+
+func (c *AppConfig) GetOpenAIAPIKey() string {
+	return c.OpenAIAPIKey
+}
+
+func (c *AppConfig) GetOpenRouterAPIKey() string {
+	return c.OpenRouterAPIKey
+}
+
+func (c *AppConfig) GetOllamaAPIKey() string {
+	return c.OllamaAPIKey
+}
+
+func (c *AppConfig) GetOllamaBaseURL() string {
+	return c.OllamaBaseURL
+}
+
+func (c *AppConfig) GetCustomOpenAIBaseURL() string {
+	return c.CustomOpenAIBaseURL
+}
+
+func (c *AppConfig) GetCustomOpenAIAPIKey() string {
+	return c.CustomOpenAIAPIKey
+}
+
 func (c *AppConfig) GetModel() string {
 	return c.model
 }
