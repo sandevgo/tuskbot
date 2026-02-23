@@ -4,7 +4,7 @@ import (
 	"context"
 )
 
-type Config interface {
+type AppConfig interface {
 	GetRuntimePath() string
 	GetSystemPath() string
 	GetIdentityPath() string
