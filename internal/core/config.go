@@ -9,7 +9,6 @@ type AppConfig interface {
 	GetDatabasePath() string
 	GetMCPConfigPath() string
 	GetContextWindowSize() int
-	GetModel() string
 	IsTelegramSelected() bool
 }
 
