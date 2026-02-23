@@ -48,6 +48,10 @@ func NewAppConfig(ctx context.Context, runtimePath string) *AppConfig {
 	return c
 }
 
+func (c *AppConfig) GetRuntimePath() string {
+	return c.runtimePath
+}
+
 func (c *AppConfig) GetSystemPath() string {
 	return filepath.Join(c.runtimePath, "SYSTEM.md")
 }
