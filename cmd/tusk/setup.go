@@ -91,7 +91,6 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	// 7. Agent Service
 	ag := agent.NewAgent(
-		appCfg,
 		aiProvider,
 		mcpManager,
 		mem,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
@@ -13,7 +12,6 @@ import (
 const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
-	appCfg   *config.AppConfig
 	ai       core.AIProvider
 	mcp      core.MCPServer
 	memory   core.Memory
@@ -21,14 +19,12 @@ type Agent struct {
 }
 
 func NewAgent(
-	appCfg *config.AppConfig,
 	ai core.AIProvider,
 	mcp core.MCPServer,
 	memory core.Memory,
 	executor *Executor,
 ) *Agent {
 	return &Agent{
-		appCfg:   appCfg,
 		ai:       ai,
 		mcp:      mcp,
 		memory:   memory,
