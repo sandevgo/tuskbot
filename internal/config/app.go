@@ -3,11 +3,13 @@ package config
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/caarlos0/env/v9"
+	envPkg "github.com/sandevgo/tuskbot/pkg/env"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -133,5 +135,20 @@ func (c *AppConfig) SetModel(model string) error {
 }
 
 func (c *AppConfig) persist() error {
-	return fmt.Errorf("persistance not implemented")
+	envPath := filepath.Join(c.runtimePath, ".env")
+
+	if err := os.MkdirAll(c.runtimePath, 0755); err != nil {
+		return fmt.Errorf("create runtime directory: %w", err)
+	}
+
+	content, err := envPkg.MarshalEnv(c)
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(envPath, []byte(content), 0600); err != nil {
+		return fmt.Errorf("write .env file: %w", err)
+	}
+
+	return nil
 }
