@@ -72,6 +72,7 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.bot.Handle(tele.OnText, b.handleMessage)
 
 	scope := tele.CommandScope{
+		Type:   tele.CommandScopeAllPrivateChats,
 		UserID: b.ownerID,
 	}
 
