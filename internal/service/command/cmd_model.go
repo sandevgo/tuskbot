@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/sandevgo/tuskbot/internal/config"
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type ModelCommand struct {
-	cfg *config.AppConfig
+	ai core.AIProvider
 }
 
-func NewModelCommand(cfg *config.AppConfig) *ModelCommand {
+func NewModelCommand(ai core.AIProvider) *ModelCommand {
 	return &ModelCommand{
-		cfg: cfg,
+		ai: ai,
 	}
 }
 
@@ -26,5 +26,13 @@ func (c *ModelCommand) Description() string {
 }
 
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
-	return fmt.Sprintf("Current model: %s\n", c.cfg.MainModel), nil
+	if len(args) == 0 {
+		return fmt.Sprintf("Current model: %s\n", c.ai.GetModel()), nil
+	}
+
+	if err := c.ai.SetModel(args[0]); err != nil {
+		return "", fmt.Errorf("failed to set model: %w", err)
+	}
+
+	return fmt.Sprintf("Model set to: %s\n", args[0]), nil
 }

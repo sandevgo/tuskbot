@@ -32,6 +32,15 @@ func newBaseProvider(baseURL, apiKey, model string) baseProvider {
 	}
 }
 
+func (b *baseProvider) GetModel() string {
+	return b.model
+}
+
+func (b *baseProvider) SetModel(model string) error {
+	b.model = model
+	return nil // TODO: Check if the selected model available.
+}
+
 func (b *baseProvider) doRequest(ctx context.Context, method, path string, body any, headers map[string]string) (*http.Response, error) {
 	var bodyData []byte
 	if body != nil {

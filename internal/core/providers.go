@@ -5,6 +5,8 @@ import "context"
 type AIProvider interface {
 	Chat(ctx context.Context, history []Message, tools []Tool) (Message, error)
 	Models(ctx context.Context) ([]Model, error)
+	GetModel() string
+	SetModel(model string) error
 }
 
 type Embedder interface {
