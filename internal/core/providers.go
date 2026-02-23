@@ -7,11 +7,6 @@ type AIProvider interface {
 	Models(ctx context.Context) ([]Model, error)
 }
 
-type DynamicProvider interface {
-	GetModel() string
-	SetModel(model string) error
-}
-
 type Embedder interface {
 	EncodeQuery(ctx context.Context, text string) ([]float32, error)
 	EncodePassage(ctx context.Context, text string) ([][]float32, error)

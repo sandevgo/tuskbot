@@ -6,14 +6,23 @@ import (
 
 type AppConfig interface {
 	GetRuntimePath() string
-	GetSystemPath() string
-	GetIdentityPath() string
-	GetUserProfilePath() string
-	GetMemoryPath() string
 	GetDatabasePath() string
 	GetMCPConfigPath() string
 	GetContextWindowSize() int
 	GetModel() string
+	IsTelegramSelected() bool
+}
+
+type PromptConfig interface {
+	GetSystemPath() string
+	GetIdentityPath() string
+	GetUserProfilePath() string
+	GetMemoryPath() string
+}
+
+type ProviderConfig interface {
+	GetModel() string
+	SetModel(model string) error
 	GetProvider() string
 	GetAnthropicAPIKey() string
 	GetOpenAIAPIKey() string
@@ -22,10 +31,8 @@ type AppConfig interface {
 	GetOllamaBaseURL() string
 	GetCustomOpenAIBaseURL() string
 	GetCustomOpenAIAPIKey() string
-	IsTelegramSelected() bool
 }
 
 type GlobalState interface {
 	ChangeModel(ctx context.Context, model string) error
-	ChangeProvider(ctx context.Context, provider string) error
 }

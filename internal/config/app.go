@@ -38,12 +38,8 @@ func NewAppConfig(ctx context.Context, runtimePath string) *AppConfig {
 		log.FromCtx(ctx).Fatal().Err(err).Msg("failed to parse App config")
 	}
 
-	i := strings.Index(c.MainModel, "/")
-	if i > 0 {
-		c.provider = c.MainModel[:i]
-		c.model = c.MainModel[i+1:]
-	}
-
+	// как-то не красиво в конструктора сетить на самого себя же
+	c.SetModel(c.MainModel)
 	c.runtimePath = runtimePath
 	return c
 }
@@ -112,21 +108,29 @@ func (c *AppConfig) GetCustomOpenAIAPIKey() string {
 	return c.CustomOpenAIAPIKey
 }
 
+func (c *AppConfig) GetProvider() string {
+	return c.provider
+}
+
 func (c *AppConfig) GetModel() string {
 	return c.model
 }
 
 func (c *AppConfig) SetModel(model string) error {
-	c.model = model
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.MainModel = model
+
+	// Parse for internal use
+	if i := strings.Index(model, "/"); i > 0 {
+		c.provider = model[:i]
+		c.model = model[i+1:]
+	} else {
+		c.model = model
+	}
+
 	return c.persist()
-}
-
-func (c *AppConfig) GetProvider() string {
-	return c.provider
-}
-
-func (c *AppConfig) SetProvider(provider string) {
-	c.provider = provider
 }
 
 func (c *AppConfig) persist() error {

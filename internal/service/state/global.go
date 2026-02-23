@@ -4,22 +4,22 @@ import (
 	"context"
 )
 
-type persister interface {
-	SetModel(string) error
+type provider interface {
+	SetModel(ctx context.Context, model string) error
 }
 
 type GlobalState struct {
-	config persister
+	provider provider
 }
 
 func NewGlobalState(
-	writer persister,
+	provider provider,
 ) *GlobalState {
 	return &GlobalState{
-		config: writer,
+		provider: provider,
 	}
 }
 
 func (s *GlobalState) ChangeModel(ctx context.Context, model string) error {
-	return s.config.SetModel(model)
+	return s.provider.SetModel(ctx, model)
 }

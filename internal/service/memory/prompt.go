@@ -7,10 +7,10 @@ import (
 )
 
 type SysPrompt struct {
-	cfg core.AppConfig
+	cfg core.PromptConfig
 }
 
-func NewSysPrompt(cfg core.AppConfig) *SysPrompt {
+func NewSysPrompt(cfg core.PromptConfig) *SysPrompt {
 	return &SysPrompt{
 		cfg: cfg,
 	}

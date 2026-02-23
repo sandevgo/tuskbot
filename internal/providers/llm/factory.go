@@ -9,7 +9,7 @@ import (
 )
 
 // NewProvider creates the appropriate AIProvider based on configuration.
-func NewProvider(ctx context.Context, cfg core.AppConfig) (core.AIProvider, error) {
+func NewProvider(ctx context.Context, cfg core.ProviderConfig) (core.AIProvider, error) {
 	provider, model := cfg.GetProvider(), cfg.GetModel()
 
 	log.FromCtx(ctx).Info().
