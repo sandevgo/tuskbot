@@ -14,9 +14,8 @@ import (
 )
 
 type AppConfig struct {
-	MainModel         string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
-	ChatChannel       string `env:"TUSK_CHAT_CHANNEL,required,notEmpty"`
-	ContextWindowSize int    `env:"TUSK_CONTEXT_WINDOW_SIZE" envDefault:"30"`
+	MainModel  string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
+	EmbedModel string `env:"TUSK_EMBEDDING_MODEL,required,notEmpty"`
 
 	AnthropicAPIKey  string `env:"TUSK_ANTHROPIC_API_KEY"`
 	OpenAIAPIKey     string `env:"TUSK_OPENAI_API_KEY"`
@@ -26,6 +25,12 @@ type AppConfig struct {
 
 	CustomOpenAIBaseURL string `env:"TUSK_CUSTOM_OPENAI_BASE_URL"`
 	CustomOpenAIAPIKey  string `env:"TUSK_CUSTOM_OPENAI_API_KEY"`
+
+	ChatChannel       string `env:"TUSK_CHAT_CHANNEL,required,notEmpty"`
+	ContextWindowSize int    `env:"TUSK_CONTEXT_WINDOW_SIZE" envDefault:"30"`
+
+	TelegramToken   string `env:"TUSK_TELEGRAM_TOKEN,required,notEmpty"`
+	TelegramOwnerID int64  `env:"TUSK_TELEGRAM_OWNER_ID,required"`
 
 	// runtime state
 	mu          sync.Mutex
