@@ -29,7 +29,7 @@ func (c *ModelCommand) Name() string {
 }
 
 func (c *ModelCommand) Description() string {
-	return "Show list of commands"
+	return "Show or change current model"
 }
 
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
