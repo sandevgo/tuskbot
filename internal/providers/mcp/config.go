@@ -26,7 +26,12 @@ type ServerConfig struct {
 
 func (c *ServerConfig) GetTransport() (TransportType, error) {
 	if c.URL != "" {
-		return TransportHTTP, nil
+		switch c.Type {
+		case TransportSSE:
+			return TransportSSE, nil
+		case TransportHTTP:
+			return TransportHTTP, nil
+		}
 	}
 	if c.Command != "" {
 		return TransportStdio, nil
