@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -43,7 +44,12 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 
 	toolNames := make([]string, len(tools))
 	for i, tool := range tools {
-		toolNames[i] = fmt.Sprintf("**%s** - %s", tool.Function.Name, tool.Function.Description)
+		description := strings.ReplaceAll(strings.ReplaceAll(tool.Function.Description, "\n", " "), "\r", " ")
+		description = strings.Join(strings.Fields(description), " ")
+		if len(description) > 120 {
+			description = description[:117] + "..."
+		}
+		toolNames[i] = fmt.Sprintf("**%s** - %s", tool.Function.Name, description)
 	}
 
 	return c.formatter.Combine(
