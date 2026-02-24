@@ -105,7 +105,8 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	// Check if it's a command
 	if response, isCmd := b.router.Execute(ctx, sessionID, c.Text()); isCmd {
-		return c.Send(response)
+		htmlContent := strings.TrimSpace(conv.MarkdownToTelegramHTML([]byte(response)))
+		return c.Send(htmlContent, tele.ModeHTML)
 	}
 
 	// Start background typing indicator

@@ -7,11 +7,10 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-const modelResponse = "Current model: %s/%s\n\nTo change use: /model <provider>/<model>"
-
 type ModelCommand struct {
-	cfg   core.ProviderConfig
-	state core.GlobalState
+	cfg       core.ProviderConfig
+	state     core.GlobalState
+	formatter *ResponseFormatter
 }
 
 func NewModelCommand(
@@ -19,8 +18,9 @@ func NewModelCommand(
 	state core.GlobalState,
 ) *ModelCommand {
 	return &ModelCommand{
-		cfg:   cfg,
-		state: state,
+		cfg:       cfg,
+		state:     state,
+		formatter: NewResponseFormatter(),
 	}
 }
 
@@ -34,12 +34,26 @@ func (c *ModelCommand) Description() string {
 
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	if len(args) == 0 {
-		return fmt.Sprintf(modelResponse, c.cfg.GetProvider(), c.cfg.GetModel()), nil
+		return c.formatter.Combine(
+			c.formatter.Header("🤖", "Current Model"),
+			c.formatter.Info("Provider", c.cfg.GetProvider()),
+			c.formatter.Info("Model", c.cfg.GetModel()),
+			c.formatter.Usage("/model <provider>/<model>"),
+			c.formatter.Examples([]string{
+				"/model openai/gpt-4",
+				"/model anthropic/claude-3-sonnet",
+				"/model openrouter/openai/gpt-3.5-turbo",
+			}),
+		), nil
 	}
 
 	if err := c.state.ChangeModel(ctx, args[0]); err != nil {
 		return "", fmt.Errorf("failed to set model: %w", err)
 	}
 
-	return fmt.Sprintf("Model set to: %s\n", c.cfg.GetModel()), nil
+	return c.formatter.Combine(
+		c.formatter.Header("✅", "Model Changed"),
+		c.formatter.Success(fmt.Sprintf("Model updated to: **%s/%s**", c.cfg.GetProvider(), c.cfg.GetModel())),
+		c.formatter.Tip("Use /model to see current configuration"),
+	), nil
 }
