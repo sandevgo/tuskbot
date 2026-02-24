@@ -31,6 +31,8 @@ func (c *ServerConfig) GetTransport() (TransportType, error) {
 			return TransportSSE, nil
 		case TransportHTTP:
 			return TransportHTTP, nil
+		default:
+			return "", fmt.Errorf("unknown transport type for URL: %s (use http or sse)", c.Type)
 		}
 	}
 	if c.Command != "" {
