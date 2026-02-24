@@ -20,6 +20,8 @@ func NewTransport(t TransportType) (Transport, error) {
 		return StdioTransport, nil
 	case TransportHTTP:
 		return HttpTransport, nil
+	case TransportSSE:
+		return SseTransport, nil
 	}
 
 	return nil, fmt.Errorf("unsupported transport type: %s", t)
@@ -77,6 +79,52 @@ func HttpTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error
 		cfg.URL,
 		mcptransport.WithHTTPHeaders(headers),
 		mcptransport.WithHTTPBasicClient(httpClient),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSE transport: %w", err)
+	}
+
+	if err = cli.Start(ctx); err != nil {
+		return nil, fmt.Errorf("failed to start client: %w", err)
+	}
+
+	req := mcpproto.InitializeRequest{}
+	req.Params.ProtocolVersion = mcpproto.LATEST_PROTOCOL_VERSION
+	req.Params.Capabilities = mcpproto.ClientCapabilities{}
+	req.Params.ClientInfo = mcpproto.Implementation{
+		Name:    core.TuskName,
+		Version: core.TaskVersion,
+	}
+
+	if _, err := cli.Initialize(ctx, req); err != nil {
+		_ = cli.Close()
+		return nil, fmt.Errorf("failed to initialize client: %w", err)
+	}
+
+	return cli, nil
+}
+
+func SseTransport(ctx context.Context, cfg ServerConfig) (*client.Client, error) {
+	// Create fresh transport to avoid shared state issues
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	headers := make(map[string]string)
+	for k, v := range cfg.Headers {
+		headers[k] = v
+	}
+
+	cli, err := client.NewSSEMCPClient(
+		cfg.URL,
+		mcptransport.WithHeaders(headers),
+		mcptransport.WithHTTPClient(httpClient),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SSE transport: %w", err)
