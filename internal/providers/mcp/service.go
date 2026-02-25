@@ -46,6 +46,9 @@ type Service struct {
 	// State tracking
 	activeConfigs map[string]ServerConfig
 	mu            sync.RWMutex
+
+	// Tool name mapping: sanitized -> original
+	toolNameMap map[string]string
 }
 
 func NewService(
@@ -64,6 +67,7 @@ func NewService(
 		nativeTools:    nativeTools,
 		nativeToolDefs: nativeToolDefs,
 		activeConfigs:  make(map[string]ServerConfig),
+		toolNameMap:    make(map[string]string),
 	}, nil
 }
 
@@ -233,6 +237,11 @@ func (s *Service) fetchToolsFromServers(ctx context.Context) (map[string][]core.
 	return serverTools, routing
 }
 
+func sanitizeToolName(name string) string {
+	// Replace dots and spaces with underscores to comply with OpenAI tool name pattern: ^[a-zA-Z0-9_-]+$
+	return strings.NewReplacer(".", "_", " ", "_").Replace(name)
+}
+
 func (s *Service) listToolsFromServer(ctx context.Context, name string, cli *ManagedClient) ([]core.Tool, error) {
 	tCtx, cancel := context.WithTimeout(ctx, s.timeouts.ToolList)
 	defer cancel()
@@ -245,14 +254,22 @@ func (s *Service) listToolsFromServer(ctx context.Context, name string, cli *Man
 	tools := make([]core.Tool, 0, len(resp.Tools))
 	for _, t := range resp.Tools {
 		schemaBytes, _ := json.Marshal(t.InputSchema)
+		originalName := fmt.Sprintf("%s.%s", name, t.Name)
+		sanitizedName := sanitizeToolName(originalName)
+		
 		tools = append(tools, core.Tool{
 			Type: "function",
 			Function: core.Function{
-				Name:        fmt.Sprintf("%s.%s", name, t.Name),
+				Name:        sanitizedName,
 				Description: t.Description,
 				Parameters:  schemaBytes,
 			},
 		})
+
+		// Store mapping for reverse lookup during tool execution
+		s.mu.Lock()
+		s.toolNameMap[sanitizedName] = originalName
+		s.mu.Unlock()
 	}
 	return tools, nil
 }
@@ -265,21 +282,30 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 		return handler(ctx, json.RawMessage(args))
 	}
 
-	// 2. Resolve Server
+	// 2. Resolve Server using sanitized name (what AI sends)
 	_, routing, _ := s.cache.Get()
 	serverName, ok := routing[name]
-
 	if !ok {
 		return "", fmt.Errorf("tool not found: %s", name)
 	}
 
-	// 3. Get Client from Pool
+	// 3. Resolve original name for MCP call
+	s.mu.RLock()
+	originalName, exists := s.toolNameMap[name]
+	s.mu.RUnlock()
+	
+	toolName := name
+	if exists {
+		toolName = originalName
+	}
+
+	// 4. Get Client from Pool
 	cli, ok := s.pool.Get(serverName)
 	if !ok {
 		return "", fmt.Errorf("server %s is not available", serverName)
 	}
 
-	// 4. Execute
+	// 5. Execute using original name
 	argsMap := make(map[string]any)
 	if args != "" {
 		if err := json.Unmarshal([]byte(args), &argsMap); err != nil {
@@ -288,7 +314,7 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 	}
 
 	req := mcpproto.CallToolRequest{}
-	req.Params.Name = strings.TrimPrefix(name, serverName+".")
+	req.Params.Name = strings.TrimPrefix(toolName, serverName+".")
 	req.Params.Arguments = argsMap
 
 	// Set a reasonable timeout for tool execution
