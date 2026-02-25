@@ -6,3 +6,5 @@
 /todos
 /external
 /vendor
+/website/node_modules
+/website/.vitepress/cache
