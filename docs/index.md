@@ -3,23 +3,24 @@
 layout: home
 
 hero:
-  name: "TuskBot — Personal AI Agent"
-  text: "TuskBot is a Go-based autonomous agent designed to handle tasks directly in your Telegram. "
-  tagline: My great project tagline
+  name: "TuskBot"
+  text: "Autonomous AI Agent for Telegram"
+  tagline: Privacy-first AI assistant with local RAG, MCP tools, and multi-provider LLM support
   actions:
     - theme: brand
-      text: Markdown Examples
-      link: /markdown-examples
+      text: Get Started
+      link: /getting-started/
     - theme: alt
-      text: API Examples
-      link: /api-examples
+      text: View on GitHub
+      link: https://github.com/sandevgo/tuskbot
 
 features:
-  - title: Feature A
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature B
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
-  - title: Feature C
-    details: Lorem ipsum dolor sit amet, consectetur adipiscing elit
+  - title: 🔌 MCP-First Architecture
+    details: Extensible via Model Context Protocol. Connect any MCP server without modifying core code.
+  - title: 🧠 Private RAG Memory
+    details: Local embeddings with llama.cpp and SQLite-vec. Your data never leaves your hardware.
+  - title: 🛠️ System Tools
+    details: Built-in filesystem, shell execution, and fetch capabilities. Autonomous task execution.
+  - title: 🤖 Multi-Provider LLM
+    details: Support for OpenAI, Anthropic, OpenRouter, Ollama, and custom OpenAI-compatible APIs.
 ---
-
