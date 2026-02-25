@@ -52,8 +52,6 @@ func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []str
 	}
 
 	return c.formatter.Combine(
-		c.formatter.Info("Model Changed"),
-		c.formatter.Success(fmt.Sprintf("Model updated to: **%s/%s**", c.cfg.GetProvider(), c.cfg.GetModel())),
-		c.formatter.Tip("Use /model to see current configuration"),
+		c.formatter.Success(fmt.Sprintf("Model changed to: `%s/%s`", c.cfg.GetProvider(), c.cfg.GetModel())),
 	), nil
 }

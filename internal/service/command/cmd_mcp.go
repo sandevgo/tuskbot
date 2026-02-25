@@ -49,13 +49,13 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 		if len(description) > 120 {
 			description = description[:117] + "..."
 		}
-		toolNames[i] = fmt.Sprintf("**%s** - %s", tool.Function.Name, description)
+		toolNames[i] = fmt.Sprintf("**%s**", tool.Function.Name)
 	}
 
 	return c.formatter.Combine(
 		c.formatter.Info("MCP Tools"),
 		c.formatter.Label("Connected tools", fmt.Sprintf("%d", len(tools))),
 		"\n",
-		c.formatter.List("•", toolNames),
+		c.formatter.List(toolNames),
 	), nil
 }

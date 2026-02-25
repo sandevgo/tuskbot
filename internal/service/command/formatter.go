@@ -40,10 +40,10 @@ func (f *ResponseFormatter) Examples(examples []string) string {
 	return sb.String()
 }
 
-func (f *ResponseFormatter) List(emoji string, items []string) string {
+func (f *ResponseFormatter) List(items []string) string {
 	var sb strings.Builder
 	for _, item := range items {
-		sb.WriteString(fmt.Sprintf("%s %s\n", emoji, item))
+		sb.WriteString(fmt.Sprintf("› %s\n", item))
 	}
 	return sb.String()
 }
@@ -54,10 +54,6 @@ func (f *ResponseFormatter) Tip(text string) string {
 
 func (f *ResponseFormatter) Section(emoji, title, content string) string {
 	return fmt.Sprintf("%s **%s**\n%s\n", emoji, title, content)
-}
-
-func (f *ResponseFormatter) CodeBlock(language, code string) string {
-	return fmt.Sprintf("```%s\n%s\n```\n", language, code)
 }
 
 func (f *ResponseFormatter) Combine(sections ...string) string {
