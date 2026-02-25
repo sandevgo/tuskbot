@@ -4,7 +4,7 @@ export default defineConfig({
   srcDir: "../docs",
   
   title: "TuskBot",
-  description: "Autonomous AI Agent for Telegram",
+  description: "Autonomous AI Agent in Your Messenger",
   
   themeConfig: {
     nav: [

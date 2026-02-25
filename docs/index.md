@@ -4,7 +4,7 @@ layout: home
 
 hero:
   name: "TuskBot"
-  text: "Autonomous AI Agent for Telegram"
+  text: "Autonomous AI Agent in YOur Messenger"
   tagline: Privacy-first AI assistant with local RAG, MCP tools, and multi-provider LLM support
   actions:
     - theme: brand
