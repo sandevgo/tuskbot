@@ -9,12 +9,14 @@ import (
 )
 
 type Router struct {
-	commands map[string]core.Command
+	commands  map[string]core.Command
+	formatter *ResponseFormatter
 }
 
 func New(commands []core.Command) *Router {
 	c := &Router{
-		commands: make(map[string]core.Command),
+		commands:  make(map[string]core.Command),
+		formatter: NewResponseFormatter(),
 	}
 
 	for _, cmd := range commands {
@@ -34,12 +36,17 @@ func (c *Router) Execute(ctx context.Context, sessionID, input string) (string, 
 
 	cmd, ok := c.commands[name]
 	if !ok {
-		return fmt.Sprintf("Unknown command: /%s", name), true
+		return c.formatter.Combine(
+			c.formatter.Info("Unknown Command"),
+			fmt.Sprintf("**Command**: /%s", name),
+			c.formatter.Usage("/help"),
+			c.formatter.Tip("Use /help to see all available commands"),
+		), true
 	}
 
 	result, err := cmd.Execute(ctx, sessionID, args)
 	if err != nil {
-		return fmt.Sprintf("Error: %v", err), true
+		return c.formatter.Error(cmd.Name(), err), true
 	}
 	return result, true
 }

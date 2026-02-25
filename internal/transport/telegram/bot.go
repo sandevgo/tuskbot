@@ -3,12 +3,10 @@ package telegram
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
-	"github.com/sandevgo/tuskbot/pkg/conv"
 	"github.com/sandevgo/tuskbot/pkg/log"
 	tele "gopkg.in/telebot.v3"
 )
@@ -21,6 +19,7 @@ type Bot struct {
 	agent   *agent.Agent
 	router  core.CmdRouter
 	ownerID int64
+	sender  *sender
 }
 
 func NewBot(
@@ -44,6 +43,7 @@ func NewBot(
 		agent:   agent,
 		router:  router,
 		ownerID: cfg.GetTelegramOwnerID(),
+		sender:  newSender(b),
 	}, nil
 }
 
@@ -105,50 +105,50 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	// Check if it's a command
 	if response, isCmd := b.router.Execute(ctx, sessionID, c.Text()); isCmd {
-		return c.Send(response)
+		return b.sender.sendMarkdown(ctx, c.Chat(), response, false)
 	}
 
 	// Start background typing indicator
 	typingCtx, stopTyping := context.WithCancel(ctx)
 	defer stopTyping()
 
-	go func() {
-		ticker := time.NewTicker(4 * time.Second) // Refresh before 5s expiry
-		defer ticker.Stop()
-
-		_ = c.Notify(tele.Typing)
-
-		for {
-			select {
-			case <-ticker.C:
-				_ = c.Notify(tele.Typing)
-			case <-typingCtx.Done():
-				return
-			}
-		}
-	}()
+	go b.typingLoop(typingCtx, c)
 
 	_, err := b.agent.Run(ctx, sessionID, c.Text(), func(msg core.Message) {
 		// Send Content
 		if msg.Content != "" {
-			htmlContent := strings.TrimSpace(conv.MarkdownToTelegramHTML([]byte(msg.Content)))
-			if htmlContent != "" {
-				if err := c.Send(htmlContent, tele.ModeHTML); err != nil {
-					logger.Error().Err(err).Msg("failed to send telegram message")
-				}
+			if err := b.sender.sendMarkdown(ctx, c.Chat(), msg.Content, true); err != nil {
+				logger.Error().Err(err).Msg("failed to send telegram message")
 			}
 		}
 
 		// Notify about tool execution
 		for _, tc := range msg.ToolCalls {
-			_ = c.Send(fmt.Sprintf("🛠 Executing: %s", tc.Function.Name))
+			_, _ = b.bot.Send(c.Chat(), fmt.Sprintf("🛠 Executing: %s", tc.Function.Name))
 		}
 	})
 
 	if err != nil {
 		logger.Error().Err(err).Msg("agent failed to response")
-		return c.Send(fmt.Sprintf("Agent failed to response: %v", err))
+		_, _ = b.bot.Send(c.Chat(), fmt.Sprintf("Agent failed to response: %v", err))
+		return err
 	}
 
 	return nil
+}
+
+func (b *Bot) typingLoop(ctx context.Context, c tele.Context) {
+	ticker := time.NewTicker(4 * time.Second) // Refresh before 5s expiry
+	defer ticker.Stop()
+
+	_ = c.Notify(tele.Typing)
+
+	for {
+		select {
+		case <-ticker.C:
+			_ = c.Notify(tele.Typing)
+		case <-ctx.Done():
+			return
+		}
+	}
 }

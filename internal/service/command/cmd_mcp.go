@@ -9,12 +9,14 @@ import (
 )
 
 type MCPCommand struct {
-	mcp core.MCPServer
+	mcp       core.MCPServer
+	formatter *ResponseFormatter
 }
 
 func NewMCPCommand(mcp core.MCPServer) core.Command {
 	return &MCPCommand{
-		mcp: mcp,
+		mcp:       mcp,
+		formatter: NewResponseFormatter(),
 	}
 }
 
@@ -32,11 +34,28 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 		return "", err
 	}
 
-	sb := strings.Builder{}
-	sb.WriteString("Connected MCP tools:\n\n")
-	for _, tool := range tools {
-		sb.WriteString(fmt.Sprintf("- %s\n", tool.Function.Name))
+	if len(tools) == 0 {
+		return c.formatter.Combine(
+			c.formatter.Info("MCP Tools"),
+			c.formatter.Label("Status", "No MCP tools are currently connected."),
+			c.formatter.Tip("Check your MCP server configuration if tools should be available"),
+		), nil
 	}
 
-	return sb.String(), nil
+	toolNames := make([]string, len(tools))
+	for i, tool := range tools {
+		description := strings.ReplaceAll(strings.ReplaceAll(tool.Function.Description, "\n", " "), "\r", " ")
+		description = strings.Join(strings.Fields(description), " ")
+		if len(description) > 120 {
+			description = description[:117] + "..."
+		}
+		toolNames[i] = fmt.Sprintf("**%s**", tool.Function.Name)
+	}
+
+	return c.formatter.Combine(
+		c.formatter.Info("MCP Tools"),
+		c.formatter.Label("Connected tools", fmt.Sprintf("%d", len(tools))),
+		"\n",
+		c.formatter.List(toolNames),
+	), nil
 }
