@@ -77,8 +77,8 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 		},
 		{
 			name:     "header tags stripped",
-			input:    "# Header",
-			expected: "Header\n",
+			input:    "# Info",
+			expected: "Info\n",
 		},
 		{
 			name:     "script tags sanitized",

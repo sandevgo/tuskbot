@@ -11,12 +11,8 @@ func NewResponseFormatter() *ResponseFormatter {
 	return &ResponseFormatter{}
 }
 
-func (f *ResponseFormatter) Header(emoji, title string) string {
-	return fmt.Sprintf("%s **%s**\n%s\n", emoji, title, strings.Repeat("━", len(title)))
-}
-
-func (f *ResponseFormatter) Info(label, value string) string {
-	return fmt.Sprintf("ℹ️ **%s**: %s\n", label, value)
+func (f *ResponseFormatter) Info(title string) string {
+	return fmt.Sprintf("⚙️️ **%s**\n\n", title)
 }
 
 func (f *ResponseFormatter) Success(message string) string {
@@ -24,18 +20,22 @@ func (f *ResponseFormatter) Success(message string) string {
 }
 
 func (f *ResponseFormatter) Error(operation string, err error) string {
-	return fmt.Sprintf("❌ **Command Error**\n%s\n\n**Issue**: %s\n", strings.Repeat("━", 15), err.Error())
+	return fmt.Sprintf("❌ **Command Error**\n\n**Issue**: %s\n", err.Error())
+}
+
+func (f *ResponseFormatter) Label(label, value string) string {
+	return fmt.Sprintf("**%s**  ›  `%s`\n", label, value)
 }
 
 func (f *ResponseFormatter) Usage(command string) string {
-	return fmt.Sprintf("📖 **Usage**: `%s`\n", command)
+	return fmt.Sprintf("**Usage**:\n```%s```\n", command)
 }
 
 func (f *ResponseFormatter) Examples(examples []string) string {
 	var sb strings.Builder
-	sb.WriteString("💡 **Examples**: \n")
+	sb.WriteString("**Examples**:\n")
 	for _, ex := range examples {
-		sb.WriteString(fmt.Sprintf("- `%s`\n", ex))
+		sb.WriteString(fmt.Sprintf("`%s`\n", ex))
 	}
 	return sb.String()
 }
@@ -49,7 +49,7 @@ func (f *ResponseFormatter) List(emoji string, items []string) string {
 }
 
 func (f *ResponseFormatter) Tip(text string) string {
-	return fmt.Sprintf("💡 **Tip**: %s\n", text)
+	return fmt.Sprintf("**Tip**: %s\n", text)
 }
 
 func (f *ResponseFormatter) Section(emoji, title, content string) string {

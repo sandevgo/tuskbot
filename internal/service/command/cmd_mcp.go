@@ -36,8 +36,8 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 
 	if len(tools) == 0 {
 		return c.formatter.Combine(
-			c.formatter.Header("🔧", "MCP Tools"),
-			c.formatter.Section("ℹ️", "Status", "No MCP tools are currently connected."),
+			c.formatter.Info("MCP Tools"),
+			c.formatter.Label("Status", "No MCP tools are currently connected."),
 			c.formatter.Tip("Check your MCP server configuration if tools should be available"),
 		), nil
 	}
@@ -53,8 +53,8 @@ func (c *MCPCommand) Execute(ctx context.Context, sessionID string, args []strin
 	}
 
 	return c.formatter.Combine(
-		c.formatter.Header("🔧", "MCP Tools"),
-		c.formatter.Info("Connected tools", fmt.Sprintf("%d", len(tools))),
+		c.formatter.Info("MCP Tools"),
+		c.formatter.Label("Connected tools", fmt.Sprintf("%d", len(tools))),
 		"\n",
 		c.formatter.List("•", toolNames),
 	), nil

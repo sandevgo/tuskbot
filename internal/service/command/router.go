@@ -37,7 +37,7 @@ func (c *Router) Execute(ctx context.Context, sessionID, input string) (string, 
 	cmd, ok := c.commands[name]
 	if !ok {
 		return c.formatter.Combine(
-			c.formatter.Header("❌", "Unknown Command"),
+			c.formatter.Info("Unknown Command"),
 			fmt.Sprintf("**Command**: /%s", name),
 			c.formatter.Usage("/help"),
 			c.formatter.Tip("Use /help to see all available commands"),

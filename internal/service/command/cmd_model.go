@@ -35,10 +35,10 @@ func (c *ModelCommand) Description() string {
 func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	if len(args) == 0 {
 		return c.formatter.Combine(
-			c.formatter.Header("🤖", "Current Model"),
-			c.formatter.Info("Provider", c.cfg.GetProvider()),
-			c.formatter.Info("Model", c.cfg.GetModel()),
-			c.formatter.Usage("/model <provider>/<model>"),
+			c.formatter.Info("Current Model"),
+			c.formatter.Label("Provider", c.cfg.GetProvider()),
+			c.formatter.Label("Model", c.cfg.GetModel()),
+			c.formatter.Usage("/model [provider]/[model]"),
 			c.formatter.Examples([]string{
 				"/model openai/gpt-4",
 				"/model anthropic/claude-3-sonnet",
@@ -52,7 +52,7 @@ func (c *ModelCommand) Execute(ctx context.Context, sessionID string, args []str
 	}
 
 	return c.formatter.Combine(
-		c.formatter.Header("✅", "Model Changed"),
+		c.formatter.Info("Model Changed"),
 		c.formatter.Success(fmt.Sprintf("Model updated to: **%s/%s**", c.cfg.GetProvider(), c.cfg.GetModel())),
 		c.formatter.Tip("Use /model to see current configuration"),
 	), nil
