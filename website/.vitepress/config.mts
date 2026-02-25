@@ -8,13 +8,7 @@ export default defineConfig({
   
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/getting-started/' },
-      { text: 'Architecture', link: '/architecture/' },
-      { text: 'Configuration', link: '/configuration/' },
-      { text: 'CLI', link: '/cli-reference/' },
-      { text: 'Tools', link: '/tools/' },
-      { text: 'Development', link: '/development/' },
-      { text: 'GitHub', link: 'https://github.com/sandevgo/tuskbot' }
+      { text: 'Documentation', link: '/getting-started/' },
     ],
 
     sidebar: {
