@@ -39,3 +39,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy ./website/.vitepress/dist --project-name=tuskbot
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+#      - name: Get Preview URL
+#        if: github.event_name == 'pull_request'
+#        run: |
+#          echo "DEPLOY_URL=${{ steps.deploy.outputs.deployment-url }}" >> $GITHUB_ENV
+
+      - name: Add PR Comment
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          message: |
+            **Website preview URL:** ${{ steps.deploy.outputs.deployment-url }}
+          comment_tag: docs_preview
