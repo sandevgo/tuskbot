@@ -3,10 +3,16 @@ name: Cloudflare Deployment
 on:
   push:
     branches:
-      #- main
-      - '**'
+      - main
     paths:
       - 'website/**'
+      - 'docs/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'website/**'
+      - 'docs/**'
 
 jobs:
   deploy:
@@ -33,6 +39,7 @@ jobs:
           pnpm run tusk:build
 
       - name: Deploy
+        id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
