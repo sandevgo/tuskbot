@@ -44,7 +44,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy ./website/.vitepress/dist --project-name=tuskbot-ai
+          command: pages deploy ./website/.vitepress/dist --project-name=tuskbot
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Add PR Comment
