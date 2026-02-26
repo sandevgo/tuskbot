@@ -20,8 +20,7 @@ export default defineConfig({
                     items: [
                         { text: 'Introduction', link: '/docs/getting-started/' },
                         { text: 'Binary Installation', link: '/docs/getting-started/installation' },
-                        { text: 'Docker Setup', link: '/docs/getting-started/docker' },
-                        { text: 'Operational Guide', link: '/docs/getting-started/first-steps' }
+                        { text: 'Docker Setup', link: '/docs/getting-started/docker' }
                     ]
                 },
                 // {
