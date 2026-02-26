@@ -23,16 +23,6 @@ export default defineConfig({
                         { text: 'Docker Setup', link: '/docs/getting-started/docker' }
                     ]
                 },
-                // {
-                //     text: 'Architecture',
-                //     collapsed: true,
-                //     items: [
-                //         { text: 'Overview', link: '/docs/architecture/' },
-                //         { text: 'MCP (Model Context Protocol)', link: '/docs/architecture/mcp' },
-                //         { text: 'RAG & Memory', link: '/docs/architecture/rag-memory' },
-                //         { text: 'Providers', link: '/docs/architecture/providers' }
-                //     ]
-                // },
                 {
                     text: 'Configuration',
                     collapsed: true,
@@ -59,13 +49,21 @@ export default defineConfig({
                     ]
                 }
                 // {
+                //     text: 'Architecture',
+                //     collapsed: true,
+                //     items: [
+                //         { text: 'Overview', link: '/docs/architecture/' },
+                //         { text: 'MCP (Model Context Protocol)', link: '/docs/architecture/mcp' },
+                //         { text: 'RAG & Memory', link: '/docs/architecture/rag-memory' },
+                //         { text: 'Providers', link: '/docs/architecture/providers' }
+                //     ]
+                // },
+                // {
                 //     text: 'CLI Reference',
                 //     collapsed: true,
                 //     items: [
-                //         { text: 'Overview', link: '/docs/cli-reference/' },
                 //         { text: 'tusk start', link: '/docs/cli-reference/start' },
                 //         { text: 'tusk install', link: '/docs/cli-reference/install' },
-                //         { text: 'Environment Variables', link: '/docs/cli-reference/environment' }
                 //     ]
                 // },
                 // {
