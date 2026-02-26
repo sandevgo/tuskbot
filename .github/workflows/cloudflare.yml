@@ -1,4 +1,4 @@
-name: Documentation
+name: Cloudflare Deployment
 
 on:
   push:
@@ -17,18 +17,19 @@ jobs:
     name: Deploy to Cloudflare Pages
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
         with:
-          node-version: 20
+          version: 10
+          cache: true
 
       - name: Install and Build
         run: |
           cd website
-          npm install
-          npm run docs:build
+          pnpm install
+          pnpm run tusk:build
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
