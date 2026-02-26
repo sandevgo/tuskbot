@@ -29,7 +29,7 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                         { text: 'Environment Variables', link: '/docs/configuration/environment' },
-                        { text: 'Slash Commands', link: '/docs/configuration/commands' },
+                        { text: 'Chat Commands', link: '/docs/configuration/commands' },
                         { text: 'Runtime Data', link: '/docs/configuration/runtime-data' },
                         { text: 'LLM Providers', link: '/docs/configuration/providers' },
                     ]

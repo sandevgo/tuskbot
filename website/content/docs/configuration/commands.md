@@ -1,4 +1,4 @@
-# Slash Commands
+# Chat Commands
 
 TuskBot provides a set of administrative commands to manage the agent's state and inspect connected services directly from the chat interface.
 
