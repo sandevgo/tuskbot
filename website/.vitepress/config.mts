@@ -42,8 +42,14 @@ export default defineConfig({
                         { text: 'Slash Commands', link: '/docs/configuration/commands' },
                         { text: 'Runtime Data', link: '/docs/configuration/runtime-data' },
                         // { text: 'LLM Providers', link: '/docs/configuration/providers' },
-                        // { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
                         // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
+                    ]
+                },
+                {
+                    text: 'Chat Channels',
+                    collapsed: true,
+                    items: [
+                        { text: 'Telegram', link: '/docs/chat-channels/telegram' }
                     ]
                 },
                 {
