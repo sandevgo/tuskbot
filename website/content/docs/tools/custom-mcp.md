@@ -20,7 +20,7 @@ You don't always need to edit the configuration manually. You can:
 
 ## Configuration Structure
 
-The `mcp_config.json` follows the standard MCP host format. Here is an example showing both `stdio` (local) and `sse` (remote) configurations:
+The `mcp_config.json` follows the standard MCP host format. Here is an example showing `stdio` (local), `http` (remote), and `sse` (legacy) configurations:
 
 ```json
 {
@@ -29,7 +29,14 @@ The `mcp_config.json` follows the standard MCP host format. Here is an example s
       "command": "uvx",
       "args": ["mcp-server-sqlite", "--db-path", "/path/to/my.db"]
     },
-    "weather": {
+    "remote-tools": {
+      "url": "https://api.example.com/mcp",
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer your_token"
+      }
+    },
+    "weather-legacy": {
       "url": "http://localhost:8080/sse",
       "type": "sse"
     },
@@ -43,3 +50,6 @@ The `mcp_config.json` follows the standard MCP host format. Here is an example s
   }
 }
 ```
+
+> [!NOTE]
+> While TuskBot supports both `http` and `sse` transports for remote servers, `sse` is considered deprecated by the protocol in favor of the more modern `http` transport.
