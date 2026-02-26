@@ -40,7 +40,7 @@ export default defineConfig({
                         { text: 'Environment Variables', link: '/docs/configuration/environment' },
                         { text: 'Slash Commands', link: '/docs/configuration/commands' },
                         { text: 'Runtime Data', link: '/docs/configuration/runtime-data' },
-                        // { text: 'LLM Providers', link: '/docs/configuration/providers' },
+                        { text: 'LLM Providers', link: '/docs/configuration/providers' },
                         // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
                     ]
                 },
