@@ -3,7 +3,7 @@ name: Cloudflare Deployment
 on:
   push:
     branches:
-      - main
+      #- main
       - '**'
     paths:
       - 'website/**'
@@ -39,11 +39,6 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy ./website/.vitepress/dist --project-name=tuskbot
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-
-#      - name: Get Preview URL
-#        if: github.event_name == 'pull_request'
-#        run: |
-#          echo "DEPLOY_URL=${{ steps.deploy.outputs.deployment-url }}" >> $GITHUB_ENV
 
       - name: Add PR Comment
         if: github.event_name == 'pull_request'
