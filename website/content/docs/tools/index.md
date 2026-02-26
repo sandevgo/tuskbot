@@ -23,12 +23,7 @@ The fetch tool allows the agent to retrieve information from the internet.
 - **fetch_url**: Performs an HTTP GET request and converts HTML content to readable text.
 - **Reliability**: Includes automatic retries for transient network errors.
 
-## MCP Tools
-
-TuskBot acts as an MCP Host. You can connect any MCP-compliant server to extend the agent's capabilities with specialized tools (e.g., Google Search, GitHub, Databases).
-
 ## Tool Security
 
 - **Path Restrictions**: Filesystem operations are generally relative to the `TUSK_RUNTIME_PATH`.
 - **Timeouts**: All tool executions have strict timeouts to prevent the agent from hanging.
-- **Manual Confirmation**: Depending on your transport (like Telegram), sensitive operations may require user oversight.
