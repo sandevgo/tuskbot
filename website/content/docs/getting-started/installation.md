@@ -4,9 +4,11 @@ How to install TuskBot on your system.
 
 ## System Requirements
 
-- **Go**: Version 1.24 or higher (if building from source).
-- **CGO**: Required for building from source (not needed for pre-compiled binaries).
-- **Storage**: Space for the runtime directory (default `~/.tuskbot`).
+TuskBot uses lightweight embedding models via llama.cpp and is designed to be resource-efficient. However, it's recommended to have at least the following:
+
+- **CPU**: 2 cores recommended.
+- **Memory**: 1GB RAM minimum.
+- **Disk**: ~300MB+ for runtime and data storage.
 
 ## Binary Installation
 
