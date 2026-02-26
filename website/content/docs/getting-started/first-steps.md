@@ -1,27 +1,30 @@
-# Usage
+# Operational Guide
 
-How to interact with TuskBot once it is running.
+This document outlines the procedures for interacting with and verifying the TuskBot service.
 
-## Starting the Conversation
+## Access Control
+The system implements a strict whitelist based on the `TUSK_TELEGRAM_OWNER_ID`. Inbound messages from unauthorized identifiers are discarded without processing.
 
-After running `tusk start`, open Telegram and find your bot. Send a message to begin. 
+## Command Interface
 
-**Security Note**: TuskBot uses `TUSK_TELEGRAM_OWNER_ID` to ensure it only responds to you. Messages from any other user will be ignored.
+| Command | Action |
+| :--- | :--- |
+| `/model` | Returns current provider/model status. Allows runtime model switching. |
+| `/mcp` | Enumerates active MCP servers and registered tool definitions. |
 
-## Slash Commands
+## Functional Verification
 
-Interact with the bot using these direct commands:
-- `/model`: Display or switch the active LLM provider and model.
-- `/mcp`: List connected MCP servers and their available tools.
+Execute the following test cases to validate system integrity:
 
-## Testing Your Setup
+### 1. Native Tool Execution
+**Prompt**: `List files in the current directory.`
+**Expected Result**: Output from the `list_directory` tool.
 
-Try the following prompts to verify functionality:
-1. **Check Tools**: "List the files in the current directory."
-2. **Check RAG**: "Remember that my favorite programming language is Go." Then ask later: "What is my favorite language?"
-3. **Check MCP**: Use a command specific to a connected MCP server.
+### 2. RAG Pipeline Verification
+**Prompt**: `Store the fact that my server port is 8080.`
+**Follow-up**: `What is my server port?`
+**Expected Result**: Retrieval of the stored fact from the vector database.
 
-## Next Steps
-
-- [Configure MCP Servers](../configuration/mcp-servers.md)
-- [Learn about Architecture](../architecture/index.md)
+### 3. MCP Connectivity
+**Prompt**: Invoke a tool specific to a configured external MCP server.
+**Expected Result**: Successful tool execution and response formatting.

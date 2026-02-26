@@ -1,42 +1,42 @@
-# Installation
+# Binary Deployment
 
-How to install TuskBot on your system.
+This document specifies the requirements and procedures for deploying TuskBot as a standalone binary.
 
-## System Requirements
+## Hardware Specifications
 
-TuskBot uses lightweight embedding models via llama.cpp and is designed to be resource-efficient. However, it's recommended to have at least the following:
+| Resource | Minimum Requirement | Recommended |
+| :--- | :--- | :--- |
+| **CPU** | 1 Core (x86_64/ARM64) | 2+ Cores |
+| **RAM** | 1 GB | 2 GB |
+| **Storage** | 500 MB | 2 GB+ (for vector growth) |
 
-- **CPU**: 2 cores recommended.
-- **Memory**: 1GB RAM minimum.
-- **Disk**: ~300MB+ for runtime and data storage.
+## Installation Procedure
 
-## Binary Installation
-
-Download the pre-compiled binary for your platform from the Releases page.
-
-**Quick Install (Linux/macOS):**
+### 1. Binary Acquisition
+Download the architecture-specific archive from the official repository.
 
 ```bash
-tar -xzvf tusk-*.tar.gz
-chmod +x tusk-*
-sudo mv tusk-* /usr/local/bin/tusk
+# Example for Linux x86_64
+tar -xzvf tusk-linux-amd64.tar.gz
+chmod +x tusk
+sudo mv tusk /usr/local/bin/
+```
+
+### 2. Environment Initialization
+Execute the interactive configuration utility to generate the required directory structure and `.env` specification.
+
+```bash
 tusk install
 ```
 
-## Quick Install Script
+The utility automates the following:
+- Provider authentication configuration.
+- GGUF embedding model acquisition.
+- Telegram Bot API credential validation.
 
-The `tusk install` command launches an interactive TUI wizard that automatically configures your environment. It handles:
-1. Selecting an AI Provider.
-2. Configuring API Keys.
-3. Downloading the local embedding model.
-4. Setting up Telegram credentials.
+## Service Verification
+Initiate the process and monitor STDOUT for the initialization sequence.
 
-This process creates a `.env` file in your runtime directory, so you don't have to set variables manually.
-
-## Verification
-
-Verify the installation by running:
 ```bash
 tusk start
 ```
-The bot should log "starting telegram bot" if configured correctly.

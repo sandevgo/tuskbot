@@ -1,21 +1,17 @@
-# Getting Started
+# System Introduction
 
-TuskBot is a Go-based autonomous AI agent designed to handle tasks directly in your Telegram. It evolves the ideas of OpenClaw into a more scalable, secure, and tool-oriented assistant.
+TuskBot is a high-concurrency autonomous agent engine implemented in Go. It facilitates secure, tool-augmented interactions via the Telegram Bot API, utilizing the Model Context Protocol (MCP) for extensible capability management.
 
-## What is TuskBot?
+## Core Architecture Components
 
-TuskBot is a high-performance engine built with Go that features:
-- **Modular Stability**: Powered by Model Context Protocol (MCP).
-- **Persistent Context**: Local RAG pipeline using SQLite-vec and llama.cpp.
-- **Privacy-First**: Native support for Ollama and local embedding models.
+| Component | Implementation | Function |
+| :--- | :--- | :--- |
+| **Runtime** | Go (Golang) | Core logic and service orchestration. |
+| **Persistence** | SQLite-vec | Vectorized message history and knowledge storage. |
+| **Embeddings** | llama.cpp (GGUF) | Local inference for RAG pipeline operations. |
+| **Extensibility** | MCP | Standardized interface for external tool integration. |
 
-## Quick Start
+## Deployment Workflow
 
-1. **Install**: Download the binary and run `tusk install`.
-2. **Start**: Run `tusk start` to launch the services.
-
-## Next Steps
-
-- [Installation](./installation.md)
-- [Docker Setup](./docker.md)
-- [Configuration](./configuration.md)
+1. **Provisioning**: Execute `tusk install` to initialize the environment.
+2. **Execution**: Invoke `tusk start` to instantiate the service lifecycle.

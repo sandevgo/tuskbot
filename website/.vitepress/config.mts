@@ -15,14 +15,14 @@ export default defineConfig({
         sidebar: {
             '/docs/': [
                 {
-                    text: 'Getting Started',
+                    text: 'Deployment',
                     collapsed: false,
                     items: [
-                        { text: 'Overview', link: '/docs/getting-started/' },
-                        { text: 'Installation (TUI)', link: '/docs/getting-started/installation' },
-                        { text: 'Docker Quickstart', link: '/docs/getting-started/docker' },
-                        { text: 'Essential Config', link: '/docs/getting-started/configuration' },
-                        { text: 'Usage', link: '/docs/getting-started/first-steps' }
+                        { text: 'Introduction', link: '/docs/getting-started/' },
+                        { text: 'Binary Installation', link: '/docs/getting-started/installation' },
+                        { text: 'Containerized Deployment', link: '/docs/getting-started/docker' },
+                        { text: 'Configuration Schema', link: '/docs/getting-started/configuration' },
+                        { text: 'Operational Guide', link: '/docs/getting-started/first-steps' }
                     ]
                 },
                 // {

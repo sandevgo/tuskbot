@@ -1,31 +1,35 @@
-# Docker Setup
+# Containerized Deployment
 
-Running TuskBot with Docker.
+TuskBot is distributed as a Docker image for containerized environments.
 
-## Docker Compose
+## Orchestration Specification
 
-You can use the following `docker-compose.yml` to run TuskBot. Note that for the first run, you should use the `install` command to set up your environment.
+Utilize the following `docker-compose.yml` definition for persistent deployment.
 
 ```yaml
 services:
   tuskbot:
     image: ghcr.io/sandevgo/tuskbot:latest
+    restart: unless-stopped
+    env_file: .env
     volumes:
-      - tuskbot-data:/root/.tuskbot
+      - tuskbot_data:/root/.tuskbot
     command: start
 
 volumes:
-  tuskbot-data:
+  tuskbot_data:
 ```
 
-## Essential Variables
+## Mandatory Environment Variables
 
-When using Docker, you must at least provide these variables to boot:
-- `TUSK_TELEGRAM_TOKEN`
-- `TUSK_TELEGRAM_OWNER_ID`
-- `TUSK_MAIN_MODEL`
-- `TUSK_EMBEDDING_MODEL`
+The container requires the following variables for successful instantiation:
 
-## Volume Mounts
+| Variable | Description |
+| :--- | :--- |
+| `TUSK_TELEGRAM_TOKEN` | Telegram Bot API authentication token. |
+| `TUSK_TELEGRAM_OWNER_ID` | Numeric identifier for the authorized user. |
+| `TUSK_MAIN_MODEL` | LLM identifier (format: `provider/model`). |
+| `TUSK_EMBEDDING_MODEL` | Filename of the local GGUF embedding model. |
 
-The volume `tuskbot-data` is mapped to `/root/.tuskbot`. This ensures that your: database and runtime data are persisted across container restarts.
+## Volume Persistence
+The `/root/.tuskbot` mount point contains the SQLite database (`tuskbot.db`), the MCP configuration (`mcp_config.json`), and the local model cache. Ensure the host volume has sufficient write permissions.
