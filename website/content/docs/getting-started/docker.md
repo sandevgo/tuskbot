@@ -11,7 +11,6 @@ services:
   tuskbot:
     image: ghcr.io/sandevgo/tuskbot:latest
     restart: unless-stopped
-    env_file: .env
     volumes:
       - tuskbot_data:/root/.tuskbot
     command: start
@@ -20,16 +19,12 @@ volumes:
   tuskbot_data:
 ```
 
-## Mandatory Environment Variables
+## Configuration Management
 
-The container requires the following variables for successful instantiation:
+TuskBot generates a `.env` configuration file within the `/root/.tuskbot` directory upon successful execution of the `tusk install` command. 
 
-| Variable | Description |
-| :--- | :--- |
-| `TUSK_TELEGRAM_TOKEN` | Telegram Bot API authentication token. |
-| `TUSK_TELEGRAM_OWNER_ID` | Numeric identifier for the authorized user. |
-| `TUSK_MAIN_MODEL` | LLM identifier (format: `provider/model`). |
-| `TUSK_EMBEDDING_MODEL` | Filename of the local GGUF embedding model. |
+### Environment Overrides
+While the system prioritizes the internal `.env` file, variables defined in the Docker `environment` block or via an `env_file` in `docker-compose.yml` will override the internal file specifications.
 
 ## Volume Persistence
 The `/root/.tuskbot` mount point contains the SQLite database (`tuskbot.db`), the MCP configuration (`mcp_config.json`), and the local model cache. Ensure the host volume has sufficient write permissions.
