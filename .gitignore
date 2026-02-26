@@ -3,6 +3,9 @@
 .idea
 .DS_Store
 /bin
-/docs
+/todos
 /external
 /vendor
+/website/node_modules
+/website/.vitepress/cache
+/website/.vitepress/dist
