@@ -6,41 +6,49 @@ TuskBot is built with an **MCP-First** philosophy. While it includes powerful na
 
 Modern LLMs are not only trained to use MCP tools but are also exceptionally good at writing the code to create them. Using frameworks like **FastMCP** (Python) or the TypeScript MCP SDK, you can define new tools in minutes. If TuskBot lacks a specific capability, you can often ask the agent itself to write a new MCP server for you.
 
-## Configuration Structure
+## Configuration Specification
 
-The `mcp_config.json` follows the standard MCP host format. Here is an example showing `stdio` (local), `http` (remote), and `sse` (legacy) configurations:
+TuskBot implements the Model Context Protocol (MCP) host specification. External server configurations are defined in `mcp_config.json` using the following schema:
+
+### Schema Definition
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `mcpServers` | `object` | Map of server identifiers to `ServerConfig` objects. |
+| `ServerConfig.command` | `string` | Executable name for `stdio` transport. |
+| `ServerConfig.args` | `string[]` | CLI arguments for the executable. |
+| `ServerConfig.env` | `object` | Key-value pairs for process environment variables. |
+| `ServerConfig.url` | `string` | Endpoint for `http` or `sse` transports. |
+| `ServerConfig.type` | `string` | Transport protocol: `stdio`, `http`, or `sse`. |
+| `ServerConfig.headers` | `object` | HTTP headers for remote transports. |
+
+### Implementation Example
 
 ```json
 {
   "mcpServers": {
-    "sqlite": {
+    "local-sqlite": {
+      "type": "stdio",
       "command": "uvx",
-      "args": ["mcp-server-sqlite", "--db-path", "/path/to/my.db"]
+      "args": ["mcp-server-sqlite", "--db-path", "/path/to/data.db"]
     },
-    "remote-tools": {
-      "url": "https://api.example.com/mcp",
+    "remote-api": {
       "type": "http",
+      "url": "https://api.example.com/mcp",
       "headers": {
-        "Authorization": "Bearer your_token"
+        "Authorization": "Bearer <token>"
       }
     },
-    "weather-legacy": {
-      "url": "http://localhost:8080/sse",
-      "type": "sse"
-    },
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
-      }
+    "legacy-service": {
+      "type": "sse",
+      "url": "http://localhost:8080/sse"
     }
   }
 }
 ```
 
-> [!NOTE]
-> While TuskBot supports both `http` and `sse` transports for remote servers, `sse` is considered deprecated by the protocol in favor of the more modern `http` transport.
+> [!IMPORTANT]
+> The `sse` transport is maintained for backward compatibility. New implementations should utilize the `http` transport for remote tool execution.
 
 ## Configuration & Auto-Reload
 
