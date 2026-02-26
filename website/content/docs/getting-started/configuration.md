@@ -21,5 +21,5 @@ For a complete list of all available settings, see the [Full Variable List](../c
 
 On the first run, TuskBot will initialize the directory structure in `~/.tuskbot`, including:
 - `tuskbot.db`: The SQLite vector database.
-- `mcp.json`: MCP server configurations.
+- `mcp_config.json`: MCP server configurations.
 - `models/`: Local GGUF embedding models.
