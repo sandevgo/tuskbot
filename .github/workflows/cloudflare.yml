@@ -30,7 +30,6 @@ jobs:
         name: Install pnpm
         with:
           version: 10
-          cache: true
 
       - name: Build
         run: |
