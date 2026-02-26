@@ -60,14 +60,6 @@ export default defineConfig({
                 //     ]
                 // },
                 // {
-                //     text: 'CLI Reference',
-                //     collapsed: true,
-                //     items: [
-                //         { text: 'tusk start', link: '/docs/cli-reference/start' },
-                //         { text: 'tusk install', link: '/docs/cli-reference/install' },
-                //     ]
-                // },
-                // {
                 //     text: 'Development',
                 //     collapsed: true,
                 //     items: [
