@@ -35,17 +35,17 @@ export default defineConfig({
                 //         { text: 'Providers', link: '/docs/architecture/providers' }
                 //     ]
                 // },
-                // {
-                //     text: 'Configuration Reference',
-                //     collapsed: true,
-                //     items: [
-                //         { text: 'Full Variable List', link: '/docs/configuration/' },
-                //         { text: 'LLM Providers', link: '/docs/configuration/providers' },
-                //         { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
-                //         { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
-                //         { text: 'MCP Servers', link: '/docs/configuration/mcp-servers' }
-                //     ]
-                // },
+                {
+                    text: 'Configuration',
+                    collapsed: true,
+                    items: [
+                        // { text: 'Full Variable List', link: '/docs/configuration/' },
+                        // { text: 'LLM Providers', link: '/docs/configuration/providers' },
+                        // { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
+                        // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
+                        // { text: 'MCP Servers', link: '/docs/configuration/mcp-servers' }
+                    ]
+                },
                 {
                     text: 'Tools & MCP',
                     collapsed: true,
