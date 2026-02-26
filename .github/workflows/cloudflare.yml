@@ -53,4 +53,4 @@ jobs:
         with:
           message: |
             **Website preview URL:** ${{ steps.deploy.outputs.deployment-url }}
-          comment_tag: docs_preview
+          comment_tag: website_preview
