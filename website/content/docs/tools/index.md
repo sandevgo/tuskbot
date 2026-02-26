@@ -1,29 +1,55 @@
-# Tools & MCP
+# Native Tools Specification
 
-TuskBot comes with a set of built-in "Native Tools" that allow it to interact with your local environment and the web. It also supports the Model Context Protocol (MCP) for connecting to external tool servers.
+TuskBot provides a suite of built-in "Native Tools" for local environment interaction and web data retrieval. These tools are implemented as internal functions and do not require external MCP server processes.
 
-## Native Tools
+## Filesystem Interface
 
-### Filesystem
-The filesystem tool allows the agent to manage files within its workspace.
-- **read_file**: Read the contents of a file.
-- **write_file**: Create or overwrite a file with new content.
-- **edit_file**: Replace specific strings within a file.
-- **list_directory**: View files and folders in a path.
-- **search_files**: Recursively search for strings within files.
-- **get_file_info**: Retrieve metadata like size and modification time.
+The filesystem toolset facilitates CRUD operations and metadata retrieval within the host environment.
 
-### Shell
-The shell tool provides command execution capabilities.
-- **execute_command**: Runs a shell command (e.g., `ls`, `grep`, `go build`) and returns the output.
-- **Safety**: Commands are executed with a timeout and output is truncated if it exceeds 200 lines.
+### Methods
 
-### Fetch
-The fetch tool allows the agent to retrieve information from the internet.
-- **fetch_url**: Performs an HTTP GET request and converts HTML content to readable text.
-- **Reliability**: Includes automatic retries for transient network errors.
+| Method | Description | Parameters |
+| :--- | :--- | :--- |
+| `read_file` | Retrieves raw content of a specified file. | `path: string` |
+| `write_file` | Persists content to a specified path. Creates parent directories if absent. | `path: string`, `content: string` |
+| `edit_file` | Performs an exact string replacement within a file. | `path: string`, `find: string`, `replace: string` |
+| `list_directory` | Enumerates entries within a directory including size metadata. | `path: string` |
+| `search_files` | Recursively scans for a query string. Excludes `node_modules`, `vendor`, and hidden directories. | `path: string`, `query: string` |
+| `get_file_info` | Returns POSIX-compliant metadata (size, mode, modification time). | `path: string` |
 
-## Tool Security
+## Shell Interface
 
-- **Path Restrictions**: Filesystem operations are generally relative to the `TUSK_RUNTIME_PATH`.
-- **Timeouts**: All tool executions have strict timeouts to prevent the agent from hanging.
+The shell interface enables arbitrary command execution via the host operating system's command processor (`sh` on Unix-like systems, `cmd` on Windows).
+
+### Methods
+
+| Method | Description | Parameters |
+| :--- | :--- | :--- |
+| `execute_command` | Executes a shell command and returns `STDOUT` and `STDERR`. | `command: string` |
+
+### Execution Constraints
+- **Timeout**: Execution is forcibly terminated after 300 seconds (5 minutes).
+- **Output Truncation**: Returns only the final 200 lines of output if the buffer exceeds this limit.
+- **Working Directory**: Operations are scoped to the configured `WorkDir`.
+
+## Fetch Interface
+
+The fetch interface provides idempotent HTTP GET capabilities with automated content transformation.
+
+### Methods
+
+| Method | Description | Parameters |
+| :--- | :--- | :--- |
+| `fetch_url` | Retrieves remote resources and converts HTML to Markdown-formatted text. | `url: string` |
+
+### Technical Specifications
+- **User-Agent**: Identifies as `TuskBot-Agent/0.1`.
+- **Payload Limit**: Maximum response size is 1MB.
+- **Resiliency**: Implements an exponential backoff retry strategy for 5xx status codes and network-level errors.
+- **Timeout**: Request lifecycle is limited to 15 seconds.
+
+## Security & Governance
+
+- **Path Scoping**: Filesystem operations are restricted to paths relative to the `TUSK_RUNTIME_PATH` environment variable.
+- **Resource Protection**: Strict timeouts are enforced at the provider level to prevent resource exhaustion.
+- **Binary Safety**: `search_files` implements a null-byte heuristic to skip binary file processing.
