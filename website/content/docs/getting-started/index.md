@@ -12,8 +12,7 @@ TuskBot is a high-performance engine built with Go that features:
 ## Quick Start
 
 1. **Install**: Download the binary and run `tusk install`.
-2. **Configure**: Set your Telegram Token and AI Provider keys.
-3. **Start**: Run `tusk start` to launch the services.
+2. **Start**: Run `tusk start` to launch the services.
 
 ## Next Steps
 
