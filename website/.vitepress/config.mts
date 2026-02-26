@@ -50,10 +50,7 @@ export default defineConfig({
                     text: 'Tools & MCP',
                     collapsed: true,
                     items: [
-                        { text: 'Overview', link: '/docs/tools/' },
-                        { text: 'Filesystem', link: '/docs/tools/filesystem' },
-                        { text: 'Shell', link: '/docs/tools/shell' },
-                        { text: 'Fetch', link: '/docs/tools/fetch' },
+                        { text: 'Built-in Tools', link: '/docs/tools/' },
                         { text: 'Custom MCP Servers', link: '/docs/tools/custom-mcp' }
                     ]
                 }
