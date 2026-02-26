@@ -18,10 +18,10 @@ export default defineConfig({
                     collapsed: false,
                     items: [
                         { text: 'Overview', link: '/docs/getting-started/' },
-                        { text: 'Installation', link: '/docs/getting-started/installation' },
-                        { text: 'Docker Setup', link: '/docs/getting-started/docker' },
-                        { text: 'Configuration', link: '/docs/getting-started/configuration' },
-                        { text: 'First Steps', link: '/docs/getting-started/first-steps' }
+                        { text: 'Installation (TUI)', link: '/docs/getting-started/installation' },
+                        { text: 'Docker Quickstart', link: '/docs/getting-started/docker' },
+                        { text: 'Essential Config', link: '/docs/getting-started/configuration' },
+                        { text: 'Usage', link: '/docs/getting-started/first-steps' }
                     ]
                 },
                 {
@@ -35,10 +35,10 @@ export default defineConfig({
                     ]
                 },
                 {
-                    text: 'Configuration',
+                    text: 'Configuration Reference',
                     collapsed: true,
                     items: [
-                        { text: 'Overview', link: '/docs/configuration/' },
+                        { text: 'Full Variable List', link: '/docs/configuration/' },
                         { text: 'LLM Providers', link: '/docs/configuration/providers' },
                         { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
                         { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },

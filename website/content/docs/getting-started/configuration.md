@@ -1,18 +1,21 @@
-# Configuration
+# Essential Config
 
-Basic configuration for TuskBot.
+TuskBot is designed to be configured via the [Interactive Installer](./installation.md), but you can also set environment variables manually.
 
-## Environment Variables
+## Required Variables
 
-TuskBot uses environment variables for core settings:
-- `TUSK_TELEGRAM_TOKEN`: Your Telegram Bot Token.
-- `TUSK_TELEGRAM_OWNER_ID`: Your Telegram User ID.
-- `TUSK_RUNTIME_PATH`: Path for data (default: `~/.tuskbot`).
-- `TUSK_MAIN_MODEL`: Format `provider/model` (e.g., `openai/gpt-4o`).
+To get the bot online, you need these four core settings:
 
-## Configuration File
+- `TUSK_TELEGRAM_TOKEN`: Your Telegram Bot Token from @BotFather.
+- `TUSK_TELEGRAM_OWNER_ID`: Your numeric Telegram User ID (the bot only responds to you).
+- `TUSK_MAIN_MODEL`: The LLM to use, formatted as `provider/model` (e.g., `openai/gpt-4o`).
+- `TUSK_EMBEDDING_MODEL`: The filename of the local GGUF embedding model (e.g., `all-MiniLM-L6-v2-Q8_0.gguf`).
 
-The `tusk install` command generates a configuration environment in your runtime path. You can manually edit these values in your shell profile or a `.env` file.
+## The .env File
+
+The `tusk install` command generates a `.env` file in your `TUSK_RUNTIME_PATH` (default `~/.tuskbot`). TuskBot automatically loads variables from this file on startup.
+
+For a complete list of all available settings, see the [Full Variable List](../configuration/index.md).
 
 ## First Run
 

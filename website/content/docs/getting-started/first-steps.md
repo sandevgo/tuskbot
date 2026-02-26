@@ -1,10 +1,12 @@
-# First Steps
+# Usage
 
-Getting started with TuskBot after installation.
+How to interact with TuskBot once it is running.
 
-## Initial Setup
+## Starting the Conversation
 
-After running `tusk start`, open your Telegram client and start a chat with your bot. Since you configured your `TUSK_TELEGRAM_OWNER_ID`, the bot will only respond to you.
+After running `tusk start`, open Telegram and find your bot. Send a message to begin. 
+
+**Security Note**: TuskBot uses `TUSK_TELEGRAM_OWNER_ID` to ensure it only responds to you. Messages from any other user will be ignored.
 
 ## Slash Commands
 
