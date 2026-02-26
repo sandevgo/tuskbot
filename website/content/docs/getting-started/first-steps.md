@@ -5,13 +5,6 @@ This document outlines the procedures for interacting with and verifying the Tus
 ## Access Control
 The system implements a strict whitelist based on the `TUSK_TELEGRAM_OWNER_ID`. Inbound messages from unauthorized identifiers are discarded without processing.
 
-## Command Interface
-
-| Command | Action |
-| :--- | :--- |
-| `/model` | Returns current provider/model status. Allows runtime model switching. |
-| `/mcp` | Enumerates active MCP servers and registered tool definitions. |
-
 ## Functional Verification
 
 Execute the following test cases to validate system integrity:
