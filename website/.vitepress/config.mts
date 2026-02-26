@@ -21,7 +21,6 @@ export default defineConfig({
                         { text: 'Introduction', link: '/docs/getting-started/' },
                         { text: 'Binary Installation', link: '/docs/getting-started/installation' },
                         { text: 'Containerized Deployment', link: '/docs/getting-started/docker' },
-                        { text: 'Configuration Schema', link: '/docs/getting-started/configuration' },
                         { text: 'Operational Guide', link: '/docs/getting-started/first-steps' }
                     ]
                 },
@@ -39,7 +38,7 @@ export default defineConfig({
                     text: 'Configuration',
                     collapsed: true,
                     items: [
-                        // { text: 'Full Variable List', link: '/docs/configuration/' },
+                        { text: 'Environment Variables', link: '/docs/configuration/environment' },
                         // { text: 'LLM Providers', link: '/docs/configuration/providers' },
                         // { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
                         // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
