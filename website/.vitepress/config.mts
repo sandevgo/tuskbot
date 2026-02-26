@@ -15,7 +15,7 @@ export default defineConfig({
         sidebar: {
             '/docs/': [
                 {
-                    text: 'Quick Start',
+                    text: 'Getting started',
                     collapsed: false,
                     items: [
                         { text: 'Introduction', link: '/docs/getting-started/' },
