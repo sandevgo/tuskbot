@@ -35,7 +35,7 @@ jobs:
         run: |
           cd website
           pnpm install
-          pnpm run tusk:build
+          pnpm run build
 
       - name: Deploy
         id: deploy

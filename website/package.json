@@ -3,8 +3,8 @@
     "vitepress": "2.0.0-alpha.16"
   },
   "scripts": {
-    "tusk:dev": "vitepress dev",
-    "tusk:build": "vitepress build",
-    "tusk:preview": "vitepress preview"
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
   }
 }
