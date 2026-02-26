@@ -36,12 +36,3 @@ TuskBot utilizes environment variables for runtime configuration. These variable
 | :--- | :--- | :--- | :--- |
 | `TUSK_TELEGRAM_TOKEN` | `string` | Yes | Bot API token issued by @BotFather. |
 | `TUSK_TELEGRAM_OWNER_ID` | `int64` | Yes | Numeric Telegram User ID for exclusive access control. |
-
-## Filesystem Hierarchy
-
-Upon initialization, the system generates the following structure in the `TUSK_RUNTIME_PATH`:
-
-- `tuskbot.db`: SQLite database containing message history and vector embeddings.
-- `mcp_config.json`: JSON-encoded configuration for external MCP servers.
-- `models/`: Directory for local GGUF model storage.
-- `.env`: Local environment variable overrides.

@@ -39,6 +39,7 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                         { text: 'Environment Variables', link: '/docs/configuration/environment' },
+                        { text: 'Runtime Data', link: '/docs/configuration/runtime-data' },
                         // { text: 'LLM Providers', link: '/docs/configuration/providers' },
                         // { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
                         // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
