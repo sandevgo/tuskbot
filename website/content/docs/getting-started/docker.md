@@ -29,11 +29,3 @@ When using Docker, you must at least provide these variables to boot:
 ## Volume Mounts
 
 The volume `tuskbot-data` is mapped to `/root/.tuskbot`. This ensures that your: database and runtime data are persisted across container restarts.
-
-## Building from Dockerfile
-
-If you are building locally:
-```bash
-docker build -t tuskbot:latest .
-docker compose up -d
-```

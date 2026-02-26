@@ -6,9 +6,17 @@ Building TuskBot from source.
 
 TODO: Go version, CGO requirements
 
-## Building
+## Building from Source
 
 TODO: Build commands
+
+## Building from Dockerfile
+
+If you are building locally:
+```bash
+docker build -t tuskbot:latest .
+docker compose up -d
+```
 
 ## Development Setup
 
