@@ -15,12 +15,12 @@ export default defineConfig({
         sidebar: {
             '/docs/': [
                 {
-                    text: 'Deployment',
+                    text: 'Quick Start',
                     collapsed: false,
                     items: [
                         { text: 'Introduction', link: '/docs/getting-started/' },
                         { text: 'Binary Installation', link: '/docs/getting-started/installation' },
-                        { text: 'Containerized Deployment', link: '/docs/getting-started/docker' },
+                        { text: 'Docker Setup', link: '/docs/getting-started/docker' },
                         { text: 'Operational Guide', link: '/docs/getting-started/first-steps' }
                     ]
                 },
@@ -43,7 +43,6 @@ export default defineConfig({
                         // { text: 'LLM Providers', link: '/docs/configuration/providers' },
                         // { text: 'Telegram Setup', link: '/docs/configuration/telegram' },
                         // { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
-                        // { text: 'MCP Servers', link: '/docs/configuration/mcp-servers' }
                     ]
                 },
                 {
