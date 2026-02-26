@@ -37,14 +37,24 @@ jobs:
           pnpm install
           pnpm run tusk:build
 
+#      - name: Deploy
+#        id: deploy
+#        uses: cloudflare/wrangler-action@v3
+#        with:
+#          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+#          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+#          command: pages deploy website/.vitepress/dist --project-name=tuskbot --branch=${{ github.head_ref || github.ref_name }}
+#          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Deploy
-        id: deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website/.vitepress/dist --project-name=tuskbot --branch=${{ github.head_ref || github.ref_name }}
+          projectName: tuskbot
+          directory: website/.vitepress/dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.head_ref || github.ref_name }}
 
       - name: Add PR Comment
         if: github.event_name == 'pull_request'
