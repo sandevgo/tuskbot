@@ -2,6 +2,24 @@ package scheduler
 
 import "time"
 
+// CronTrigger Cron implementation
+type CronTrigger struct {
+	Expression string
+}
+
+// IntervalTrigger Heartbeat implementation
+type IntervalTrigger struct {
+	Interval time.Duration
+	Last     time.Time
+}
+
+func (t *IntervalTrigger) NextFireTime(now time.Time) time.Time {
+	if t.Last.IsZero() {
+		return now
+	}
+	return t.Last.Add(t.Interval)
+}
+
 // OneOffTrigger At implementation
 type OneOffTrigger struct {
 	At    time.Time
