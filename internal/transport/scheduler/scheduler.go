@@ -62,7 +62,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			logger.Info().Msg("scheduler stopped by contexts")
-			return ctx.Err()
+			return nil
 		default:
 		}
 
@@ -80,7 +80,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			case <-time.After(1 * time.Second):
 				continue
 			case <-ctx.Done():
-				return ctx.Err()
+				return nil
 			}
 		}
 
@@ -92,7 +92,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			case <-s.signal:
 				continue
 			case <-ctx.Done():
-				return ctx.Err()
+				return nil
 			}
 			now = time.Now()
 		}
