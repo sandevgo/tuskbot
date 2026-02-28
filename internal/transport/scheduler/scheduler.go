@@ -40,6 +40,10 @@ func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
 		LastRun: time.Time{},
 		NextRun: next,
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	heap.Push(&s.tasks, task)
 	//fmt.Printf("[Scheduler] Task '%s' added. Next run: %s\n", name, next.Format(time.RFC3339))
 }
