@@ -20,7 +20,7 @@ type Scheduler struct {
 func NewScheduler() *Scheduler {
 	sch := &Scheduler{
 		tasks:  make(taskHeap, 0),
-		signal: make(chan struct{}),
+		signal: make(chan struct{}, 1),
 	}
 	heap.Init(&sch.tasks)
 	return sch
@@ -42,10 +42,16 @@ func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	heap.Push(&s.tasks, task)
-	//fmt.Printf("[Scheduler] Task '%s' added. Next run: %s\n", name, next.Format(time.RFC3339))
+	s.mu.Unlock()
+
+	// check wasEmpty?
+	if task.NextRun.Before(s.tasks.Peek().NextRun) {
+		select {
+		case s.signal <- struct{}{}:
+		default:
+		}
+	}
 }
 
 func (s *Scheduler) Start(ctx context.Context) error {
@@ -74,6 +80,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		if delay > 0 {
 			select {
 			case <-time.After(delay):
+			case <-s.signal:
 			case <-ctx.Done():
 				return ctx.Err()
 			}
