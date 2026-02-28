@@ -2,25 +2,22 @@ package scheduler
 
 import (
 	"time"
-
-	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 // IntervalTrigger Heartbeat implementation
 type IntervalTrigger struct {
 	Interval time.Duration
-	Last     time.Time
 }
 
-func NewIntervalTrigger(d time.Duration) core.Trigger {
+func NewIntervalTrigger(d time.Duration) *IntervalTrigger {
 	return &IntervalTrigger{Interval: d}
 }
 
-func (t *IntervalTrigger) NextFireTime(now time.Time) time.Time {
-	if t.Last.IsZero() {
+func (t *IntervalTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
+	if last.IsZero() {
 		return now
 	}
-	return t.Last.Add(t.Interval)
+	return last.Add(t.Interval)
 }
 
 // OneOffTrigger At implementation
@@ -29,11 +26,11 @@ type OneOffTrigger struct {
 	fired bool
 }
 
-func NewOneOffTrigger(at time.Time) core.Trigger {
+func NewOneOffTrigger(at time.Time) *OneOffTrigger {
 	return &OneOffTrigger{At: at}
 }
 
-func (t *OneOffTrigger) NextFireTime(now time.Time) time.Time {
+func (t *OneOffTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
 	if t.fired {
 		return time.Time{} // Done forever
 	}
