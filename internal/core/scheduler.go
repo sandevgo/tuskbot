@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+type Scheduler interface {
+	AddTask(name string, trigger Trigger, job Job)
+}
+
 type Trigger interface {
 	NextFireTime(now time.Time, lastRun time.Time) time.Time
 }
