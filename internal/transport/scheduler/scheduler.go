@@ -94,3 +94,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		}
 	}
 }
+
+func (s *Scheduler) Shutdown(ctx context.Context) error {
+	return nil // TODO: Implement stop logic
+}
