@@ -23,21 +23,21 @@ func NewScheduler() *Scheduler {
 }
 
 func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
-	// Schedule for the very first execution
 	next := trigger.NextFireTime(time.Now(), time.Time{})
-
-	if !next.IsZero() {
-		task := &core.Task{
-			ID:      name,
-			Name:    name,
-			Trigger: trigger,
-			Job:     job,
-			LastRun: time.Time{},
-			NextRun: next,
-		}
-		heap.Push(&s.tasks, task)
-		fmt.Printf("[Scheduler] Task '%s' added. Next run: %s\n", name, next.Format(time.RFC3339))
+	if next.IsZero() {
+		return
 	}
+
+	task := &core.Task{
+		ID:      name,
+		Name:    name,
+		Trigger: trigger,
+		Job:     job,
+		LastRun: time.Time{},
+		NextRun: next,
+	}
+	heap.Push(&s.tasks, task)
+	//fmt.Printf("[Scheduler] Task '%s' added. Next run: %s\n", name, next.Format(time.RFC3339))
 }
 
 func (s *Scheduler) Start(ctx context.Context) error {
