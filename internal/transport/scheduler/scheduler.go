@@ -4,6 +4,7 @@ import (
 	"container/heap"
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -11,12 +12,15 @@ import (
 )
 
 type Scheduler struct {
-	tasks taskHeap
+	tasks  taskHeap
+	mu     sync.Mutex
+	signal chan struct{}
 }
 
 func NewScheduler() *Scheduler {
 	sch := &Scheduler{
-		tasks: make(taskHeap, 0),
+		tasks:  make(taskHeap, 0),
+		signal: make(chan struct{}),
 	}
 	heap.Init(&sch.tasks)
 	return sch
