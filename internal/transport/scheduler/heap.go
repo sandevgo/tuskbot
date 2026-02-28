@@ -1,8 +1,10 @@
 package scheduler
 
+import "github.com/sandevgo/tuskbot/internal/core"
+
 // taskHeap implements heap.Interface for Task items.
 // We want the item with the earliest NextRun to be popped first (Min-Heap).
-type taskHeap []*Task
+type taskHeap []*core.Task
 
 func (h taskHeap) Len() int {
 	return len(h)
@@ -18,7 +20,7 @@ func (h taskHeap) Swap(i, j int) {
 }
 
 func (h *taskHeap) Push(x interface{}) {
-	*h = append(*h, x.(*Task))
+	*h = append(*h, x.(*core.Task))
 }
 
 func (h *taskHeap) Pop() interface{} {
@@ -29,7 +31,7 @@ func (h *taskHeap) Pop() interface{} {
 	return item
 }
 
-func (h *taskHeap) Peek() *Task {
+func (h *taskHeap) Peek() *core.Task {
 	if len(*h) == 0 {
 		return nil
 	}

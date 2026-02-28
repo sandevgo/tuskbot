@@ -21,12 +21,12 @@ func NewScheduler() *Scheduler {
 	return sch
 }
 
-func (s *Scheduler) AddTask(name string, trigger core.Trigger, job Job) {
+func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
 	// Schedule for the very first execution
-	next := trigger.NextFireTime(time.Now())
+	next := trigger.NextFireTime(time.Now(), time.Time{})
 
 	if !next.IsZero() {
-		task := &Task{
+		task := &core.Task{
 			ID:      name,
 			Name:    name,
 			Trigger: trigger,
@@ -39,8 +39,6 @@ func (s *Scheduler) AddTask(name string, trigger core.Trigger, job Job) {
 	}
 }
 
-// Start runs the main loop of the scheduler in the foreground (blocking).
-// Call it in a goroutine `go scheduler.Start(ctx)`.
 func (s *Scheduler) Start(ctx context.Context) error {
 	log.Println("[Scheduler] Started.")
 	for {
@@ -74,11 +72,11 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		}
 
 		// 3. Execute: Pop the task and run it
-		task := heap.Pop(&s.tasks).(*Task) // Pop task from heap
+		task := heap.Pop(&s.tasks).(*core.Task) // Pop task from heap
 
 		// Run job in separate goroutine
 		log.Printf("[Scheduler] Executing Task '%s'...\n", task.Name)
-		go func(t *Task) {
+		go func(t *core.Task) {
 			// Execute the job with passed context or a new one? Often we want task context independent of Scheduler cancellation?
 			_ = t.Job(context.Background())
 		}(task)
