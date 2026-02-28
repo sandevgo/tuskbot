@@ -51,7 +51,7 @@ func (s *Service) AddTask(name string, trigger core.Trigger, instruction string)
 
 		// Execute via Agent in dedicated session
 		// The onUpdate callback can be used to send notifications back to user if needed
-		return s.agent.Run(ctx, sessionID, instruction, func(msg core.Message) {
+		_, err := s.agent.Run(ctx, sessionID, instruction, func(msg core.Message) {
 			// Optional: Handle streaming updates from the agent
 			// For async tasks, you might want to send Telegram notifications here
 			// or just log the completion
@@ -59,6 +59,7 @@ func (s *Service) AddTask(name string, trigger core.Trigger, instruction string)
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
 		})
+		return err
 	}
 
 	// Wrap the core.Task to store metadata
