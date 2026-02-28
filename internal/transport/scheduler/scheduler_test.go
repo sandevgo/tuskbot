@@ -182,3 +182,67 @@ func TestScheduler_ExecutionOrder(t *testing.T) {
 	assert.Equal(t, "immediate", executionOrder[0])
 	assert.Equal(t, "delayed", executionOrder[1])
 }
+
+func TestScheduler_AddAfterStart(t *testing.T) {
+	s := NewScheduler()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start scheduler in background
+	go func() {
+		_ = s.Start(ctx)
+	}()
+
+	// Wait a bit to ensure it's running
+	time.Sleep(50 * time.Millisecond)
+
+	done := make(chan struct{})
+	job := func(ctx context.Context) error {
+		close(done)
+		return nil
+	}
+
+	// Add task that should run immediately
+	s.AddTask("late-task", NewOneOffTrigger(time.Now()), job)
+
+	select {
+	case <-done:
+		// Success
+	case <-time.After(1 * time.Second):
+		t.Fatal("task added after start did not execute in time")
+	}
+}
+
+func TestScheduler_ConcurrentAdd(t *testing.T) {
+	s := NewScheduler()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		_ = s.Start(ctx)
+	}()
+
+	const numTasks = 100
+	var counter int32
+
+	var wg sync.WaitGroup
+	wg.Add(numTasks)
+
+	for i := 0; i < numTasks; i++ {
+		go func() {
+			defer wg.Done()
+			s.AddTask("task", NewOneOffTrigger(time.Now()), func(ctx context.Context) error {
+				atomic.AddInt32(&counter, 1)
+				return nil
+			})
+		}()
+	}
+
+	wg.Wait()
+
+	// Wait for tasks to execute
+	time.Sleep(500 * time.Millisecond)
+
+	val := atomic.LoadInt32(&counter)
+	assert.Equal(t, int32(numTasks), val, "all concurrent tasks should have executed")
+}
