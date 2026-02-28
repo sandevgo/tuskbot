@@ -76,8 +76,8 @@ func (s *Scheduler) Start(ctx context.Context) error {
 		task := heap.Pop(&s.tasks).(*core.Task)
 
 		// Run job
-		fmt.Printf("[Scheduler] Executing Task '%s'...\n", task.Name)
 		go func(t *core.Task) {
+			fmt.Printf("executing Task '%s'...\n", task.Name)
 			_ = t.Job(ctx)
 		}(task)
 
