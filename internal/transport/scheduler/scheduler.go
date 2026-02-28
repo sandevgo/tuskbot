@@ -56,7 +56,7 @@ func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
 
 func (s *Scheduler) Start(ctx context.Context) error {
 	logger := log.FromCtx(ctx)
-	logger.Info().Msg("scheduler started")
+	logger.Info().Msg("starting scheduler")
 
 	for {
 		select {

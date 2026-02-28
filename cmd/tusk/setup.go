@@ -17,6 +17,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/memory"
 	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
+	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
 	"github.com/sandevgo/tuskbot/pkg/log"
 	"github.com/sandevgo/tuskbot/pkg/srv"
@@ -70,6 +71,10 @@ func NewServices(ctx context.Context) []srv.Service {
 	// Embedding extractor
 	embedderWorker := memory.NewEmbedderWorker(messagesRepo, embedder)
 	services = append(services, embedderWorker)
+
+	// Scheduler
+	scheduleService := scheduler.NewScheduler()
+	services = append(services, scheduleService)
 
 	// 6. MCP & Tools
 	mcpManager, err := initMCP(ctx, appCfg)
