@@ -15,7 +15,6 @@ import (
 
 type AppConfig struct {
 	MainModel  string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
-	LiteModel  string `env:"TUSK_LITE_MODEL,required,notEmpty"`
 	EmbedModel string `env:"TUSK_EMBEDDING_MODEL,required,notEmpty"`
 
 	AnthropicAPIKey  string `env:"TUSK_ANTHROPIC_API_KEY"`
