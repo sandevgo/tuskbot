@@ -38,7 +38,7 @@ func NewService(scheduler core.Scheduler, agent *agent.Agent) *Service {
 func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, instruction string) error {
 	sessionID := generateSessionID(name)
 
-	trigger, err := s.createTrigger(taskType, timeSpec)
+	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
 	if err != nil {
 		return fmt.Errorf("create trigger: %w", err)
 	}
@@ -58,41 +58,6 @@ func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, in
 
 func generateSessionID(name string) string {
 	return fmt.Sprintf("task-%s", name)
-}
-
-func (s *Service) createTrigger(taskType, timeSpec string) (core.Trigger, error) {
-	switch taskType {
-	case core.TriggerTypeInterval:
-		return createIntervalTrigger(timeSpec)
-	case core.TriggerTypeOnce:
-		return createOneOffTrigger(timeSpec)
-	case core.TriggerTypeCron:
-		return &scheduler.CronTrigger{Expression: timeSpec}, nil
-	default:
-		return nil, fmt.Errorf("unknown task type: %s", taskType)
-	}
-}
-
-func createIntervalTrigger(timeSpec string) (core.Trigger, error) {
-	dur, err := time.ParseDuration(timeSpec)
-	if err != nil {
-		return nil, fmt.Errorf("invalid interval duration: %w", err)
-	}
-	return scheduler.NewIntervalTrigger(dur), nil
-}
-
-func createOneOffTrigger(timeSpec string) (core.Trigger, error) {
-	// Try parsing as duration (delay) first
-	if dur, err := time.ParseDuration(timeSpec); err == nil {
-		return &scheduler.OneOffTrigger{At: time.Now().Add(dur)}, nil
-	}
-
-	// Try parsing as ISO8601/RFC3339
-	t, err := time.Parse(time.RFC3339, timeSpec)
-	if err != nil {
-		return nil, fmt.Errorf("invalid time_spec for 'once' (expected duration or RFC3339): %w", err)
-	}
-	return &scheduler.OneOffTrigger{At: t}, nil
 }
 
 func (s *Service) createJob(sessionID, instruction string) func(ctx context.Context) error {
