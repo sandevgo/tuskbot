@@ -22,3 +22,7 @@ type Task struct {
 	LastRun time.Time
 	NextRun time.Time
 }
+
+func (t *Task) NextFireTime(now time.Time) time.Time {
+	return t.Trigger.NextFireTime(now, t.LastRun)
+}
