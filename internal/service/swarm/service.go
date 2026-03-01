@@ -34,11 +34,7 @@ func NewService(scheduler core.Scheduler, agent *agent.Agent) *Service {
 	}
 }
 
-// AddTask schedules a new autonomous task with its own session
-func (s *Service) AddTask(name string, trigger core.Trigger, instruction string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, instruction string) error {
 	sessionID := fmt.Sprintf("task-%s", name)
 
 	// Create the Job that will run when triggered
@@ -66,13 +62,16 @@ func (s *Service) AddTask(name string, trigger core.Trigger, instruction string)
 		Job:     job,
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.tasks[name] = task
 	s.scheduler.AddTask(name, trigger, job)
 
 	return nil
 }
 
-func (s *Service) CancelTask(name string) error {
+func (s *Service) CancelTask(ctx context.Context, name string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -84,19 +83,19 @@ func (s *Service) CancelTask(name string) error {
 	return nil
 }
 
-func (s *Service) ListTasks() []TaskInfo {
+func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var infos []TaskInfo
+	var infos []core.Task
 	for _, t := range s.tasks {
-		infos = append(infos, TaskInfo{
-			ID:          t.ID,
-			Name:        t.Name,
-			NextRun:     t.NextRun,
-			LastRun:     t.LastRun,
-			Instruction: "...", // You'd need to store this separately
+		infos = append(infos, core.Task{
+			ID:      t.ID,
+			Name:    t.Name,
+			NextRun: t.NextRun,
+			LastRun: t.LastRun,
+			Prompt:  "...", // You'd need to store this separately
 		})
 	}
-	return infos
+	return infos, nil
 }

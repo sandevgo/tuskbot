@@ -11,11 +11,13 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
+	"github.com/sandevgo/tuskbot/internal/providers/mcp/tools"
 	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
 	"github.com/sandevgo/tuskbot/internal/service/state"
+	"github.com/sandevgo/tuskbot/internal/service/swarm"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
 	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
@@ -101,6 +103,14 @@ func NewServices(ctx context.Context) []srv.Service {
 		executor,
 	)
 
+	swarmService := swarm.NewService(scheduleService, ag)
+
+	// Register tools
+	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))
+	mcpManager.RegisterNativeTool(tools.NewShell(appCfg.GetRuntimePath()))
+	mcpManager.RegisterNativeTool(tools.NewFetch())
+	mcpManager.RegisterNativeTool(tools.NewSchedule(swarmService))
+
 	// commands
 	commands := command.NewCommands(appCfg, globState, mcpManager)
 	cmdRouter := command.New(commands)
@@ -127,7 +137,6 @@ func initStorage(ctx context.Context, cfg *config.AppConfig) (*sql.DB, core.Mess
 func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	filStorage := mcp.NewFileStorage(cfg.GetMCPConfigPath())
 	mgr, err := mcp.NewService(
-		config.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
 		mcp.NewToolCache(),
