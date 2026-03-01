@@ -74,10 +74,6 @@ func NewServices(ctx context.Context) []srv.Service {
 	embedderWorker := memory.NewEmbedderWorker(messagesRepo, embedder)
 	services = append(services, embedderWorker)
 
-	// Scheduler
-	scheduleService := scheduler.NewScheduler()
-	services = append(services, scheduleService)
-
 	// 6. MCP & Tools
 	mcpManager, err := initMCP(ctx, appCfg)
 	if err != nil {
@@ -103,6 +99,11 @@ func NewServices(ctx context.Context) []srv.Service {
 		executor,
 	)
 
+	// Scheduler
+	scheduleService := scheduler.NewScheduler()
+	services = append(services, scheduleService)
+
+	// Swam
 	swarmService := swarm.NewService(scheduleService, ag)
 
 	// Register tools
