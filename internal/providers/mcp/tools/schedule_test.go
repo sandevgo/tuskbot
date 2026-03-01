@@ -20,8 +20,8 @@ func TestParseScheduleAdd(t *testing.T) {
 		wantQuery *ScheduleAddQuery
 	}{
 		{
-			name: "valid input with all fields",
-			args: json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":"do something"}`),
+			name:    "valid input with all fields",
+			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":"do something"}`),
 			wantErr: false,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeOnce,
@@ -31,8 +31,8 @@ func TestParseScheduleAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "valid input with cron type",
-			args: json.RawMessage(`{"type":"cron","task_name":"daily-job","time_spec":"0 9 * * *","instruction":"send daily report"}`),
+			name:    "valid input with cron type",
+			args:    json.RawMessage(`{"type":"cron","task_name":"daily-job","time_spec":"0 9 * * *","instruction":"send daily report"}`),
 			wantErr: false,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeCron,
@@ -42,8 +42,8 @@ func TestParseScheduleAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "valid input with interval type",
-			args: json.RawMessage(`{"type":"interval","task_name":"interval-task","time_spec":"30s","instruction":"check status"}`),
+			name:    "valid input with interval type",
+			args:    json.RawMessage(`{"type":"interval","task_name":"interval-task","time_spec":"30s","instruction":"check status"}`),
 			wantErr: false,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeInterval,
@@ -131,9 +131,9 @@ func TestParseScheduleAdd(t *testing.T) {
 			errMsg:  "instruction cannot be empty",
 		},
 		{
-			name: "task_name with underscores and numbers",
-			args: json.RawMessage(`{"type":"once","task_name":"test_task_123","time_spec":"10m","instruction":"do it"}`),
-			wantErr: false,
+			name:    "task_name with underscores and numbers",
+			args:    json.RawMessage(`{"type":"once","task_name":"test_task_123","time_spec":"10m","instruction":"do it"}`),
+			wantErr: true,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeOnce,
 				TaskName:    "test_task_123",
@@ -142,8 +142,8 @@ func TestParseScheduleAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "task_name with uppercase",
-			args: json.RawMessage(`{"type":"once","task_name":"Test-Task","time_spec":"10m","instruction":"do it"}`),
+			name:    "task_name with uppercase",
+			args:    json.RawMessage(`{"type":"once","task_name":"Test-Task","time_spec":"10m","instruction":"do it"}`),
 			wantErr: false,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeOnce,
@@ -153,8 +153,8 @@ func TestParseScheduleAdd(t *testing.T) {
 			},
 		},
 		{
-			name: "trimmed fields",
-			args: json.RawMessage(`{"type":"once","task_name":"  test-task  ","time_spec":"  10m  ","instruction":"  do it  "}`),
+			name:    "trimmed fields",
+			args:    json.RawMessage(`{"type":"once","task_name":"  test-task  ","time_spec":"  10m  ","instruction":"  do it  "}`),
 			wantErr: false,
 			wantQuery: &ScheduleAddQuery{
 				Type:        core.TriggerTypeOnce,

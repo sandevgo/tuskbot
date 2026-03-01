@@ -135,7 +135,7 @@ func (m *Schedule) GetDefinitions() map[string]struct {
 }
 
 // slugRegex matches valid task names: alphanumeric, hyphens, and underscores only
-var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 
 func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQuery, error) {
 	var input *ScheduleAddQuery
