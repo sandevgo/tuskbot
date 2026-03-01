@@ -39,23 +39,19 @@ func (s *Service) AddTask(name string, trigger core.Trigger, instruction string)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Create a dedicated session ID for this task
 	sessionID := fmt.Sprintf("task-%s", name)
 
 	// Create the Job that will run when triggered
 	job := func(ctx context.Context) error {
-		logger := log.FromCtx(ctx).With().Str("task", name).Str("session", sessionID).Logger()
-		ctx = logger.WithContext(ctx)
+		logger := log.FromCtx(ctx)
 
-		logger.Info().Str("instruction", instruction).Msg("executing scheduled task")
+		logger.Info().
+			Str("session", sessionID).
+			Msg("executing scheduled task")
 
-		// Execute via Agent in dedicated session
-		// The onUpdate callback can be used to send notifications back to user if needed
 		_, err := s.agent.Run(ctx, sessionID, instruction, func(msg core.Message) {
-			// Optional: Handle streaming updates from the agent
-			// For async tasks, you might want to send Telegram notifications here
-			// or just log the completion
 			if msg.Content != "" {
+				// save stream state
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
 		})
