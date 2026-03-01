@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 const readFileSchema = `
@@ -319,18 +321,42 @@ func (fs *Filesystem) GetFileInfo(ctx context.Context, args json.RawMessage) (st
 func (fs *Filesystem) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
-	Handler     func(context.Context, json.RawMessage) (string, error)
+	Handler     core.NativeHandler
 } {
 	return map[string]struct {
 		Description string
 		Schema      string
-		Handler     func(context.Context, json.RawMessage) (string, error)
+		Handler     core.NativeHandler
 	}{
-		"read_file":      {"Read a file from the local filesystem", readFileSchema, fs.ReadFile},
-		"write_file":     {"Write content to a file on the local filesystem", writeFileSchema, fs.WriteFile},
-		"edit_file":      {"Edit a file by replacing an exact string with a new one", editFileSchema, fs.EditFile},
-		"list_directory": {"List contents of a directory", listDirSchema, fs.ListDir},
-		"search_files":   {"Search for a string in files recursively", searchFilesSchema, fs.SearchFiles},
-		"get_file_info":  {"Get metadata about a file (size, mode, modtime)", getFileInfoSchema, fs.GetFileInfo},
+		"read_file": {
+			Description: "Read a file from the local filesystem",
+			Schema:      readFileSchema,
+			Handler:     fs.ReadFile,
+		},
+		"write_file": {
+			Description: "Write content to a file on the local filesystem",
+			Schema:      writeFileSchema,
+			Handler:     fs.WriteFile,
+		},
+		"edit_file": {
+			Description: "Edit a file by replacing an exact string with a new one",
+			Schema:      editFileSchema,
+			Handler:     fs.EditFile,
+		},
+		"list_directory": {
+			Description: "List contents of a directory",
+			Schema:      listDirSchema,
+			Handler:     fs.ListDir,
+		},
+		"search_files": {
+			Description: "Search for a string in files recursively",
+			Schema:      searchFilesSchema,
+			Handler:     fs.SearchFiles,
+		},
+		"get_file_info": {
+			Description: "Get metadata about a file (size, mode, modtime)",
+			Schema:      getFileInfoSchema,
+			Handler:     fs.GetFileInfo,
+		},
 	}
 }

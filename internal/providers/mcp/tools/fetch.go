@@ -98,13 +98,17 @@ func (f *Fetch) FetchURL(ctx context.Context, args json.RawMessage) (string, err
 func (f *Fetch) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
-	Handler     func(context.Context, json.RawMessage) (string, error)
+	Handler     core.NativeHandler
 } {
 	return map[string]struct {
 		Description string
 		Schema      string
-		Handler     func(context.Context, json.RawMessage) (string, error)
+		Handler     core.NativeHandler
 	}{
-		"fetch_url": {"Fetch content from a URL (HTTP GET)", fetchURLSchema, f.FetchURL},
+		"fetch_url": {
+			Description: "Fetch content from a URL (HTTP GET)",
+			Schema:      fetchURLSchema,
+			Handler:     f.FetchURL,
+		},
 	}
 }
