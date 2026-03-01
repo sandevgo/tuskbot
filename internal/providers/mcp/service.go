@@ -95,7 +95,7 @@ func (s *Service) Start(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) RegisterTool(t core.NativeTool) {
+func (s *Service) RegisterNativeTool(t core.NativeTool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
