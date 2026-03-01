@@ -163,7 +163,7 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 		return nil, fmt.Errorf("task_name cannot be empty")
 	}
 	if !slugRegex.MatchString(input.TaskName) {
-		return nil, fmt.Errorf("task_name must be a valid slug (alphanumeric, hyphens, underscores only): %s", input.TaskName)
+		return nil, fmt.Errorf("task_name must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
 	}
 
 	// Validate TimeSpec
