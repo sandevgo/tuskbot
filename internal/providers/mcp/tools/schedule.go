@@ -106,30 +106,30 @@ func (s *Schedule) handleCancel(ctx context.Context, args json.RawMessage) (stri
 	return "", nil
 }
 
-func (m *Schedule) GetDefinitions() map[string]struct {
+func (s *Schedule) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
-	Handler     func(context.Context, json.RawMessage) (string, error)
+	Handler     core.NativeHandler
 } {
 	return map[string]struct {
 		Description string
 		Schema      string
-		Handler     func(context.Context, json.RawMessage) (string, error)
+		Handler     core.NativeHandler
 	}{
 		"schedule_add": {
 			Description: "Schedule background job",
 			Schema:      scheduleAddSchema,
-			Handler:     m.handleAdd,
+			Handler:     s.handleAdd,
 		},
 		"schedule_list": {
-			Description: "handleList scheduled jobs",
+			Description: "Get list of scheduled jobs",
 			Schema:      scheduleListSchema,
-			Handler:     m.handleList,
+			Handler:     s.handleList,
 		},
 		"schedule_cancel": {
-			Description: "handleCancel and remove a scheduled job by name",
+			Description: "Cancel and remove a scheduled job by name",
 			Schema:      scheduleCancelSchema,
-			Handler:     m.handleCancel,
+			Handler:     s.handleCancel,
 		},
 	}
 }
