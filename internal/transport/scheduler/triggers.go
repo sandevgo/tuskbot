@@ -46,3 +46,8 @@ func (t *OneOffTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
 type CronTrigger struct {
 	Expression string
 }
+
+func (c CronTrigger) NextFireTime(now time.Time, lastRun time.Time) time.Time {
+	//TODO implement me
+	panic("implement me")
+}

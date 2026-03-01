@@ -8,6 +8,7 @@ import (
 
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
+	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -36,6 +37,34 @@ func NewService(scheduler core.Scheduler, agent *agent.Agent) *Service {
 
 func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, instruction string) error {
 	sessionID := fmt.Sprintf("task-%s", name)
+
+	var trigger core.Trigger
+	var err error
+
+	switch taskType {
+	case core.TriggerTypeInterval:
+		dur, err := time.ParseDuration(timeSpec)
+		if err != nil {
+			return fmt.Errorf("invalid interval duration: %w", err)
+		}
+		trigger = scheduler.NewIntervalTrigger(dur)
+	case core.TriggerTypeOnce:
+		// Try parsing as duration (delay) first
+		if dur, err := time.ParseDuration(timeSpec); err == nil {
+			trigger = &scheduler.OneOffTrigger{At: time.Now().Add(dur)}
+		} else {
+			// Try parsing as ISO8601/RFC3339
+			t, err := time.Parse(time.RFC3339, timeSpec)
+			if err != nil {
+				return fmt.Errorf("invalid time_spec for 'once' (expected duration or RFC3339): %w", err)
+			}
+			trigger = &scheduler.OneOffTrigger{At: t}
+		}
+	case core.TriggerTypeCron:
+		trigger = &scheduler.CronTrigger{Expression: timeSpec}
+	default:
+		return fmt.Errorf("unknown task type: %s", taskType)
+	}
 
 	// Create the Job that will run when triggered
 	job := func(ctx context.Context) error {
