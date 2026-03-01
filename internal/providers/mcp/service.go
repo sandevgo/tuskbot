@@ -28,9 +28,6 @@ func NewDefaultTimeouts() *Timeouts {
 	}
 }
 
-// NativeHandler defines a function signature for internal tools
-type NativeHandler func(ctx context.Context, args json.RawMessage) (string, error)
-
 var _ core.MCPServer = (*Service)(nil)
 
 type Service struct {
@@ -40,7 +37,7 @@ type Service struct {
 	timeouts *Timeouts
 
 	// Native tools support
-	nativeTools    map[string]NativeHandler
+	nativeTools    map[string]core.NativeHandler
 	nativeToolDefs []core.Tool
 
 	// State tracking
@@ -52,20 +49,17 @@ type Service struct {
 }
 
 func NewService(
-	runtimePath string,
 	pool ConnectionPool,
 	registry *Registry,
 	cache *ToolCache,
 ) (*Service, error) {
-	nativeTools, nativeToolDefs := RegisterNativeTools(runtimePath)
-
 	return &Service{
 		pool:           pool,
 		registry:       registry,
 		cache:          cache,
 		timeouts:       NewDefaultTimeouts(),
-		nativeTools:    nativeTools,
-		nativeToolDefs: nativeToolDefs,
+		nativeTools:    make(map[string]core.NativeHandler),
+		nativeToolDefs: make([]core.Tool, 0),
 		activeConfigs:  make(map[string]ServerConfig),
 		toolNameMap:    make(map[string]string),
 	}, nil
@@ -99,6 +93,25 @@ func (s *Service) Start(ctx context.Context) error {
 	go s.watchConfig(ctx, updates)
 
 	return nil
+}
+
+func (s *Service) RegisterTool(t core.NativeTool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for name, def := range t.GetDefinitions() {
+		s.nativeTools[name] = def.Handler
+		s.nativeToolDefs = append(s.nativeToolDefs, core.Tool{
+			Type: "function",
+			Function: core.Function{
+				Name:        name,
+				Description: def.Description,
+				Parameters:  json.RawMessage(def.Schema),
+			},
+		})
+	}
+
+	s.cache.Invalidate()
 }
 
 func (s *Service) connectServer(ctx context.Context, name string, cfg ServerConfig) {
@@ -256,7 +269,7 @@ func (s *Service) listToolsFromServer(ctx context.Context, name string, cli *Man
 		schemaBytes, _ := json.Marshal(t.InputSchema)
 		originalName := fmt.Sprintf("%s.%s", name, t.Name)
 		sanitizedName := sanitizeToolName(originalName)
-		
+
 		tools = append(tools, core.Tool{
 			Type: "function",
 			Function: core.Function{
@@ -293,7 +306,7 @@ func (s *Service) CallTool(ctx context.Context, name string, args string) (strin
 	s.mu.RLock()
 	originalName, exists := s.toolNameMap[name]
 	s.mu.RUnlock()
-	
+
 	toolName := name
 	if exists {
 		toolName = originalName
