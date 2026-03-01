@@ -3,9 +3,18 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"slices"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
+
+type ScheduleAddQuery struct {
+	Type        string `json:"type"`
+	TaskName    string `json:"task_name"`
+	TimeSpec    string `json:"time_spec"`
+	Instruction string `json:"instruction"`
+}
 
 const scheduleAddSchema = `
 {
@@ -16,12 +25,12 @@ const scheduleAddSchema = `
     "properties": {
       "type": {
         "type": "string",
-        "enum": ["one_off", "interval"],
-        "description": "Тип задачи: 'one_off' (один раз) или 'interval' (повторять)."
+        "enum": ["once", "interval"],
+        "description": "Тип задачи: 'once' (один раз) или 'interval' (повторять)."
       },
       "time_spec": {
         "type": "string",
-        "description": "Для 'one_off': дата ISO8601 (2023-10-27T15:00:00Z) или задержка (10m, 2h). Для 'interval': период повторения (30s, 10m, 24h)."
+        "description": "Для 'once': дата ISO8601 (2023-10-27T15:00:00Z) или задержка (10m, 2h). Для 'interval': период повторения (30s, 10m, 24h)."
       },
       "task_name": {
         "type": "string",
@@ -76,19 +85,28 @@ func NewSchedule(swarm core.Swarm) *Schedule {
 	}
 }
 
-func (s *Schedule) Add(ctx context.Context, args json.RawMessage) (string, error) {
+func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string, error) {
+	query, err := parseScheduleAdd(ctx, args)
+	if err != nil {
+		return "", err
+	}
+
+	if query.Type == "" {
+
+	}
+
 	return "", nil
 }
 
-func (s *Schedule) List(ctx context.Context, args json.RawMessage) (string, error) {
+func (s *Schedule) handleList(ctx context.Context, args json.RawMessage) (string, error) {
 	return "", nil
 }
 
-func (s *Schedule) Cancel(ctx context.Context, args json.RawMessage) (string, error) {
+func (s *Schedule) handleCancel(ctx context.Context, args json.RawMessage) (string, error) {
 	return "", nil
 }
 
-func (s *Schedule) GetDefinitions() map[string]struct {
+func (m *Schedule) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
 	Handler     func(context.Context, json.RawMessage) (string, error)
@@ -98,8 +116,39 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 		Schema      string
 		Handler     func(context.Context, json.RawMessage) (string, error)
 	}{
-		"schedule_add":    {"Schedule job", fetchURLSchema, s.Add},
-		"schedule_list":   {"List scheduled jobs", scheduleListSchema, s.List},
-		"schedule_cancel": {"Cancel and remove a scheduled job by name", scheduleCancelSchema, s.Cancel},
+		"schedule_add": {
+			Description: "Schedule background job",
+			Schema:      scheduleAddSchema,
+			Handler:     m.handleAdd,
+		},
+		"schedule_list": {
+			Description: "handleList scheduled jobs",
+			Schema:      scheduleListSchema,
+			Handler:     m.handleList,
+		},
+		"schedule_cancel": {
+			Description: "handleCancel and remove a scheduled job by name",
+			Schema:      scheduleCancelSchema,
+			Handler:     m.handleCancel,
+		},
 	}
+}
+
+func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQuery, error) {
+	var input *ScheduleAddQuery
+	if err := json.Unmarshal(args, &input); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	validType := []string{
+		core.TriggerTypeCron,
+		core.TriggerTypeOnce,
+		core.TriggerTypeInterval,
+	}
+
+	if !slices.Contains(validType, input.Type) {
+		return nil, fmt.Errorf("invalid type: %s", input.Type)
+	}
+
+	return input, nil
 }
