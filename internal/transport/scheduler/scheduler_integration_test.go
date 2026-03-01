@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -54,7 +55,11 @@ func TestScheduler_Integration(t *testing.T) {
 				return nil
 			}
 
-			sch.AddTask("counter", NewIntervalTrigger(tt.interval), job)
+			sch.AddTask(&core.Task{
+				Name:    "counter",
+				Trigger: NewIntervalTrigger(tt.interval),
+				Job:     job,
+			})
 
 			go func() {
 				_ = sch.Start(ctx)

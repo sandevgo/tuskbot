@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +20,11 @@ func TestScheduler_AddTask(t *testing.T) {
 	
 	// Should not panic
 	require.NotPanics(t, func() {
-		s.AddTask("test-task", trigger, job)
+		s.AddTask(&core.Task{
+			Name:    "test-task",
+			Trigger: trigger,
+			Job:     job,
+		})
 	})
 }
 
@@ -39,7 +44,11 @@ func TestScheduler_Triggers(t *testing.T) {
 					atomic.AddInt32(counters["interval"], 1)
 					return nil
 				}
-				s.AddTask("interval-task", trigger, job)
+				s.AddTask(&core.Task{
+					Name:    "interval-task",
+					Trigger: trigger,
+					Job:     job,
+				})
 			},
 			minCounts: map[string]int32{
 				"interval": 3, // Should run at 0ms, 100ms, 200ms, 300ms... within 350ms
@@ -54,7 +63,11 @@ func TestScheduler_Triggers(t *testing.T) {
 					atomic.AddInt32(counters["oneoff"], 1)
 					return nil
 				}
-				s.AddTask("oneoff-task", trigger, job)
+				s.AddTask(&core.Task{
+					Name:    "oneoff-task",
+					Trigger: trigger,
+					Job:     job,
+				})
 			},
 			expectedCounts: map[string]int32{
 				"oneoff": 1,
@@ -70,23 +83,35 @@ func TestScheduler_Triggers(t *testing.T) {
 					atomic.AddInt32(counters["fast"], 1)
 					return nil
 				}
-				s.AddTask("fast-task", intervalTrigger, intervalJob)
-				
+				s.AddTask(&core.Task{
+					Name:    "fast-task",
+					Trigger: intervalTrigger,
+					Job:     intervalJob,
+				})
+
 				// Slow interval task
 				slowTrigger := NewIntervalTrigger(200 * time.Millisecond)
 				slowJob := func(ctx context.Context) error {
 					atomic.AddInt32(counters["slow"], 1)
 					return nil
 				}
-				s.AddTask("slow-task", slowTrigger, slowJob)
-				
+				s.AddTask(&core.Task{
+					Name:    "slow-task",
+					Trigger: slowTrigger,
+					Job:     slowJob,
+				})
+
 				// One-off task
 				oneOffTrigger := NewOneOffTrigger(time.Now().Add(150 * time.Millisecond))
 				oneOffJob := func(ctx context.Context) error {
 					atomic.AddInt32(counters["once"], 1)
 					return nil
 				}
-				s.AddTask("once-task", oneOffTrigger, oneOffJob)
+				s.AddTask(&core.Task{
+					Name:    "once-task",
+					Trigger: oneOffTrigger,
+					Job:     oneOffJob,
+				})
 			},
 			minCounts: map[string]int32{
 				"fast": 3, // 0, 100, 200, 300... within 350ms
@@ -154,8 +179,12 @@ func TestScheduler_ExecutionOrder(t *testing.T) {
 		mu.Unlock()
 		return nil
 	}
-	s.AddTask("immediate", nowTrigger, job1)
-	
+	s.AddTask(&core.Task{
+		Name:    "immediate",
+		Trigger: nowTrigger,
+		Job:     job1,
+	})
+
 	// Task that runs in 100ms
 	futureTrigger := NewOneOffTrigger(time.Now().Add(100 * time.Millisecond))
 	job2 := func(ctx context.Context) error {
@@ -164,7 +193,11 @@ func TestScheduler_ExecutionOrder(t *testing.T) {
 		mu.Unlock()
 		return nil
 	}
-	s.AddTask("delayed", futureTrigger, job2)
+	s.AddTask(&core.Task{
+		Name:    "delayed",
+		Trigger: futureTrigger,
+		Job:     job2,
+	})
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
@@ -203,7 +236,11 @@ func TestScheduler_AddAfterStart(t *testing.T) {
 	}
 
 	// Add task that should run immediately
-	s.AddTask("late-task", NewOneOffTrigger(time.Now()), job)
+	s.AddTask(&core.Task{
+		Name:    "late-task",
+		Trigger: NewOneOffTrigger(time.Now()),
+		Job:     job,
+	})
 
 	select {
 	case <-done:
@@ -231,9 +268,13 @@ func TestScheduler_ConcurrentAdd(t *testing.T) {
 	for i := 0; i < numTasks; i++ {
 		go func() {
 			defer wg.Done()
-			s.AddTask("task", NewOneOffTrigger(time.Now()), func(ctx context.Context) error {
-				atomic.AddInt32(&counter, 1)
-				return nil
+			s.AddTask(&core.Task{
+				Name:    "task",
+				Trigger: NewOneOffTrigger(time.Now()),
+				Job: func(ctx context.Context) error {
+					atomic.AddInt32(&counter, 1)
+					return nil
+				},
 			})
 		}()
 	}
