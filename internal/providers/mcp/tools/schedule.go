@@ -91,9 +91,7 @@ func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string,
 		return "", err
 	}
 
-	if query.Type == "" {
-
-	}
+	fmt.Println("Received schedule add request:", query)
 
 	return "", nil
 }
