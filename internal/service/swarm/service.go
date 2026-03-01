@@ -94,7 +94,7 @@ func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, in
 	defer s.mu.Unlock()
 
 	s.tasks[name] = task
-	s.scheduler.AddTask(name, trigger, job)
+	s.scheduler.AddTask(task)
 
 	return nil
 }

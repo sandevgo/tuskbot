@@ -12,7 +12,7 @@ const (
 )
 
 type Scheduler interface {
-	AddTask(name string, trigger Trigger, job Job)
+	AddTask(task *Task)
 }
 
 type Trigger interface {

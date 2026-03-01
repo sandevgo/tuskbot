@@ -26,20 +26,20 @@ func NewScheduler() *Scheduler {
 	return sch
 }
 
-func (s *Scheduler) AddTask(name string, trigger core.Trigger, job core.Job) {
-	next := trigger.NextFireTime(time.Now(), time.Time{})
-	if next.IsZero() {
-		return
-	}
+func (s *Scheduler) AddTask(task *core.Task) {
+	//next := trigger.NextFireTime(time.Now(), time.Time{})
+	//if next.IsZero() {
+	//	return
+	//}
 
-	task := &core.Task{
-		ID:      name,
-		Name:    name,
-		Trigger: trigger,
-		Job:     job,
-		LastRun: time.Time{},
-		NextRun: next,
-	}
+	//task := &core.Task{
+	//	ID:      name,
+	//	Name:    name,
+	//	Trigger: trigger,
+	//	Job:     job,
+	//	LastRun: time.Time{},
+	//	NextRun: next,
+	//}
 
 	s.mu.Lock()
 	heap.Push(&s.tasks, task)
