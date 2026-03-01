@@ -59,7 +59,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 
 		now := time.Now()
 
-		// 1. Peek: Get the earliest task
+		// Get the earliest task
 		s.mu.Lock()
 		nextTask := s.tasks.Peek()
 		s.mu.Unlock()
@@ -75,7 +75,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			}
 		}
 
-		// 2. Wait: If it is not time yet, sleep until NextRun
+		// Wait: If it is not time yet, sleep until NextRun
 		delay := nextTask.NextRun.Sub(now)
 		if delay > 0 {
 			select {
@@ -88,7 +88,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			now = time.Now()
 		}
 
-		// 3. Execute: Pop the task and run it
+		// Execute: Pop the task and run it
 		s.mu.Lock()
 		if s.tasks.Len() == 0 {
 			s.mu.Unlock()
@@ -103,7 +103,7 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			_ = t.Job(ctx)
 		}(task)
 
-		// 4. Calculate next run time
+		// Calculate next run time
 		task.LastRun = now
 		nextRun := task.Trigger.NextFireTime(now, task.LastRun)
 
