@@ -93,7 +93,10 @@ func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string,
 		return "", err
 	}
 
-	fmt.Println("Received schedule add request:", query)
+	err = s.swarm.ScheduleTask(ctx, query.TaskName, query.Type, query.TimeSpec, query.Instruction)
+	if err != nil {
+		return "", err
+	}
 
 	return "", nil
 }
