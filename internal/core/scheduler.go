@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+const (
+	TriggerTypeCron     = "cron"
+	TriggerTypeOnce     = "once"
+	TriggerTypeInterval = "interval"
+)
+
 type Scheduler interface {
 	AddTask(name string, trigger Trigger, job Job)
 }
@@ -14,14 +20,3 @@ type Trigger interface {
 }
 
 type Job func(ctx context.Context) error
-
-type Task struct {
-	ID   string
-	Name string
-
-	Trigger Trigger
-	Job     Job
-
-	LastRun time.Time
-	NextRun time.Time
-}

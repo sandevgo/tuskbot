@@ -1,5 +1,12 @@
 package tools
 
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/sandevgo/tuskbot/internal/core"
+)
+
 const scheduleAddSchema = `
 {
   "name": "schedule_add",
@@ -58,3 +65,41 @@ const scheduleCancelSchema = `
   }
 }
 `
+
+type Schedule struct {
+	swarm core.Swarm
+}
+
+func NewSchedule(swarm core.Swarm) *Schedule {
+	return &Schedule{
+		swarm: swarm,
+	}
+}
+
+func (s *Schedule) Add(ctx context.Context, args json.RawMessage) (string, error) {
+	return "", nil
+}
+
+func (s *Schedule) List(ctx context.Context, args json.RawMessage) (string, error) {
+	return "", nil
+}
+
+func (s *Schedule) Cancel(ctx context.Context, args json.RawMessage) (string, error) {
+	return "", nil
+}
+
+func (s *Schedule) GetDefinitions() map[string]struct {
+	Description string
+	Schema      string
+	Handler     func(context.Context, json.RawMessage) (string, error)
+} {
+	return map[string]struct {
+		Description string
+		Schema      string
+		Handler     func(context.Context, json.RawMessage) (string, error)
+	}{
+		"schedule_add":    {"Schedule job", fetchURLSchema, s.Add},
+		"schedule_list":   {"List scheduled jobs", scheduleListSchema, s.List},
+		"schedule_cancel": {"Cancel and remove a scheduled job by name", scheduleCancelSchema, s.Cancel},
+	}
+}
