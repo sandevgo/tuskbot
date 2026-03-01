@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"slices"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -132,10 +134,17 @@ func (m *Schedule) GetDefinitions() map[string]struct {
 	}
 }
 
+// slugRegex matches valid task names: alphanumeric, hyphens, and underscores only
+var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
 func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQuery, error) {
 	var input *ScheduleAddQuery
 	if err := json.Unmarshal(args, &input); err != nil {
 		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	if input == nil {
+		return nil, fmt.Errorf("arguments cannot be null")
 	}
 
 	validType := []string{
@@ -146,6 +155,27 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 
 	if !slices.Contains(validType, input.Type) {
 		return nil, fmt.Errorf("invalid type: %s", input.Type)
+	}
+
+	// Validate TaskName
+	input.TaskName = strings.TrimSpace(input.TaskName)
+	if input.TaskName == "" {
+		return nil, fmt.Errorf("task_name cannot be empty")
+	}
+	if !slugRegex.MatchString(input.TaskName) {
+		return nil, fmt.Errorf("task_name must be a valid slug (alphanumeric, hyphens, underscores only): %s", input.TaskName)
+	}
+
+	// Validate TimeSpec
+	input.TimeSpec = strings.TrimSpace(input.TimeSpec)
+	if input.TimeSpec == "" {
+		return nil, fmt.Errorf("time_spec cannot be empty")
+	}
+
+	// Validate Instruction
+	input.Instruction = strings.TrimSpace(input.Instruction)
+	if input.Instruction == "" {
+		return nil, fmt.Errorf("instruction cannot be empty")
 	}
 
 	return input, nil
