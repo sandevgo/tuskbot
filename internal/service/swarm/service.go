@@ -39,7 +39,6 @@ func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, in
 	sessionID := fmt.Sprintf("task-%s", name)
 
 	var trigger core.Trigger
-	var err error
 
 	switch taskType {
 	case core.TriggerTypeInterval:
