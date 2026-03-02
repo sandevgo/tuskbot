@@ -14,6 +14,10 @@ const (
 	TaskVersion       = "0.1.0"
 )
 
+const (
+	CtxKeySessionID = "session_id"
+)
+
 type Message struct {
 	Role       string     `json:"role"`
 	Content    string     `json:"content"`

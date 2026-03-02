@@ -101,7 +101,10 @@ func (b *Bot) handleMessage(c tele.Context) error {
 	// Create a context for this request
 	ctx := c.Get(baseContextKey).(context.Context)
 	logger := log.FromCtx(ctx)
+
+	// Save session ID
 	sessionID := fmt.Sprintf("telegram-%d", c.Chat().ID)
+	ctx = context.WithValue(ctx, core.CtxKeySessionID, sessionID)
 
 	// Check if it's a command
 	if response, isCmd := b.router.Execute(ctx, sessionID, c.Text()); isCmd {
