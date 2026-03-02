@@ -35,7 +35,7 @@ func NewService(scheduler core.Scheduler, agent *agent.Agent) *Service {
 	}
 }
 
-func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, instruction string) error {
+func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskType, timeSpec, instruction string) error {
 	sessionID := generateSessionID(name)
 
 	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
@@ -46,10 +46,12 @@ func (s *Service) ScheduleTask(ctx context.Context, name, taskType, timeSpec, in
 	job := s.createJob(sessionID, instruction)
 
 	task := &core.Task{
-		ID:      name,
-		Name:    name,
-		Trigger: trigger,
-		Job:     job,
+		ID:             name,
+		Name:           name,
+		Prompt:         instruction,
+		OwnerSessionID: ownerSessionID,
+		Trigger:        trigger,
+		Job:            job,
 	}
 
 	s.registerTask(name, task)
@@ -101,11 +103,12 @@ func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
 	var infos []core.Task
 	for _, t := range s.tasks {
 		infos = append(infos, core.Task{
-			ID:      t.ID,
-			Name:    t.Name,
-			NextRun: t.NextRun,
-			LastRun: t.LastRun,
-			Prompt:  "...", // You'd need to store this separately
+			ID:             t.ID,
+			Name:           t.Name,
+			NextRun:        t.NextRun,
+			LastRun:        t.LastRun,
+			Prompt:         t.Prompt,
+			OwnerSessionID: t.OwnerSessionID,
 		})
 	}
 	return infos, nil
