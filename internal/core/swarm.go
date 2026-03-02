@@ -12,9 +12,10 @@ type Swarm interface {
 }
 
 type Task struct {
-	ID     string
-	Name   string
-	Prompt string
+	ID             string
+	Name           string
+	Prompt         string
+	OwnerSessionID string
 
 	Trigger Trigger
 	Job     Job
