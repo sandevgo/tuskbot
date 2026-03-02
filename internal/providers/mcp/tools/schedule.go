@@ -93,7 +93,13 @@ func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string,
 		return "", err
 	}
 
-	err = s.swarm.ScheduleTask(ctx, query.TaskName, query.Type, query.TimeSpec, query.Instruction)
+	// Get sessionID from context
+	sessionID, ok := ctx.Value(core.CtxKeySessionID).(string)
+	if !ok || sessionID == "" {
+		return "", fmt.Errorf("sessionID not found in context")
+	}
+
+	err = s.swarm.ScheduleTask(ctx, sessionID, query.TaskName, query.Type, query.TimeSpec, query.Instruction)
 	if err != nil {
 		return "", err
 	}
