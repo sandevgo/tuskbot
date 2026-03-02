@@ -6,7 +6,7 @@ import (
 )
 
 type Swarm interface {
-	ScheduleTask(ctx context.Context, name, taskType, timeSpec, instruction string) error
+	ScheduleTask(ctx context.Context, ownerSessionID, name, taskType, timeSpec, instruction string) error
 	CancelTask(ctx context.Context, name string) error
 	ListTasks(ctx context.Context) ([]Task, error)
 }
