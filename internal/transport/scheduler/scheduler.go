@@ -31,6 +31,7 @@ func (s *Scheduler) AddTask(task *core.Task) {
 	if next.IsZero() {
 		return
 	}
+	task.NextRun = next
 
 	s.mu.Lock()
 	heap.Push(&s.tasks, task)

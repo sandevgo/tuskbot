@@ -287,3 +287,35 @@ func TestScheduler_ConcurrentAdd(t *testing.T) {
 	val := atomic.LoadInt32(&counter)
 	assert.Equal(t, int32(numTasks), val, "all concurrent tasks should have executed")
 }
+
+func TestScheduler_DelayedExecution(t *testing.T) {
+	s := NewScheduler()
+
+	var executed int32
+
+	// Task that runs in 200ms
+	futureTrigger := NewOneOffTrigger(time.Now().Add(200 * time.Millisecond))
+	job := func(ctx context.Context) error {
+		atomic.AddInt32(&executed, 1)
+		return nil
+	}
+
+	s.AddTask(&core.Task{
+		Name:    "delayed-check",
+		Trigger: futureTrigger,
+		Job:     job,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	go func() {
+		_ = s.Start(ctx)
+	}()
+
+	<-ctx.Done()
+
+	// Should NOT have executed yet
+	val := atomic.LoadInt32(&executed)
+	assert.Equal(t, int32(0), val, "delayed task should not execute immediately")
+}
