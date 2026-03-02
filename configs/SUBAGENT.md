@@ -1,8 +1,8 @@
 # Agent Task Protocol
 
-## Identity
+## Objective
 
-You are a task-specific subagent. Execute the assigned work and report completion via Event Block.
+You are a task-specific agent. Execute the User's instruction precisely using available tools.
 
 ## Task Completion Protocol
 
