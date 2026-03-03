@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/pkg/log"
@@ -50,8 +51,28 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 
 	job := s.createJob(sessionID, instruction)
 
+	taskID, err := uuid.NewV7()
+	if err != nil {
+		return err
+	}
+
+	storedTask := &core.StoredTask{
+		ID:             taskID,
+		Name:           name,
+		Prompt:         instruction,
+		TriggerType:    taskType,
+		TriggerSpec:    timeSpec,
+		OwnerSessionID: ownerSessionID,
+	}
+
+	// TODO: Persist task to database
+	err = s.taskRepo.Create(ctx, storedTask)
+	if err != nil {
+		return fmt.Errorf("failed to persist task: %w", err)
+	}
+
 	task := &core.Task{
-		ID:             name,
+		ID:             taskID,
 		Name:           name,
 		Prompt:         instruction,
 		OwnerSessionID: ownerSessionID,
@@ -59,13 +80,7 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		Job:            job,
 	}
 
-	// TODO: Persist task to database
-	storedTask, err := s.taskRepo.Create(ctx, task)
-	if err != nil {
-		return fmt.Errorf("failed to persist task: %w", err)
-	}
-
-	s.registerTask(name, storedTask)
+	s.registerTask(name, task)
 	return nil
 }
 
@@ -123,4 +138,21 @@ func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
 		})
 	}
 	return infos, nil
+}
+
+func (s *Service) toDomain(st core.StoredTask) (core.Task, error) {
+	trigger, err := scheduler.CreateTrigger(st.TriggerType, st.TriggerSpec)
+	if err != nil {
+		return core.Task{}, err
+	}
+
+	return core.Task{
+		ID:             st.ID,
+		Name:           st.Name,
+		OwnerSessionID: st.OwnerSessionID,
+		Prompt:         st.Prompt,
+		Trigger:        trigger,
+		Job:            s.createJob(st.OwnerSessionID, st.Prompt),
+		LastRun:        st.LastRun,
+	}, nil
 }

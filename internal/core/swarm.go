@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type Swarm interface {
@@ -12,7 +14,7 @@ type Swarm interface {
 }
 
 type Task struct {
-	ID             string
+	ID             uuid.UUID
 	Name           string
 	Prompt         string
 	OwnerSessionID string

@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type MessagesRepository interface {
@@ -21,7 +23,7 @@ type KnowledgeRepository interface {
 }
 
 type TaskRepository interface {
-	Create(ctx context.Context, task StoredTask) (StoredTask, error)
+	Create(ctx context.Context, task *StoredTask) error
 	Cancel(ctx context.Context, name string) error
 	List(ctx context.Context) ([]StoredTask, error)
 }
@@ -50,7 +52,7 @@ type StoredKnowledge struct {
 }
 
 type StoredTask struct {
-	ID             string
+	ID             uuid.UUID
 	Name           string
 	OwnerSessionID string
 	Prompt         string
