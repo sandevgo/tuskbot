@@ -18,6 +18,10 @@ type ScheduleAddQuery struct {
 	Instruction string `json:"instruction"`
 }
 
+type ScheduleCancelQuery struct {
+	TaskName string `json:"task_name"`
+}
+
 const scheduleAddSchema = `
 {
   "name": "schedule_add",
@@ -108,10 +112,29 @@ func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string,
 }
 
 func (s *Schedule) handleList(ctx context.Context, args json.RawMessage) (string, error) {
-	return "", nil
+	tasks, err := s.swarm.ListTasks(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	sb := strings.Builder{}
+	for _, task := range tasks {
+		sb.WriteString(fmt.Sprintf("Task ID: %s Name: %s\n", task.ID, task.Name))
+	}
+	return sb.String(), nil
 }
 
 func (s *Schedule) handleCancel(ctx context.Context, args json.RawMessage) (string, error) {
+	query, err := parseScheduleCancel(ctx, args)
+	if err != nil {
+		return "", err
+	}
+
+	err = s.swarm.CancelTask(ctx, query.TaskName)
+	if err != nil {
+		return "", err
+	}
+
 	return "", nil
 }
 
@@ -188,4 +211,8 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 	}
 
 	return input, nil
+}
+
+func parseScheduleCancel(ctx context.Context, args json.RawMessage) (*ScheduleCancelQuery, error) {
+	return nil, nil
 }
