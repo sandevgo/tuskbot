@@ -22,7 +22,7 @@ type TaskInfo struct {
 
 type Service struct {
 	scheduler core.Scheduler
-	agent     *agent.Agent
+	agent     core.Agent
 	mu        sync.RWMutex
 	tasks     map[string]*core.Task
 }
