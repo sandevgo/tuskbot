@@ -45,7 +45,7 @@ func TestScheduledTaskRepo_Create(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := NewScheduledTaskRepo(db)
+	repo := NewTaskRepo(db)
 	ctx := context.Background()
 
 	t.Run("successfully creates task", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := NewScheduledTaskRepo(db)
+	repo := NewTaskRepo(db)
 	ctx := context.Background()
 
 	t.Run("successfully cancels active task", func(t *testing.T) {
@@ -166,7 +166,7 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	repo := NewScheduledTaskRepo(db)
+	repo := NewTaskRepo(db)
 	ctx := context.Background()
 
 	t.Run("returns only active tasks", func(t *testing.T) {
