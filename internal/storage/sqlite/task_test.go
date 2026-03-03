@@ -10,6 +10,8 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/google/uuid"
 )
 
 func setupTestDB(t *testing.T) *sql.DB {
@@ -49,8 +51,8 @@ func TestScheduledTaskRepo_Create(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully creates task", func(t *testing.T) {
-		task := core.StoredTask{
-			ID:             "task-1",
+		task := &core.StoredTask{
+			ID:             uuid.MustParse("11111111-1111-1111-1111-111111111111"),
 			Name:           "test-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
@@ -65,14 +67,14 @@ func TestScheduledTaskRepo_Create(t *testing.T) {
 
 		// Verify task was created
 		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM task WHERE id = ?", task.ID).Scan(&count)
+		err = db.QueryRow("SELECT COUNT(*) FROM task WHERE id = ?", task.ID.String()).Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count)
 	})
 
 	t.Run("fails on duplicate name", func(t *testing.T) {
-		task := core.StoredTask{
-			ID:             "task-2",
+		task := &core.StoredTask{
+			ID:             uuid.MustParse("22222222-2222-2222-2222-222222222222"),
 			Name:           "duplicate-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
@@ -86,8 +88,8 @@ func TestScheduledTaskRepo_Create(t *testing.T) {
 		require.NoError(t, err)
 
 		// Try to create another task with same name
-		task2 := core.StoredTask{
-			ID:             "task-3",
+		task2 := &core.StoredTask{
+			ID:             uuid.MustParse("33333333-3333-3333-3333-333333333333"),
 			Name:           "duplicate-task",
 			OwnerSessionID: "session-456",
 			Prompt:         "Another prompt",
@@ -111,8 +113,8 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully cancels active task", func(t *testing.T) {
-		task := core.StoredTask{
-			ID:             "task-cancel-1",
+		task := &core.StoredTask{
+			ID:             uuid.MustParse("44444444-4444-4444-4444-444444444444"),
 			Name:           "cancelable-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
@@ -142,8 +144,8 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 	})
 
 	t.Run("returns error when task already cancelled", func(t *testing.T) {
-		task := core.StoredTask{
-			ID:             "task-cancel-2",
+		task := &core.StoredTask{
+			ID:             uuid.MustParse("55555555-5555-5555-5555-555555555555"),
 			Name:           "already-cancelled-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
@@ -171,8 +173,8 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 
 	t.Run("returns only active tasks", func(t *testing.T) {
 		// Create active task
-		activeTask := core.StoredTask{
-			ID:             "task-list-1",
+		activeTask := &core.StoredTask{
+			ID:             uuid.MustParse("66666666-6666-6666-6666-666666666666"),
 			Name:           "active-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Active prompt",
@@ -185,8 +187,8 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create inactive task
-		inactiveTask := core.StoredTask{
-			ID:             "task-list-2",
+		inactiveTask := &core.StoredTask{
+			ID:             uuid.MustParse("77777777-7777-7777-7777-777777777777"),
 			Name:           "inactive-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Inactive prompt",
@@ -211,8 +213,8 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create older task
-		olderTask := core.StoredTask{
-			ID:             "task-older",
+		olderTask := &core.StoredTask{
+			ID:             uuid.MustParse("88888888-8888-8888-8888-888888888888"),
 			Name:           "older-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Older prompt",
@@ -225,8 +227,8 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create newer task
-		newerTask := core.StoredTask{
-			ID:             "task-newer",
+		newerTask := &core.StoredTask{
+			ID:             uuid.MustParse("99999999-9999-9999-9999-999999999999"),
 			Name:           "newer-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Newer prompt",
@@ -256,8 +258,8 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 	})
 
 	t.Run("scans null times correctly", func(t *testing.T) {
-		task := core.StoredTask{
-			ID:             "task-null-times",
+		task := &core.StoredTask{
+			ID:             uuid.MustParse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
 			Name:           "null-times-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
