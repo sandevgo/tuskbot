@@ -27,7 +27,11 @@ type Service struct {
 	tasks     map[string]*core.Task
 }
 
-func NewService(scheduler core.Scheduler, agent core.Agent, taskRepo core.TaskRepository) *Service {
+func NewService(
+	scheduler core.Scheduler,
+	agent core.Agent,
+	taskRepo core.TaskRepository,
+) *Service {
 	return &Service{
 		scheduler: scheduler,
 		agent:     agent,
