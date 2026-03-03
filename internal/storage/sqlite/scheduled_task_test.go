@@ -31,8 +31,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 		updated_at DATETIME
 	);
 
-	CREATE INDEX idx_scheduled_task_owner ON scheduled_task(owner_session_id);
-	CREATE INDEX idx_scheduled_task_active ON scheduled_task(is_active) WHERE is_active = TRUE;
+	CREATE INDEX idx_task_owner ON task(owner_session_id);
+	CREATE INDEX idx_task_active ON task(is_active) WHERE is_active = TRUE;
 	`
 
 	_, err = db.Exec(schema)
