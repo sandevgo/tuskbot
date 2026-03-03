@@ -13,6 +13,7 @@ const (
 
 type Scheduler interface {
 	AddTask(task *Task)
+	DelTask(task *Task)
 }
 
 type Trigger interface {

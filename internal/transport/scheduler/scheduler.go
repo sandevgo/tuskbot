@@ -46,6 +46,23 @@ func (s *Scheduler) AddTask(task *core.Task) {
 	}
 }
 
+func (s *Scheduler) DelTask(task *core.Task) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for i, t := range s.tasks {
+		if t.ID == task.ID {
+			heap.Remove(&s.tasks, i)
+			// Signal scheduler in case the deleted task was the next scheduled one
+			select {
+			case s.signal <- struct{}{}:
+			default:
+			}
+			return
+		}
+	}
+}
+
 func (s *Scheduler) Start(ctx context.Context) error {
 	logger := log.FromCtx(ctx)
 	logger.Info().Msg("starting scheduler")
