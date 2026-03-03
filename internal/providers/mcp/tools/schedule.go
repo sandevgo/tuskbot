@@ -19,7 +19,7 @@ type ScheduleAddQuery struct {
 }
 
 type ScheduleCancelQuery struct {
-	TaskName string `json:"task_name"`
+	TaskName string `json:"task_id"`
 }
 
 const scheduleAddSchema = `
@@ -214,5 +214,23 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 }
 
 func parseScheduleCancel(ctx context.Context, args json.RawMessage) (*ScheduleCancelQuery, error) {
-	return nil, nil
+	var input *ScheduleCancelQuery
+	if err := json.Unmarshal(args, &input); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	if input == nil {
+		return nil, fmt.Errorf("arguments cannot be null")
+	}
+
+	// Validate TaskName (task_id in JSON)
+	input.TaskName = strings.TrimSpace(input.TaskName)
+	if input.TaskName == "" {
+		return nil, fmt.Errorf("task_id cannot be empty")
+	}
+	if !slugRegex.MatchString(input.TaskName) {
+		return nil, fmt.Errorf("task_id must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
+	}
+
+	return input, nil
 }
