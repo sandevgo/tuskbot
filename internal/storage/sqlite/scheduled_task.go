@@ -19,7 +19,7 @@ func NewScheduledTaskRepo(db *sql.DB) *ScheduledTaskRepo {
 
 func (r *ScheduledTaskRepo) Create(ctx context.Context, task core.StoredTask) error {
 	query := `
-		INSERT INTO scheduled_task (id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at)
+		INSERT INTO task (id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.ExecContext(ctx, query,
@@ -42,7 +42,7 @@ func (r *ScheduledTaskRepo) Create(ctx context.Context, task core.StoredTask) er
 
 func (r *ScheduledTaskRepo) Cancel(ctx context.Context, name string) error {
 	query := `
-		UPDATE scheduled_task 
+		UPDATE task 
 		SET is_active = FALSE, updated_at = ?
 		WHERE name = ? AND is_active = TRUE
 	`
@@ -65,7 +65,7 @@ func (r *ScheduledTaskRepo) Cancel(ctx context.Context, name string) error {
 func (r *ScheduledTaskRepo) List(ctx context.Context) ([]core.StoredTask, error) {
 	query := `
 		SELECT id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at
-		FROM scheduled_task
+		FROM task
 		WHERE is_active = TRUE
 		ORDER BY created_at DESC
 	`

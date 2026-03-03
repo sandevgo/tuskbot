@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sandevgo/tuskbot/internal/core"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +18,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 	// Create table schema based on migration
 	schema := `
-	CREATE TABLE IF NOT EXISTS scheduled_task (
+	CREATE TABLE IF NOT EXISTS task (
 		id TEXT PRIMARY KEY,
 		name TEXT UNIQUE NOT NULL,
 		owner_session_id TEXT NOT NULL,
@@ -65,7 +65,7 @@ func TestScheduledTaskRepo_Create(t *testing.T) {
 
 		// Verify task was created
 		var count int
-		err = db.QueryRow("SELECT COUNT(*) FROM scheduled_task WHERE id = ?", task.ID).Scan(&count)
+		err = db.QueryRow("SELECT COUNT(*) FROM task WHERE id = ?", task.ID).Scan(&count)
 		require.NoError(t, err)
 		assert.Equal(t, 1, count)
 	})
@@ -130,7 +130,7 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 
 		// Verify task is inactive
 		var isActive bool
-		err = db.QueryRow("SELECT is_active FROM scheduled_task WHERE name = ?", task.Name).Scan(&isActive)
+		err = db.QueryRow("SELECT is_active FROM task WHERE name = ?", task.Name).Scan(&isActive)
 		require.NoError(t, err)
 		assert.False(t, isActive)
 	})
@@ -207,7 +207,7 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 
 	t.Run("returns tasks ordered by created_at DESC", func(t *testing.T) {
 		// Clear existing data
-		_, err := db.Exec("DELETE FROM scheduled_task")
+		_, err := db.Exec("DELETE FROM task")
 		require.NoError(t, err)
 
 		// Create older task
@@ -247,7 +247,7 @@ func TestScheduledTaskRepo_List(t *testing.T) {
 
 	t.Run("returns empty slice when no active tasks", func(t *testing.T) {
 		// Clear existing data
-		_, err := db.Exec("DELETE FROM scheduled_task")
+		_, err := db.Exec("DELETE FROM task")
 		require.NoError(t, err)
 
 		tasks, err := repo.List(ctx)
