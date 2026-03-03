@@ -17,7 +17,7 @@ func NewTaskRepo(db *sql.DB) *TaskRepo {
 	return &TaskRepo{db: db}
 }
 
-func (r *TaskRepo) Create(ctx context.Context, task core.StoredTask) error {
+func (r *TaskRepo) Create(ctx context.Context, task core.StoredTask) (*core.StoredTask, error) {
 	query := `
 		INSERT INTO task (id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -35,9 +35,9 @@ func (r *TaskRepo) Create(ctx context.Context, task core.StoredTask) error {
 		task.UpdatedAt,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create scheduled task: %w", err)
+		return nil, fmt.Errorf("failed to create scheduled task: %w", err)
 	}
-	return nil
+	return nil, nil
 }
 
 func (r *TaskRepo) Cancel(ctx context.Context, name string) error {
