@@ -205,3 +205,135 @@ func TestParseScheduleAdd(t *testing.T) {
 		})
 	}
 }
+
+func TestParseScheduleCancel(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		args      json.RawMessage
+		wantErr   bool
+		errMsg    string
+		wantQuery *ScheduleCancelQuery
+	}{
+		{
+			name:    "valid input with task_id",
+			args:    json.RawMessage(`{"task_id":"test-task"}`),
+			wantErr: false,
+			wantQuery: &ScheduleCancelQuery{
+				TaskName: "test-task",
+			},
+		},
+		{
+			name:    "valid input with hyphens",
+			args:    json.RawMessage(`{"task_id":"daily-cleanup-job"}`),
+			wantErr: false,
+			wantQuery: &ScheduleCancelQuery{
+				TaskName: "daily-cleanup-job",
+			},
+		},
+		{
+			name:    "valid input with numbers",
+			args:    json.RawMessage(`{"task_id":"task-123-456"}`),
+			wantErr: false,
+			wantQuery: &ScheduleCancelQuery{
+				TaskName: "task-123-456",
+			},
+		},
+		{
+			name:    "valid input with uppercase",
+			args:    json.RawMessage(`{"task_id":"Daily-Task"}`),
+			wantErr: false,
+			wantQuery: &ScheduleCancelQuery{
+				TaskName: "Daily-Task",
+			},
+		},
+		{
+			name:    "trimmed fields",
+			args:    json.RawMessage(`{"task_id":"  test-task  "}`),
+			wantErr: false,
+			wantQuery: &ScheduleCancelQuery{
+				TaskName: "test-task",
+			},
+		},
+		{
+			name:    "invalid json",
+			args:    json.RawMessage(`{invalid json}`),
+			wantErr: true,
+			errMsg:  "invalid arguments",
+		},
+		{
+			name:    "null input",
+			args:    json.RawMessage(`null`),
+			wantErr: true,
+			errMsg:  "arguments cannot be null",
+		},
+		{
+			name:    "empty json object",
+			args:    json.RawMessage(`{}`),
+			wantErr: true,
+			errMsg:  "task_id cannot be empty",
+		},
+		{
+			name:    "empty task_id",
+			args:    json.RawMessage(`{"task_id":""}`),
+			wantErr: true,
+			errMsg:  "task_id cannot be empty",
+		},
+		{
+			name:    "whitespace only task_id",
+			args:    json.RawMessage(`{"task_id":"   "}`),
+			wantErr: true,
+			errMsg:  "task_id cannot be empty",
+		},
+		{
+			name:    "task_id with spaces",
+			args:    json.RawMessage(`{"task_id":"test task"}`),
+			wantErr: true,
+			errMsg:  "task_id must be a valid slug",
+		},
+		{
+			name:    "task_id with underscores",
+			args:    json.RawMessage(`{"task_id":"test_task"}`),
+			wantErr: true,
+			errMsg:  "task_id must be a valid slug",
+		},
+		{
+			name:    "task_id with special characters",
+			args:    json.RawMessage(`{"task_id":"test@task!"}`),
+			wantErr: true,
+			errMsg:  "task_id must be a valid slug",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseScheduleCancel(ctx, tt.args)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("parseScheduleCancel() error = nil, wantErr %v", tt.wantErr)
+					return
+				}
+				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("parseScheduleCancel() error message = %v, should contain %v", err.Error(), tt.errMsg)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("parseScheduleCancel() unexpected error = %v", err)
+				return
+			}
+
+			if got == nil {
+				t.Errorf("parseScheduleCancel() returned nil query without error")
+				return
+			}
+
+			if got.TaskName != tt.wantQuery.TaskName {
+				t.Errorf("parseScheduleCancel() TaskName = %v, want %v", got.TaskName, tt.wantQuery.TaskName)
+			}
+		})
+	}
+}
