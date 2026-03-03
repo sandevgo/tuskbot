@@ -37,7 +37,7 @@ func (r *TaskRepo) Create(ctx context.Context, task core.StoredTask) (*core.Stor
 	if err != nil {
 		return nil, fmt.Errorf("failed to create scheduled task: %w", err)
 	}
-	return nil, nil
+	return &task, nil
 }
 
 func (r *TaskRepo) Cancel(ctx context.Context, name string) error {
