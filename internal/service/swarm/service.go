@@ -59,7 +59,13 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		Job:            job,
 	}
 
-	s.registerTask(name, task)
+	// TODO: Persist task to database
+	storedTask, err := s.taskRepo.Create(ctx, task)
+	if err != nil {
+		return fmt.Errorf("failed to persist task: %w", err)
+	}
+
+	s.registerTask(name, storedTask)
 	return nil
 }
 
