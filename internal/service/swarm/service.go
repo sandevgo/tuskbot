@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
-	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
@@ -27,7 +26,7 @@ type Service struct {
 	tasks     map[string]*core.Task
 }
 
-func NewService(scheduler core.Scheduler, agent *agent.Agent) *Service {
+func NewService(scheduler core.Scheduler, agent core.Agent) *Service {
 	return &Service{
 		scheduler: scheduler,
 		agent:     agent,
