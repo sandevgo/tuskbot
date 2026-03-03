@@ -103,8 +103,11 @@ func NewServices(ctx context.Context) []srv.Service {
 	scheduleService := scheduler.NewScheduler()
 	services = append(services, scheduleService)
 
+	// TaskRepo
+	taskRepo := sqlite.NewTaskRepo(db)
+
 	// Swam
-	swarmService := swarm.NewService(scheduleService, ag)
+	swarmService := swarm.NewService(scheduleService, ag, taskRepo)
 
 	// Register tools
 	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))
