@@ -96,8 +96,8 @@ func (s *Service) CancelTask(ctx context.Context, name string) error {
 	// Remove from local tracking
 	delete(s.tasks, name)
 
-	// Note: You'll need to add a RemoveTask method to your Scheduler interface
-	// or implement cancellation via context cancellation
+	// TODO: get task from repo
+	//		then s.scheduler.DelTask(tasks)
 	return nil
 }
 
