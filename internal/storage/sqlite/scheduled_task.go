@@ -5,20 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
-)
 
-type StoredTask struct {
-	ID             string
-	Name           string
-	OwnerSessionID string
-	Prompt         string
-	TriggerType    string
-	TriggerSpec    string
-	LastRun        time.Time
-	IsActive       bool
-	CreatedAt      time.Time
-	UpdatedAt      *time.Time
-}
+	"github.com/sandevgo/tuskbot/internal/core"
+)
 
 type ScheduledTaskRepo struct {
 	db *sql.DB
@@ -28,7 +17,7 @@ func NewScheduledTaskRepo(db *sql.DB) *ScheduledTaskRepo {
 	return &ScheduledTaskRepo{db: db}
 }
 
-func (r *ScheduledTaskRepo) Create(ctx context.Context, task StoredTask) error {
+func (r *ScheduledTaskRepo) Create(ctx context.Context, task core.StoredTask) error {
 	query := `
 		INSERT INTO scheduled_task (id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -73,7 +62,7 @@ func (r *ScheduledTaskRepo) Cancel(ctx context.Context, name string) error {
 	return nil
 }
 
-func (r *ScheduledTaskRepo) List(ctx context.Context) ([]StoredTask, error) {
+func (r *ScheduledTaskRepo) List(ctx context.Context) ([]core.StoredTask, error) {
 	query := `
 		SELECT id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at
 		FROM scheduled_task
@@ -86,9 +75,9 @@ func (r *ScheduledTaskRepo) List(ctx context.Context) ([]StoredTask, error) {
 	}
 	defer rows.Close()
 
-	var tasks []StoredTask
+	var tasks []core.StoredTask
 	for rows.Next() {
-		var task StoredTask
+		var task core.StoredTask
 		var lastRun sql.NullTime
 		var updatedAt sql.NullTime
 

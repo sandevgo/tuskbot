@@ -20,6 +20,12 @@ type KnowledgeRepository interface {
 	GetRecentExtractedMessages(ctx context.Context, limit int, before time.Time, threshold time.Duration) ([]StoredMessage, error)
 }
 
+type ScheduledTaskRepository interface {
+	Create(ctx context.Context, task StoredTask) error
+	Cancel(ctx context.Context, name string) error
+	List(ctx context.Context) ([]StoredTask, error)
+}
+
 type StoredMessage struct {
 	ID         int64     `json:"id"`
 	SessionID  string    `json:"session_id"`
@@ -41,4 +47,17 @@ type StoredKnowledge struct {
 	Embedding []float32  `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+type StoredTask struct {
+	ID             string
+	Name           string
+	OwnerSessionID string
+	Prompt         string
+	TriggerType    string
+	TriggerSpec    string
+	LastRun        time.Time
+	IsActive       bool
+	CreatedAt      time.Time
+	UpdatedAt      *time.Time
 }
