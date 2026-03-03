@@ -16,7 +16,7 @@ const baseContextKey = "base_context"
 type Bot struct {
 	bot     *tele.Bot
 	cfg     core.TelegramConfig
-	agent   *agent.Agent
+	agent   core.Agent
 	router  core.CmdRouter
 	ownerID int64
 	sender  *sender

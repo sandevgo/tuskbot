@@ -32,7 +32,7 @@ func NewAgent(
 	}
 }
 
-func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate func(core.Message)) (string, error) {
+func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate core.UpdateFunc) (string, error) {
 	logger := log.FromCtx(ctx)
 
 	logger.Debug().

@@ -1,0 +1,13 @@
+package core
+
+import "context"
+
+type UpdateFunc func(Message)
+
+type Agent interface {
+	Run(ctx context.Context, sessionID string, input string, onUpdate UpdateFunc) (string, error)
+}
+
+type SubAgent interface {
+	Run(ctx context.Context, task Task, onComplete UpdateFunc) (string, error)
+}
