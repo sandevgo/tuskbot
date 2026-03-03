@@ -22,14 +22,16 @@ type TaskInfo struct {
 type Service struct {
 	scheduler core.Scheduler
 	agent     core.Agent
+	taskRepo  core.TaskRepository
 	mu        sync.RWMutex
 	tasks     map[string]*core.Task
 }
 
-func NewService(scheduler core.Scheduler, agent core.Agent) *Service {
+func NewService(scheduler core.Scheduler, agent core.Agent, taskRepo core.TaskRepository) *Service {
 	return &Service{
 		scheduler: scheduler,
 		agent:     agent,
+		taskRepo:  taskRepo,
 		tasks:     make(map[string]*core.Task),
 	}
 }
