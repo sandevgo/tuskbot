@@ -61,25 +61,22 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		return fmt.Errorf("failed to persist task: %w", err)
 	}
 
-	sessionID := generateSessionID(name)
-
 	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
 	if err != nil {
 		return fmt.Errorf("create trigger: %w", err)
 	}
 
-	job := s.createJob(sessionID, instruction)
-
 	task := &core.Task{
 		ID:             taskID,
 		Name:           name,
 		Prompt:         instruction,
+		SessionID:      generateSessionID(name),
 		OwnerSessionID: ownerSessionID,
 		Trigger:        trigger,
-		Job:            job,
 	}
 
-	s.registerTask(name, task)
+	s.assignJob(task)
+	s.registerTask(task)
 	return nil
 }
 
@@ -87,13 +84,12 @@ func generateSessionID(name string) string {
 	return fmt.Sprintf("task-%s", name)
 }
 
-func (s *Service) createJob(sessionID, instruction string) func(ctx context.Context) error {
-	return func(ctx context.Context) error {
+func (s *Service) assignJob(task *core.Task) {
+	task.Job = func(ctx context.Context) error {
 		logger := log.FromCtx(ctx)
-		logger.Info().Str("session", sessionID).Msg("executing scheduled task")
+		logger.Info().Str("session", task.SessionID).Msg("executing scheduled task")
 
-		// TODO: Looks like I need core.Task before creating the job
-		_, err := s.subagent.Run(ctx, sessionID, instruction, func(msg core.Message) {
+		_, err := s.subagent.Run(ctx, task, func(msg core.Message) {
 			if msg.Content != "" {
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
@@ -102,11 +98,11 @@ func (s *Service) createJob(sessionID, instruction string) func(ctx context.Cont
 	}
 }
 
-func (s *Service) registerTask(name string, task *core.Task) {
+func (s *Service) registerTask(task *core.Task) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.tasks[name] = task
+	s.tasks[task.Name] = task
 	s.scheduler.AddTask(task)
 }
 
@@ -152,7 +148,7 @@ func (s *Service) toDomain(st core.StoredTask) (core.Task, error) {
 		OwnerSessionID: st.OwnerSessionID,
 		Prompt:         st.Prompt,
 		Trigger:        trigger,
-		Job:            s.createJob(st.OwnerSessionID, st.Prompt),
+		Job:            s.assignJob(st.OwnerSessionID, st.Prompt),
 		LastRun:        st.LastRun,
 	}, nil
 }
