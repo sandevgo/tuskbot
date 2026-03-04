@@ -22,7 +22,7 @@ type TaskInfo struct {
 
 type Service struct {
 	scheduler core.Scheduler
-	agent     core.Agent
+	subagent  core.SubAgent
 	taskRepo  core.TaskRepository
 	mu        sync.RWMutex
 	tasks     map[string]*core.Task
@@ -30,27 +30,18 @@ type Service struct {
 
 func NewService(
 	scheduler core.Scheduler,
-	agent core.Agent,
+	agent core.SubAgent,
 	taskRepo core.TaskRepository,
 ) *Service {
 	return &Service{
 		scheduler: scheduler,
-		agent:     agent,
+		subagent:  agent,
 		taskRepo:  taskRepo,
 		tasks:     make(map[string]*core.Task),
 	}
 }
 
 func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskType, timeSpec, instruction string) error {
-	sessionID := generateSessionID(name)
-
-	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
-	if err != nil {
-		return fmt.Errorf("create trigger: %w", err)
-	}
-
-	job := s.createJob(sessionID, instruction)
-
 	taskID, err := uuid.NewV7()
 	if err != nil {
 		return err
@@ -65,11 +56,19 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		OwnerSessionID: ownerSessionID,
 	}
 
-	// TODO: Persist task to database
 	err = s.taskRepo.Create(ctx, storedTask)
 	if err != nil {
 		return fmt.Errorf("failed to persist task: %w", err)
 	}
+
+	sessionID := generateSessionID(name)
+
+	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
+	if err != nil {
+		return fmt.Errorf("create trigger: %w", err)
+	}
+
+	job := s.createJob(sessionID, instruction)
 
 	task := &core.Task{
 		ID:             taskID,
@@ -93,7 +92,8 @@ func (s *Service) createJob(sessionID, instruction string) func(ctx context.Cont
 		logger := log.FromCtx(ctx)
 		logger.Info().Str("session", sessionID).Msg("executing scheduled task")
 
-		_, err := s.agent.Run(ctx, sessionID, instruction, func(msg core.Message) {
+		// TODO: Looks like I need core.Task before creating the job
+		_, err := s.subagent.Run(ctx, sessionID, instruction, func(msg core.Message) {
 			if msg.Content != "" {
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
