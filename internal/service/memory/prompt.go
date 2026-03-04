@@ -36,7 +36,7 @@ func (p *SysPrompt) BuildForAgent() []core.Message {
 
 func (p *SysPrompt) BuildForSubAgent() []core.Message {
 	messages := make([]core.Message, 0)
-	if content := readFile(p.cfg.GetMemoryPath()); content != "" {
+	if content := readFile(p.cfg.GetSubAgentPath()); content != "" {
 		messages = append(messages, core.Message{Role: "system", Content: content})
 	}
 	return messages
