@@ -9,5 +9,5 @@ type Agent interface {
 }
 
 type SubAgent interface {
-	Run(ctx context.Context, task Task, onComplete UpdateFunc) (string, error)
+	Run(ctx context.Context, task *Task, onComplete UpdateFunc) (string, error)
 }

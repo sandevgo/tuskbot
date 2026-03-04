@@ -22,6 +22,6 @@ func NewSubAgent(ai core.AIProvider, mcp core.MCPServer, memory core.Memory, exe
 	}
 }
 
-func (s *SubAgent) Run(ctx context.Context, task core.Task, onComplete core.UpdateFunc) (string, error) {
+func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.UpdateFunc) (string, error) {
 	return "", nil
 }

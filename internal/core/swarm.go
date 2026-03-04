@@ -17,6 +17,7 @@ type Task struct {
 	ID             uuid.UUID
 	Name           string
 	Prompt         string
+	SessionID      string
 	OwnerSessionID string
 
 	Trigger Trigger
