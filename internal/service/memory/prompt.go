@@ -16,15 +16,8 @@ func NewSysPrompt(cfg core.PromptConfig) *SysPrompt {
 	}
 }
 
-func (p *SysPrompt) Build() []core.Message {
+func (p *SysPrompt) BuildForAgent() []core.Message {
 	messages := make([]core.Message, 0)
-	readFile := func(path string) string {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return ""
-		}
-		return string(content)
-	}
 
 	if content := readFile(p.cfg.GetSystemPath()); content != "" {
 		messages = append(messages, core.Message{Role: "system", Content: content})
@@ -39,4 +32,20 @@ func (p *SysPrompt) Build() []core.Message {
 		messages = append(messages, core.Message{Role: "system", Content: content})
 	}
 	return messages
+}
+
+func (p *SysPrompt) BuildForSubAgent() []core.Message {
+	messages := make([]core.Message, 0)
+	if content := readFile(p.cfg.GetMemoryPath()); content != "" {
+		messages = append(messages, core.Message{Role: "system", Content: content})
+	}
+	return messages
+}
+
+func readFile(path string) string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return string(content)
 }
