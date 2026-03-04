@@ -71,14 +71,23 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 }
 
 func (s *Service) CancelTask(ctx context.Context, name string) error {
+	storedTask, err := s.taskRepo.GetByName(ctx, name)
+	if err != nil {
+		return fmt.Errorf("failed to get task by name %w", err)
+	}
+
+	task, err := s.toDomain(storedTask)
+	if err != nil {
+		return fmt.Errorf("failed to convert to domain task %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Remove from local tracking
 	delete(s.tasks, name)
+	s.scheduler.DelTask(task)
 
-	// TODO: get task from repo
-	//		then s.scheduler.DelTask(tasks)
 	return nil
 }
 
