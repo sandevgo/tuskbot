@@ -7,6 +7,7 @@ import (
 
 type Memory interface {
 	GetFullContext(ctx context.Context, sessionID, userQuery string) ([]Message, error)
+	GetTaskContext(ctx context.Context, sessionID, instruction string) ([]Message, error)
 	SaveMessage(ctx context.Context, sessionID string, msg Message) error
 }
 
