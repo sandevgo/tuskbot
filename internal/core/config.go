@@ -17,6 +17,7 @@ type PromptConfig interface {
 	GetIdentityPath() string
 	GetUserProfilePath() string
 	GetMemoryPath() string
+	GetSubAgentPath() string
 }
 
 type ProviderConfig interface {

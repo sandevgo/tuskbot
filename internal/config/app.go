@@ -70,6 +70,10 @@ func (c *AppConfig) GetMemoryPath() string {
 	return filepath.Join(c.runtimePath, "MEMORY.md")
 }
 
+func (c *AppConfig) GetSubAgentPath() string {
+	return filepath.Join(c.runtimePath, "SUBAGENT.md")
+}
+
 func (c *AppConfig) GetDatabasePath() string {
 	return filepath.Join(c.runtimePath, "tuskbot.db")
 }
