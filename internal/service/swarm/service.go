@@ -61,49 +61,13 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		return fmt.Errorf("failed to persist task: %w", err)
 	}
 
-	trigger, err := scheduler.CreateTrigger(taskType, timeSpec)
+	task, err := s.toDomain(storedTask)
 	if err != nil {
-		return fmt.Errorf("create trigger: %w", err)
+		return fmt.Errorf("failed to convert to domain task: %w", err)
 	}
 
-	task := &core.Task{
-		ID:             taskID,
-		Name:           name,
-		Prompt:         instruction,
-		SessionID:      generateSessionID(name),
-		OwnerSessionID: ownerSessionID,
-		Trigger:        trigger,
-	}
-
-	s.assignJob(task)
 	s.registerTask(task)
 	return nil
-}
-
-func generateSessionID(name string) string {
-	return fmt.Sprintf("task-%s", name)
-}
-
-func (s *Service) assignJob(task *core.Task) {
-	task.Job = func(ctx context.Context) error {
-		logger := log.FromCtx(ctx)
-		logger.Info().Str("session", task.SessionID).Msg("executing scheduled task")
-
-		_, err := s.subagent.Run(ctx, task, func(msg core.Message) {
-			if msg.Content != "" {
-				logger.Debug().Str("output", msg.Content).Msg("task progress")
-			}
-		})
-		return err
-	}
-}
-
-func (s *Service) registerTask(task *core.Task) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.tasks[task.Name] = task
-	s.scheduler.AddTask(task)
 }
 
 func (s *Service) CancelTask(ctx context.Context, name string) error {
@@ -136,19 +100,47 @@ func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
 	return infos, nil
 }
 
-func (s *Service) toDomain(st core.StoredTask) (core.Task, error) {
+func (s *Service) toDomain(st *core.StoredTask) (*core.Task, error) {
 	trigger, err := scheduler.CreateTrigger(st.TriggerType, st.TriggerSpec)
 	if err != nil {
-		return core.Task{}, err
+		return nil, fmt.Errorf("create trigger: %w", err)
 	}
 
-	return core.Task{
+	task := &core.Task{
 		ID:             st.ID,
 		Name:           st.Name,
-		OwnerSessionID: st.OwnerSessionID,
 		Prompt:         st.Prompt,
+		SessionID:      generateSessionID(st.Name),
+		OwnerSessionID: st.OwnerSessionID,
 		Trigger:        trigger,
-		Job:            s.assignJob(st.OwnerSessionID, st.Prompt),
-		LastRun:        st.LastRun,
-	}, nil
+	}
+
+	s.assignJob(task)
+	return task, nil
+}
+
+func generateSessionID(name string) string {
+	return fmt.Sprintf("task-%s", name)
+}
+
+func (s *Service) assignJob(task *core.Task) {
+	task.Job = func(ctx context.Context) error {
+		logger := log.FromCtx(ctx)
+		logger.Info().Str("session", task.SessionID).Msg("executing scheduled task")
+
+		_, err := s.subagent.Run(ctx, task, func(msg core.Message) {
+			if msg.Content != "" {
+				logger.Debug().Str("output", msg.Content).Msg("task progress")
+			}
+		})
+		return err
+	}
+}
+
+func (s *Service) registerTask(task *core.Task) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.tasks[task.Name] = task
+	s.scheduler.AddTask(task)
 }
