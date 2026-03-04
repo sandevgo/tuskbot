@@ -62,6 +62,10 @@ func (r *TaskRepo) Cancel(ctx context.Context, name string) error {
 	return nil
 }
 
+func (r *TaskRepo) GetByName(ctx context.Context, name string) (*core.StoredTask, error) {
+	return nil, nil
+}
+
 func (r *TaskRepo) List(ctx context.Context) ([]core.StoredTask, error) {
 	query := `
 		SELECT id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at

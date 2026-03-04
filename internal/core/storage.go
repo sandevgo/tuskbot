@@ -24,6 +24,7 @@ type KnowledgeRepository interface {
 
 type TaskRepository interface {
 	Create(ctx context.Context, task *StoredTask) error
+	GetByName(ctx context.Context, name string) (*StoredTask, error)
 	Cancel(ctx context.Context, name string) error
 	List(ctx context.Context) ([]StoredTask, error)
 }
