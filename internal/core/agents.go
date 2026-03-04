@@ -11,3 +11,7 @@ type Agent interface {
 type SubAgent interface {
 	Run(ctx context.Context, task *Task, onComplete UpdateFunc) (string, error)
 }
+
+type ToolExecutor interface {
+	Execute(ctx context.Context, toolCalls []ToolCall) []Message
+}

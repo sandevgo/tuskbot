@@ -16,18 +16,16 @@ const (
 )
 
 type SubAgent struct {
-	ai       core.AIProvider
-	mcp      core.MCPServer
-	memory   core.Memory
-	executor *Executor
+	runner *ReActRunner
+	mcp    core.MCPServer
+	memory core.Memory
 }
 
-func NewSubAgent(ai core.AIProvider, mcp core.MCPServer, memory core.Memory, executor *Executor) *SubAgent {
+func NewSubAgent(ai core.AIProvider, mcp core.MCPServer, memory core.Memory, executor core.ToolExecutor) *SubAgent {
 	return &SubAgent{
-		ai:       ai,
-		mcp:      mcp,
-		memory:   memory,
-		executor: executor,
+		runner: NewReActRunner(ai, executor, ChatTimeout),
+		mcp:    mcp,
+		memory: memory,
 	}
 }
 
@@ -56,7 +54,14 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		return "", fmt.Errorf("get tools: %w", err)
 	}
 
-	return s.runReActLoop(ctx, task.SessionID, messages, tools, onComplete)
+	return s.runner.Run(ctx, messages, tools, func(msg core.Message) error {
+		// SubAgent only notifies on complete for assistant messages with content
+		// Does not persist to memory during execution
+		if msg.Role == core.RoleAssistant && msg.Content != "" {
+			onComplete(msg)
+		}
+		return nil
+	})
 }
 
 func (s *SubAgent) validate(task *core.Task, onComplete core.UpdateFunc) error {
@@ -70,47 +75,4 @@ func (s *SubAgent) validate(task *core.Task, onComplete core.UpdateFunc) error {
 		return errors.New("onComplete callback is nil")
 	}
 	return nil
-}
-
-func (s *SubAgent) runReActLoop(ctx context.Context, sessionID string, messages []core.Message, tools []core.Tool, onComplete core.UpdateFunc) (string, error) {
-	var finalContent string
-
-	for {
-		responseMsg, err := s.queryAI(ctx, sessionID, messages, tools)
-		if err != nil {
-			return "", err
-		}
-
-		messages = append(messages, responseMsg)
-
-		if responseMsg.Content != "" {
-			onComplete(responseMsg)
-			finalContent = responseMsg.Content
-		}
-
-		if len(responseMsg.ToolCalls) == 0 {
-			break
-		}
-
-		toolResults := s.executor.Execute(ctx, responseMsg.ToolCalls)
-		messages = append(messages, toolResults...)
-	}
-
-	return finalContent, nil
-}
-
-func (s *SubAgent) queryAI(ctx context.Context, sessionID string, messages []core.Message, tools []core.Tool) (core.Message, error) {
-	chatCtx, cancel := context.WithTimeout(ctx, ChatTimeout)
-	defer cancel()
-
-	logger := log.FromCtx(ctx)
-	logger.Debug().Str("session_id", sessionID).Msg("subagent querying AI")
-
-	responseMsg, err := s.ai.Chat(chatCtx, messages, tools)
-	if err != nil {
-		return core.Message{}, fmt.Errorf("ai chat: %w", err)
-	}
-
-	logger.Debug().Str("session_id", sessionID).Msg("subagent received AI response")
-	return responseMsg, nil
 }

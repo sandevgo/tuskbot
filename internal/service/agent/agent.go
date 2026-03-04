@@ -12,23 +12,21 @@ import (
 const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
-	ai       core.AIProvider
-	mcp      core.MCPServer
-	memory   core.Memory
-	executor *Executor
+	runner *ReActRunner
+	mcp    core.MCPServer
+	memory core.Memory
 }
 
 func NewAgent(
 	ai core.AIProvider,
 	mcp core.MCPServer,
 	memory core.Memory,
-	executor *Executor,
+	executor core.ToolExecutor,
 ) *Agent {
 	return &Agent{
-		ai:       ai,
-		mcp:      mcp,
-		memory:   memory,
-		executor: executor,
+		runner: NewReActRunner(ai, executor, ChatTimeout),
+		mcp:    mcp,
+		memory: memory,
 	}
 }
 
@@ -61,64 +59,23 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to get tools: %w", err)
 	}
 
-	var finalContent string
-
 	// 4. ReAct Loop
-	for {
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent sending request to llm")
-
-		chatCtx, cancel := context.WithTimeout(ctx, ChatTimeout)
-		responseMsg, err := a.ai.Chat(chatCtx, messages, tools)
-		cancel()
-
-		if err != nil {
-			return "", fmt.Errorf("ai chat error: %w", err)
+	finalContent, err := a.runner.Run(ctx, messages, tools, func(msg core.Message) error {
+		// Persist every message to memory
+		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
+			return fmt.Errorf("failed to save message: %w", err)
 		}
 
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent received llm response")
-
-		// Save Assistant Response and update local context
-		if err := a.memory.SaveMessage(ctx, sessionID, responseMsg); err != nil {
-			return "", fmt.Errorf("failed to save assistant message: %w", err)
-		}
-		messages = append(messages, responseMsg)
-
-		if onUpdate != nil {
-			onUpdate(responseMsg)
+		// Notify callback only for assistant messages
+		if msg.Role == core.RoleAssistant && onUpdate != nil {
+			onUpdate(msg)
 		}
 
-		if responseMsg.Content != "" {
-			finalContent = responseMsg.Content
-		}
+		return nil
+	})
 
-		// If no tools are called, we are done
-		if len(responseMsg.ToolCalls) == 0 {
-			break
-		}
-
-		// 5. Execute Tool Calls
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent called mcp tool")
-
-		toolResults := a.executor.Execute(ctx, responseMsg.ToolCalls)
-
-		for _, toolMsg := range toolResults {
-			if err := a.memory.SaveMessage(ctx, sessionID, toolMsg); err != nil {
-				return "", fmt.Errorf("failed to save tool message: %w", err)
-			}
-			messages = append(messages, toolMsg)
-		}
-
-		// Update tool set (if model added new tools)
-		tools, err = a.mcp.GetTools(ctx)
-		if err != nil {
-			return "", fmt.Errorf("failed to get tools: %w", err)
-		}
+	if err != nil {
+		return "", err
 	}
 
 	return finalContent, nil
