@@ -141,6 +141,7 @@ func (s *Service) assignJob(task *core.Task) {
 			if msg.Content != "" {
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
+			// TODO: Finish logic here
 		})
 		return err
 	}
