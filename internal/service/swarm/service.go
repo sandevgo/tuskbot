@@ -31,11 +31,13 @@ type Service struct {
 
 func NewService(
 	scheduler core.Scheduler,
+	agent core.Agent,
 	subagent core.SubAgent,
 	taskRepo core.TaskRepository,
 ) *Service {
 	return &Service{
 		scheduler: scheduler,
+		agent:     agent,
 		subagent:  subagent,
 		taskRepo:  taskRepo,
 		tasks:     make(map[string]*core.Task),

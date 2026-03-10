@@ -110,7 +110,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	subAgent := agent.NewSubAgent(aiProvider, mcpManager, mem, executor)
 
 	// Swam
-	swarmService := swarm.NewService(scheduleService, subAgent, taskRepo)
+	swarmService := swarm.NewService(scheduleService, ag, subAgent, taskRepo)
 
 	// Register tools
 	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))
