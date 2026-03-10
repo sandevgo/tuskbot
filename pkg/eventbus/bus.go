@@ -67,7 +67,7 @@ func (b *Bus) runHandler(sub *subscription, event Event) {
 	sub.handler(sub.ctx, event)
 }
 
-func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler func(context.Context, T)) {
+func (b *Bus) Subscribe(ctx context.Context, eventName string, handler func(context.Context, Event)) {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -76,15 +76,9 @@ func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler f
 
 	subCtx, cancel := context.WithCancel(ctx)
 
-	wrappedHandler := func(ctx context.Context, e Event) {
-		if typed, ok := e.(T); ok {
-			handler(ctx, typed)
-		}
-	}
-
 	sub := &subscription{
 		ch:      make(chan Event, b.bufSize),
-		handler: wrappedHandler,
+		handler: handler,
 		ctx:     subCtx,
 		cancel:  cancel,
 		wg:      &sync.WaitGroup{},
@@ -112,7 +106,7 @@ func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler f
 	}()
 }
 
-func Publish[T Event](b *Bus, ctx context.Context, event T) {
+func (b *Bus) Publish(ctx context.Context, event Event) {
 	eventName := event.EventName()
 
 	b.mu.RLock()
