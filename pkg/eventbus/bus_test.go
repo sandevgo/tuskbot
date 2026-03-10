@@ -31,12 +31,12 @@ func TestBasicPublishSubscribe(t *testing.T) {
 
 	received := make(chan TestEvent, 1)
 
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
-		received <- e
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+		received <- e.(TestEvent)
 	})
 
 	event := TestEvent{Name: "test", Value: 42}
-	Publish(bus, ctx, event)
+	bus.Publish(ctx, event)
 
 	select {
 	case got := <-received:
@@ -56,15 +56,15 @@ func TestMultipleSubscribers(t *testing.T) {
 	defer cancel()
 
 	var counter atomic.Int32
-	handler := func(ctx context.Context, e TestEvent) {
+	handler := func(ctx context.Context, e Event) {
 		counter.Add(1)
 	}
 
-	Subscribe(bus, ctx, "test.event", handler)
-	Subscribe(bus, ctx, "test.event", handler)
-	Subscribe(bus, ctx, "test.event", handler)
+	bus.Subscribe(ctx, "test.event", handler)
+	bus.Subscribe(ctx, "test.event", handler)
+	bus.Subscribe(ctx, "test.event", handler)
 
-	Publish(bus, ctx, TestEvent{Name: "multi", Value: 1})
+	bus.Publish(ctx, TestEvent{Name: "multi", Value: 1})
 
 	// Give time for all handlers to execute
 	time.Sleep(100 * time.Millisecond)
@@ -84,17 +84,17 @@ func TestDifferentEventTypes(t *testing.T) {
 	testReceived := make(chan TestEvent, 1)
 	otherReceived := make(chan OtherEvent, 1)
 
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
-		testReceived <- e
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+		testReceived <- e.(TestEvent)
 	})
 
-	Subscribe(bus, ctx, "other.event", func(ctx context.Context, e OtherEvent) {
-		otherReceived <- e
+	bus.Subscribe(ctx, "other.event", func(ctx context.Context, e Event) {
+		otherReceived <- e.(OtherEvent)
 	})
 
 	// Publish different event types
-	Publish(bus, ctx, TestEvent{Name: "test", Value: 1})
-	Publish(bus, ctx, OtherEvent{Data: "other"})
+	bus.Publish(ctx, TestEvent{Name: "test", Value: 1})
+	bus.Publish(ctx, OtherEvent{Data: "other"})
 
 	// Verify correct routing
 	select {
@@ -123,14 +123,14 @@ func TestContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	received := make(chan TestEvent, 10)
-	handler := func(ctx context.Context, e TestEvent) {
-		received <- e
+	handler := func(ctx context.Context, e Event) {
+		received <- e.(TestEvent)
 	}
 
-	Subscribe(bus, ctx, "test.event", handler)
+	bus.Subscribe(ctx, "test.event", handler)
 
 	// First event should work
-	Publish(bus, context.Background(), TestEvent{Name: "before", Value: 1})
+	bus.Publish(context.Background(), TestEvent{Name: "before", Value: 1})
 	
 	select {
 	case <-received:
@@ -144,7 +144,7 @@ func TestContextCancellation(t *testing.T) {
 	time.Sleep(50 * time.Millisecond) // Let goroutine exit
 
 	// Second event should not be received (subscriber is gone)
-	Publish(bus, context.Background(), TestEvent{Name: "after", Value: 2})
+	bus.Publish(context.Background(), TestEvent{Name: "after", Value: 2})
 	
 	select {
 	case <-received:
@@ -160,14 +160,14 @@ func TestClosedBus(t *testing.T) {
 	ctx := context.Background()
 	received := make(chan TestEvent, 1)
 
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
-		received <- e
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+		received <- e.(TestEvent)
 	})
 
 	bus.Close()
 
 	// Should not panic and should not deliver
-	Publish(bus, ctx, TestEvent{Name: "closed", Value: 1})
+	bus.Publish(ctx, TestEvent{Name: "closed", Value: 1})
 
 	select {
 	case <-received:
@@ -177,7 +177,7 @@ func TestClosedBus(t *testing.T) {
 	}
 
 	// Subscribe on closed bus should not panic
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {})
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {})
 }
 
 func TestConcurrentPublishSubscribe(t *testing.T) {
@@ -193,13 +193,13 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 	)
 
 	var counter atomic.Int32
-	handler := func(ctx context.Context, e TestEvent) {
+	handler := func(ctx context.Context, e Event) {
 		counter.Add(1)
 	}
 
 	// Start subscribers
 	for i := 0; i < numSubscribers; i++ {
-		Subscribe(bus, ctx, "test.event", handler)
+		bus.Subscribe(ctx, "test.event", handler)
 	}
 
 	// Concurrent publishes
@@ -208,7 +208,7 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			Publish(bus, ctx, TestEvent{Name: "concurrent", Value: n})
+			bus.Publish(ctx, TestEvent{Name: "concurrent", Value: n})
 		}(i)
 	}
 	wg.Wait()
@@ -231,23 +231,24 @@ func TestHandlerPanicRecovery(t *testing.T) {
 	var recovered atomic.Bool
 	var afterPanic atomic.Bool
 
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
-		if e.Name == "panic" {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+		te := e.(TestEvent)
+		if te.Name == "panic" {
 			panic("intentional panic")
 		}
 		recovered.Store(true)
 	})
 
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
 		afterPanic.Store(true)
 	})
 
 	// First event causes panic in first handler
-	Publish(bus, ctx, TestEvent{Name: "panic", Value: 1})
+	bus.Publish(ctx, TestEvent{Name: "panic", Value: 1})
 	time.Sleep(100 * time.Millisecond)
 
 	// Second event should still be processed by both handlers
-	Publish(bus, ctx, TestEvent{Name: "normal", Value: 2})
+	bus.Publish(ctx, TestEvent{Name: "normal", Value: 2})
 	time.Sleep(100 * time.Millisecond)
 
 	if !recovered.Load() {
@@ -266,15 +267,15 @@ func TestEventDropping(t *testing.T) {
 	blocking := make(chan struct{})
 
 	// Handler that blocks
-	Subscribe(bus, ctx, "test.event", func(ctx context.Context, e TestEvent) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
 		<-blocking // Block forever
 	})
 
 	// Fill the channel
-	Publish(bus, ctx, TestEvent{Name: "first", Value: 1})
+	bus.Publish(ctx, TestEvent{Name: "first", Value: 1})
 	
 	// This should be dropped (channel full, handler blocked)
-	Publish(bus, ctx, TestEvent{Name: "dropped", Value: 2})
+	bus.Publish(ctx, TestEvent{Name: "dropped", Value: 2})
 
 	// Unblock to verify first was received
 	close(blocking)
