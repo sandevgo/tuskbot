@@ -11,10 +11,8 @@ When the task is complete, output EXACTLY ONE event block.
 Do NOT output any conversational filler, headers, or explanations before or after the block.
 
 ## Event Block Format
----EVENT---
 STATUS: SUCCESS | FAILED
 RESULT: <Plain text summary of findings OR error description>
----END_EVENT---
 
 ## Rules
 1. **Silence**. Do not say "Here is the result" or "I have finished". Just print the block.
