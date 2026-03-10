@@ -131,7 +131,7 @@ func TestContextCancellation(t *testing.T) {
 
 	// First event should work
 	bus.Publish(context.Background(), TestEvent{Name: "before", Value: 1})
-	
+
 	select {
 	case <-received:
 		// ok
@@ -145,7 +145,7 @@ func TestContextCancellation(t *testing.T) {
 
 	// Second event should not be received (subscriber is gone)
 	bus.Publish(context.Background(), TestEvent{Name: "after", Value: 2})
-	
+
 	select {
 	case <-received:
 		t.Fatal("should not receive event after cancellation")
@@ -273,7 +273,7 @@ func TestEventDropping(t *testing.T) {
 
 	// Fill the channel
 	bus.Publish(ctx, TestEvent{Name: "first", Value: 1})
-	
+
 	// This should be dropped (channel full, handler blocked)
 	bus.Publish(ctx, TestEvent{Name: "dropped", Value: 2})
 
