@@ -22,13 +22,9 @@ RESULT: <Plain text summary of findings OR error description>
 5. **Plain Text**. No markdown formatting inside the RESULT field.
 
 ## Example (Success)
----EVENT---
 STATUS: SUCCESS
 RESULT: Погода в Москве: ясно, +22°C. Ветер 5 м/с. Рекомендация: зонт не нужен.
----END_EVENT---
 
 ## Example (Failure)
----EVENT---
 STATUS: FAILED
 RESULT: API вернул 503 (Service Unavailable). Повторить через 5 минут.
----END_EVENT---
