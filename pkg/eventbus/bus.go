@@ -34,6 +34,39 @@ func New(bufSize int) *Bus {
 	}
 }
 
+func (b *Bus) removeSubscription(eventName string, sub *subscription) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if b.closed {
+		return
+	}
+
+	subs := b.subs[eventName]
+	for i, s := range subs {
+		if s == sub {
+			b.subs[eventName] = append(subs[:i], subs[i+1:]...)
+			break
+		}
+	}
+	if len(b.subs[eventName]) == 0 {
+		delete(b.subs, eventName)
+	}
+}
+
+func (b *Bus) runHandler(sub *subscription, event Event) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.FromCtx(sub.ctx).
+				Error().
+				Interface("panic", r).
+				Str("event", event.EventName()).
+				Msg("event handler panic")
+		}
+	}()
+	sub.handler(sub.ctx, event)
+}
+
 func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler func(context.Context, T)) {
 	b.mu.Lock()
 	if b.closed {
@@ -43,7 +76,6 @@ func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler f
 
 	subCtx, cancel := context.WithCancel(ctx)
 
-	// Create a wrapped handler that type-asserts safely
 	wrappedHandler := func(ctx context.Context, e Event) {
 		if typed, ok := e.(T); ok {
 			handler(ctx, typed)
@@ -64,26 +96,7 @@ func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler f
 	sub.wg.Add(1)
 	go func() {
 		defer sub.wg.Done()
-
-		// Point 2: Cleanup subscription from map when goroutine exits
-		defer func() {
-			b.mu.Lock()
-			if b.closed {
-				b.mu.Unlock()
-				return
-			}
-			subs := b.subs[eventName]
-			for i, s := range subs {
-				if s == sub {
-					b.subs[eventName] = append(subs[:i], subs[i+1:]...)
-					break
-				}
-			}
-			if len(b.subs[eventName]) == 0 {
-				delete(b.subs, eventName)
-			}
-			b.mu.Unlock()
-		}()
+		defer b.removeSubscription(eventName, sub)
 
 		for {
 			select {
@@ -93,19 +106,7 @@ func Subscribe[T Event](b *Bus, ctx context.Context, eventName string, handler f
 				if !ok {
 					return
 				}
-
-				func() {
-					defer func() {
-						if r := recover(); r != nil {
-							log.FromCtx(subCtx).
-								Error().
-								Interface("panic", r).
-								Str("event", event.EventName()).
-								Msg("event handler panic")
-						}
-					}()
-					sub.handler(subCtx, event)
-				}()
+				b.runHandler(sub, event)
 			}
 		}
 	}()
@@ -119,14 +120,12 @@ func Publish[T Event](b *Bus, ctx context.Context, event T) {
 		b.mu.RUnlock()
 		return
 	}
-	// Copy slice to avoid holding lock during send
 	subs := b.subs[eventName]
 	subsCopy := make([]*subscription, len(subs))
 	copy(subsCopy, subs)
 	b.mu.RUnlock()
 
 	for _, sub := range subsCopy {
-		// Skip if subscription is already canceled
 		if sub.ctx.Err() != nil {
 			continue
 		}
@@ -147,21 +146,17 @@ func (b *Bus) Close() {
 		b.mu.Lock()
 		b.closed = true
 
-		// Collect all subscriptions
 		var allSubs []*subscription
 		for _, subs := range b.subs {
 			allSubs = append(allSubs, subs...)
 		}
-		// Clear the map immediately to prevent new operations
 		b.subs = make(map[string][]*subscription)
 		b.mu.Unlock()
 
-		// Cancel all subscription contexts
 		for _, sub := range allSubs {
 			sub.cancel()
 		}
 
-		// Wait for all goroutines to finish
 		for _, sub := range allSubs {
 			sub.wg.Wait()
 			close(sub.ch)
