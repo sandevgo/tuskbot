@@ -22,6 +22,7 @@ type TaskInfo struct {
 
 type Service struct {
 	scheduler core.Scheduler
+	agent     core.Agent
 	subagent  core.SubAgent
 	taskRepo  core.TaskRepository
 	mu        sync.RWMutex
@@ -30,12 +31,12 @@ type Service struct {
 
 func NewService(
 	scheduler core.Scheduler,
-	agent core.SubAgent,
+	subagent core.SubAgent,
 	taskRepo core.TaskRepository,
 ) *Service {
 	return &Service{
 		scheduler: scheduler,
-		subagent:  agent,
+		subagent:  subagent,
 		taskRepo:  taskRepo,
 		tasks:     make(map[string]*core.Task),
 	}
@@ -141,9 +142,12 @@ func (s *Service) assignJob(task *core.Task) {
 			if msg.Content != "" {
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
-			// TODO: Finish logic here
 		})
-		return err
+		if err != nil {
+			return err
+		}
+
+		return s.agent.Notify(ctx, task)
 	}
 }
 

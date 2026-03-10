@@ -81,7 +81,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	return finalContent, nil
 }
 
-func (a *Agent) Notify(ctx context.Context, task core.Task) error {
+func (a *Agent) Notify(ctx context.Context, task *core.Task) error {
 	// Notify the user that a task completed
 	// Could send a message to the session or trigger a callback
 	// Implementation depends on transport layer (Telegram, CLI, etc.)
