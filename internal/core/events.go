@@ -13,12 +13,13 @@ type Event interface {
 }
 
 type EventPublisher interface {
-	Publish(ctx context.Context, event Event) error
+	Publish(ctx context.Context, event Event)
 }
+
 type EventSubscriber interface {
-	Subscribe(eventName string, handler EventHandler)
+	Subscribe(ctx context.Context, eventName string, handler EventHandler)
 }
-type EventHandler func(ctx context.Context, event Event) error
+type EventHandler func(ctx context.Context, event Event)
 
 type ChatEvent struct {
 	Type    string
