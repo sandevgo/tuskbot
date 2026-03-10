@@ -81,6 +81,13 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	return finalContent, nil
 }
 
+func (a *Agent) Notify(ctx context.Context, task core.Task) error {
+	// Notify the user that a task completed
+	// Could send a message to the session or trigger a callback
+	// Implementation depends on transport layer (Telegram, CLI, etc.)
+	return nil
+}
+
 // sanitizeToolCalls ensures the message history is valid for LLM consumption.
 // It removes Tool messages that do not have a corresponding preceding Assistant tool call.
 func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
