@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -20,8 +21,8 @@ type Bus struct {
 }
 
 type subscription struct {
-	ch      chan Event
-	handler func(context.Context, Event)
+	ch      chan core.Event
+	handler core.EventHandler
 	ctx     context.Context
 	cancel  context.CancelFunc
 	wg      *sync.WaitGroup
@@ -67,7 +68,7 @@ func (b *Bus) runHandler(sub *subscription, event Event) {
 	sub.handler(sub.ctx, event)
 }
 
-func (b *Bus) Subscribe(ctx context.Context, eventName string, handler func(context.Context, Event)) {
+func (b *Bus) Subscribe(ctx context.Context, eventName string, handler core.EventHandler) {
 	b.mu.Lock()
 	if b.closed {
 		b.mu.Unlock()
@@ -77,7 +78,7 @@ func (b *Bus) Subscribe(ctx context.Context, eventName string, handler func(cont
 	subCtx, cancel := context.WithCancel(ctx)
 
 	sub := &subscription{
-		ch:      make(chan Event, b.bufSize),
+		ch:      make(chan core.Event, b.bufSize),
 		handler: handler,
 		ctx:     subCtx,
 		cancel:  cancel,
@@ -106,7 +107,7 @@ func (b *Bus) Subscribe(ctx context.Context, eventName string, handler func(cont
 	}()
 }
 
-func (b *Bus) Publish(ctx context.Context, event Event) {
+func (b *Bus) Publish(ctx context.Context, event core.Event) {
 	eventName := event.EventName()
 
 	b.mu.RLock()

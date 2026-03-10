@@ -6,6 +6,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 // Test event types
@@ -31,7 +33,7 @@ func TestBasicPublishSubscribe(t *testing.T) {
 
 	received := make(chan TestEvent, 1)
 
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		received <- e.(TestEvent)
 	})
 
@@ -56,7 +58,7 @@ func TestMultipleSubscribers(t *testing.T) {
 	defer cancel()
 
 	var counter atomic.Int32
-	handler := func(ctx context.Context, e Event) {
+	handler := func(ctx context.Context, e core.Event) {
 		counter.Add(1)
 	}
 
@@ -84,11 +86,11 @@ func TestDifferentEventTypes(t *testing.T) {
 	testReceived := make(chan TestEvent, 1)
 	otherReceived := make(chan OtherEvent, 1)
 
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		testReceived <- e.(TestEvent)
 	})
 
-	bus.Subscribe(ctx, "other.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "other.event", func(ctx context.Context, e core.Event) {
 		otherReceived <- e.(OtherEvent)
 	})
 
@@ -123,7 +125,7 @@ func TestContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	received := make(chan TestEvent, 10)
-	handler := func(ctx context.Context, e Event) {
+	handler := func(ctx context.Context, e core.Event) {
 		received <- e.(TestEvent)
 	}
 
@@ -160,7 +162,7 @@ func TestClosedBus(t *testing.T) {
 	ctx := context.Background()
 	received := make(chan TestEvent, 1)
 
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		received <- e.(TestEvent)
 	})
 
@@ -177,7 +179,7 @@ func TestClosedBus(t *testing.T) {
 	}
 
 	// Subscribe on closed bus should not panic
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {})
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {})
 }
 
 func TestConcurrentPublishSubscribe(t *testing.T) {
@@ -193,7 +195,7 @@ func TestConcurrentPublishSubscribe(t *testing.T) {
 	)
 
 	var counter atomic.Int32
-	handler := func(ctx context.Context, e Event) {
+	handler := func(ctx context.Context, e core.Event) {
 		counter.Add(1)
 	}
 
@@ -231,7 +233,7 @@ func TestHandlerPanicRecovery(t *testing.T) {
 	var recovered atomic.Bool
 	var afterPanic atomic.Bool
 
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		te := e.(TestEvent)
 		if te.Name == "panic" {
 			panic("intentional panic")
@@ -239,7 +241,7 @@ func TestHandlerPanicRecovery(t *testing.T) {
 		recovered.Store(true)
 	})
 
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		afterPanic.Store(true)
 	})
 
@@ -267,7 +269,7 @@ func TestEventDropping(t *testing.T) {
 	blocking := make(chan struct{})
 
 	// Handler that blocks
-	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e Event) {
+	bus.Subscribe(ctx, "test.event", func(ctx context.Context, e core.Event) {
 		<-blocking // Block forever
 	})
 
