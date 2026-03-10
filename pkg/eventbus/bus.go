@@ -3,6 +3,8 @@ package eventbus
 import (
 	"context"
 	"sync"
+
+	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 type Event interface {
@@ -11,26 +13,53 @@ type Event interface {
 
 type Handler func(ctx context.Context, event Event)
 
+type subscription struct {
+	ch      chan Event
+	handler Handler
+	ctx     context.Context
+	cancel  context.CancelFunc
+}
+
 type Bus struct {
 	mu      sync.RWMutex
-	subs    map[string][]chan Event
+	subs    map[string][]*subscription
 	bufSize int
 }
 
 func New(bufSize int) *Bus {
 	return &Bus{
-		subs:    make(map[string][]chan Event),
+		subs:    make(map[string][]*subscription),
 		bufSize: bufSize,
 	}
 }
 
-func (b *Bus) Subscribe(eventName string) <-chan Event {
+func (b *Bus) Subscribe(ctx context.Context, eventName string, handler Handler) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	ch := make(chan Event, b.bufSize)
-	b.subs[eventName] = append(b.subs[eventName], ch)
-	return ch
+	subCtx, cancel := context.WithCancel(ctx)
+	sub := &subscription{
+		ch:      make(chan Event, b.bufSize),
+		handler: handler,
+		ctx:     subCtx,
+		cancel:  cancel,
+	}
+
+	b.subs[eventName] = append(b.subs[eventName], sub)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-sub.ch:
+				if !ok {
+					return
+				}
+				handler(ctx, event)
+			}
+		}
+	}()
 }
 
 func (b *Bus) Publish(ctx context.Context, event Event) {
@@ -38,11 +67,14 @@ func (b *Bus) Publish(ctx context.Context, event Event) {
 	subs := b.subs[event.EventName()]
 	b.mu.RUnlock()
 
-	for _, ch := range subs {
+	for _, sub := range subs {
 		select {
-		case ch <- event:
+		case sub.ch <- event:
 		default:
-			// subscriber is lagging, drop or log the event
+			log.FromCtx(ctx).
+				Warn().
+				Str("event", event.EventName()).
+				Msg("subscription channel is full, dropping event")
 		}
 	}
 }
@@ -52,9 +84,10 @@ func (b *Bus) Close() {
 	defer b.mu.Unlock()
 
 	for _, subs := range b.subs {
-		for _, ch := range subs {
-			close(ch)
+		for _, sub := range subs {
+			sub.cancel()
+			close(sub.ch)
 		}
 	}
-	b.subs = make(map[string][]chan Event)
+	b.subs = make(map[string][]*subscription)
 }
