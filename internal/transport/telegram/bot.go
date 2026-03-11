@@ -18,6 +18,7 @@ type Bot struct {
 	cfg     core.TelegramConfig
 	agent   core.Agent
 	router  core.CmdRouter
+	subs    core.EventSubscriber
 	ownerID int64
 	sender  *sender
 }
@@ -26,6 +27,7 @@ func NewBot(
 	cfg core.TelegramConfig,
 	agent *agent.Agent,
 	router core.CmdRouter,
+	subs core.EventSubscriber,
 ) (*Bot, error) {
 	pref := tele.Settings{
 		Token:  cfg.GetTelegramToken(),
@@ -42,6 +44,7 @@ func NewBot(
 		cfg:     cfg,
 		agent:   agent,
 		router:  router,
+		subs:    subs,
 		ownerID: cfg.GetTelegramOwnerID(),
 		sender:  newSender(b),
 	}, nil
@@ -89,6 +92,9 @@ func (b *Bot) Start(ctx context.Context) error {
 	}
 
 	b.bot.Start()
+
+	// TODO: Subscribe to event bus
+
 	return nil
 }
 

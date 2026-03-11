@@ -9,6 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/internal/providers/eventbus"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp/tools"
@@ -64,6 +65,9 @@ func NewServices(ctx context.Context) []srv.Service {
 	services = append(services, srv.NewCleanup(embedModel.Shutdown))
 
 	embedder := rag.NewEmbedder(embedModel)
+
+	// 4.1 EventBus
+	ebus := eventbus.New(100)
 
 	// 5. Knowledge Extractor Service
 	// Runs in background to convert conversation history into atomic facts
@@ -123,7 +127,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	cmdRouter := command.New(commands)
 
 	// 8. Transports
-	transports, err := initTransports(ctx, appCfg, ag, cmdRouter)
+	transports, err := initTransports(ctx, appCfg, ag, cmdRouter, ebus)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize transports")
 	}
@@ -155,12 +159,18 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	return mgr, nil
 }
 
-func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent, router core.CmdRouter) ([]srv.Service, error) {
+func initTransports(
+	ctx context.Context,
+	cfg *config.AppConfig,
+	ag *agent.Agent,
+	router core.CmdRouter,
+	subs core.EventSubscriber,
+) ([]srv.Service, error) {
 	var services []srv.Service
 
 	// Telegram Bot
 	if cfg.IsTelegramSelected() {
-		bot, err := telegram.NewBot(cfg, ag, router)
+		bot, err := telegram.NewBot(cfg, ag, router, subs)
 		if err != nil {
 			return nil, err
 		}
