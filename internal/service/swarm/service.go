@@ -140,7 +140,7 @@ func (s *Service) assignJob(task *core.Task) {
 		logger := log.FromCtx(ctx)
 		logger.Info().Str("session", task.SessionID).Msg("executing scheduled task")
 
-		_, err := s.subagent.Run(ctx, task, func(msg core.Message) {
+		result, err := s.subagent.Run(ctx, task, func(msg core.Message) {
 			if msg.Content != "" {
 				logger.Debug().Str("output", msg.Content).Msg("task progress")
 			}
@@ -149,7 +149,7 @@ func (s *Service) assignJob(task *core.Task) {
 			return err
 		}
 
-		return s.agent.Notify(ctx, task)
+		return s.agent.Notify(ctx, task, result)
 	}
 }
 

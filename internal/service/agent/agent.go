@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -16,6 +17,7 @@ type Agent struct {
 	mcp    core.MCPServer
 	memory core.Memory
 	events core.EventPublisher
+	mu     sync.Map
 }
 
 func NewAgent(
@@ -34,6 +36,11 @@ func NewAgent(
 }
 
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate core.UpdateFunc) (string, error) {
+	if _, busy := a.mu.LoadOrStore(sessionID, true); busy {
+		return "", fmt.Errorf("agent is busy")
+	}
+	defer a.mu.Delete(sessionID)
+
 	logger := log.FromCtx(ctx)
 
 	logger.Debug().
@@ -50,14 +57,12 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
 
-	messages = sanitizeToolCalls(ctx, messages)
-
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tools: %w", err)
 	}
 
-	finalContent, err := a.runner.Run(ctx, messages, tools, func(msg core.Message) error {
+	finalContent, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(msg core.Message) error {
 		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
 			return fmt.Errorf("failed to save message: %w", err)
 		}
@@ -76,52 +81,58 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	return finalContent, nil
 }
 
-func (a *Agent) Notify(
-	ctx context.Context,
-	task *core.Task,
-	result string,
-) error {
-	input := fmt.Sprintf("Task '%s' started", task.
-
-	userMsg := core.Message{
-		Role: core.RoleSystem,
-		Content: input,
+func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) error {
+	msg := core.Message{
+		Role:    core.RoleSystem,
+		Content: fmt.Sprintf("Task '%s' completed with result: %s", task.Name, result),
+	}
+	if err := a.memory.SaveMessage(ctx, task.OwnerSessionID, msg); err != nil {
+		return err
 	}
 
-	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, result))
+	if _, busy := a.mu.LoadOrStore(task.OwnerSessionID, true); busy {
+		return nil
+	}
+	defer a.mu.Delete(task.OwnerSessionID)
+
+	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
+	if err != nil {
+		return err
+	}
+
+	tools, err := a.mcp.GetTools(ctx)
+	if err != nil {
+		return err
+	}
+
+	final, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(m core.Message) error {
+		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
+	})
+	if err != nil {
+		return err
+	}
+
+	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, final))
 	return nil
 }
 
 func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
-	logger := log.FromCtx(ctx)
 	var sanitized []core.Message
-	var validToolCallIDs map[string]bool
-
-	for i, msg := range messages {
+	var validIDs map[string]bool
+	for _, msg := range messages {
 		switch msg.Role {
-		case core.RoleUser, core.RoleSystem:
-			validToolCallIDs = nil
-			sanitized = append(sanitized, msg)
-
 		case core.RoleAssistant:
-			validToolCallIDs = make(map[string]bool)
+			validIDs = make(map[string]bool)
 			for _, tc := range msg.ToolCalls {
-				validToolCallIDs[tc.ID] = true
+				validIDs[tc.ID] = true
 			}
 			sanitized = append(sanitized, msg)
-
 		case core.RoleTool:
-			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
+			if validIDs != nil && validIDs[msg.ToolCallID] {
 				sanitized = append(sanitized, msg)
-			} else {
-				logger.Warn().
-					Int("msg_index", i).
-					Str("tool_call_id", msg.ToolCallID).
-					Interface("valid_ids_in_context", validToolCallIDs).
-					Msg("dropping invalid tool message (orphaned or ID mismatch)")
 			}
-
 		default:
+			validIDs = nil
 			sanitized = append(sanitized, msg)
 		}
 	}
