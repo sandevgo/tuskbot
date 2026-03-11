@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -77,29 +76,19 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	return finalContent, nil
 }
 
-func (a *Agent) Notify(ctx context.Context, task *core.Task) error {
-	logger := log.FromCtx(ctx)
+func (a *Agent) Notify(
+	ctx context.Context,
+	task *core.Task,
+	result string,
+) error {
+	input := fmt.Sprintf("Task '%s' started", task.
 
-	messages, err := a.memory.GetMessages(ctx, task.OwnerSessionID, 5)
-	if err != nil {
-		return fmt.Errorf("failed to get messages: %w", err)
-	}
-
-	var result string
-	for _, msg := range messages {
-		if msg.Role == core.RoleSystem && strings.Contains(msg.Content, "Task '"+task.Name+"'") {
-			result = msg.Content
-			break
-		}
-	}
-
-	if result == "" {
-		result = fmt.Sprintf("Task '%s' completed", task.Name)
+	userMsg := core.Message{
+		Role: core.RoleSystem,
+		Content: input,
 	}
 
 	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, result))
-
-	logger.Info().Str("task", task.Name).Str("session", task.OwnerSessionID).Msg("task completion notified")
 	return nil
 }
 
