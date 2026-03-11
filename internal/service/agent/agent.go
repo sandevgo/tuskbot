@@ -91,8 +91,16 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	if !a.sessions.TryLock(task.OwnerSessionID) {
-		return nil
+	for {
+		if a.sessions.TryLock(task.OwnerSessionID) {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(1 * time.Second):
+			continue
+		}
 	}
 	defer a.sessions.Unlock(task.OwnerSessionID)
 
