@@ -85,7 +85,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) error {
 	msg := core.Message{
 		Role:    core.RoleSystem,
-		Content: fmt.Sprintf("Task '%s' completed with result: %s", task.Name, result),
+		Content: fmt.Sprintf("Task '%s' completed\n %s", task.Name, result),
 	}
 	if err := a.memory.SaveMessage(ctx, task.OwnerSessionID, msg); err != nil {
 		return err
