@@ -25,29 +25,29 @@ type ScheduleCancelQuery struct {
 const scheduleAddSchema = `
 {
   "name": "schedule_add",
-  "description": "Запланировать выполнение новой задачи (напоминание или регулярное действие).",
+  "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
   "parameters": {
     "type": "object",
     "properties": {
-      "type": {
-        "type": "string",
-        "enum": ["once", "interval"],
-        "description": "Тип задачи: 'once' (один раз) или 'interval' (повторять)."
-      },
-      "time_spec": {
-        "type": "string",
-        "description": "Для 'once': дата ISO8601 (2023-10-27T15:00:00Z) или задержка (10m, 2h). Для 'interval': период повторения (30s, 10m, 24h)."
-      },
       "task_name": {
         "type": "string",
-        "description": "Уникальное короткое название задачи (slug), без пробелов (напр: 'daily-digest', 'remind-milk')."
+        "description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
       },
       "instruction": {
         "type": "string",
-        "description": "Подробная инструкция для агента, который проснется в будущем. Что именно нужно сделать?"
+        "description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
+      },
+      "type": {
+        "type": "string",
+        "enum": ["once", "cron"],
+        "description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
+      },
+      "time_spec": {
+        "type": "string",
+        "description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
       }
     },
-    "required": ["type", "time_spec", "task_name", "instruction"]
+    "required": ["task_name", "instruction", "type", "time_spec"]
   }
 }
 `
@@ -55,28 +55,23 @@ const scheduleAddSchema = `
 const scheduleListSchema = `
 {
   "name": "schedule_list",
-  "description": "Получить список всех активных запланированных задач.",
-  "parameters": {
-    "type": "object",
-    "properties": {},
-    "required": []
-  }
+  "description": "Retrieves information about all currently scheduled background tasks. Returns an array of task objects, including their ID, name, current status, type, and the original instruction."
 }
 `
 
 const scheduleCancelSchema = `
 {
   "name": "schedule_cancel",
-  "description": "Отменить и удалить запланированную задачу по её названию.",
+  "description": "Cancels and permanently removes a scheduled task by its unique identifier. This stops future executions, including recurring 'cron' tasks.",
   "parameters": {
     "type": "object",
     "properties": {
-      "task_id": {
+      "task_name": {
         "type": "string",
-        "description": "Название задачи (task_name), которую нужно удалить."
+        "description": "The unique slug-formatted name of the task to be cancelled (e.g., 'write-hokku-task')."
       }
     },
-    "required": ["task_id"]
+    "required": ["task_name"]
   }
 }
 `
@@ -183,6 +178,10 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 		core.TriggerTypeCron,
 		core.TriggerTypeOnce,
 		core.TriggerTypeInterval,
+	}
+
+	if input.Type == "" {
+		return nil, fmt.Errorf("type is required")
 	}
 
 	if !slices.Contains(validType, input.Type) {
