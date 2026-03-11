@@ -3,7 +3,6 @@ package agent
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -13,11 +12,11 @@ import (
 const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
-	runner *ReActRunner
-	mcp    core.MCPServer
-	memory core.Memory
-	events core.EventPublisher
-	mu     sync.Map
+	runner   *ReActRunner
+	mcp      core.MCPServer
+	memory   core.Memory
+	events   core.EventPublisher
+	sessions core.SessionManager
 }
 
 func NewAgent(
@@ -26,20 +25,22 @@ func NewAgent(
 	memory core.Memory,
 	executor core.ToolExecutor,
 	events core.EventPublisher,
+	sessions core.SessionManager,
 ) *Agent {
 	return &Agent{
-		runner: NewReActRunner(ai, executor, ChatTimeout),
-		mcp:    mcp,
-		memory: memory,
-		events: events,
+		runner:   NewReActRunner(ai, executor, ChatTimeout),
+		mcp:      mcp,
+		memory:   memory,
+		events:   events,
+		sessions: sessions,
 	}
 }
 
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate core.UpdateFunc) (string, error) {
-	if _, busy := a.mu.LoadOrStore(sessionID, true); busy {
+	if !a.sessions.TryLock(sessionID) {
 		return "", fmt.Errorf("agent is busy")
 	}
-	defer a.mu.Delete(sessionID)
+	defer a.sessions.Unlock(sessionID)
 
 	logger := log.FromCtx(ctx)
 
@@ -90,10 +91,10 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	if _, busy := a.mu.LoadOrStore(task.OwnerSessionID, true); busy {
+	if !a.sessions.TryLock(task.OwnerSessionID) {
 		return nil
 	}
-	defer a.mu.Delete(task.OwnerSessionID)
+	defer a.sessions.Unlock(task.OwnerSessionID)
 
 	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
 	if err != nil {
