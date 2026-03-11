@@ -85,7 +85,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) error {
 	msg := core.Message{
 		Role:    core.RoleSystem,
-		Content: fmt.Sprintf("Task '%s' completed\n %s", task.Name, result),
+		Content: fmt.Sprintf("Background Task '%s' completed. Send\n %s", task.Name, result),
 	}
 	if err := a.memory.SaveMessage(ctx, task.OwnerSessionID, msg); err != nil {
 		return err
@@ -115,7 +115,8 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 	}
 
 	final, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(m core.Message) error {
-		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
+		//return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
+		return nil
 	})
 	if err != nil {
 		return err
