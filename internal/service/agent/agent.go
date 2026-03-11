@@ -82,10 +82,11 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 }
 
 func (a *Agent) Notify(ctx context.Context, task *core.Task) error {
-	// Notify the user that a task completed
-	// Could send a message to the session or trigger a callback
-	// Implementation depends on transport layer (Telegram, CLI, etc.)
 	// TODO: ???
+	// Check if the agent is in react loop
+	// If not, call Agent with the result of the task and may be special prompt ("here is the result of the task")
+	// Save to the messages
+	// Trigger core.EventTypeTaskCompleted
 	return nil
 }
 
