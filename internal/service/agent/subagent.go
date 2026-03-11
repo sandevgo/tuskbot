@@ -63,10 +63,10 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		return "", err
 	}
 
-	s.memory.SaveMessage(ctx, task.OwnerSessionID, core.Message{
-		Role:    core.RoleSystem,
-		Content: fmt.Sprintf("Task '%s' completed.\n\nResult:\n%s", task.Name, result),
-	})
+	//s.memory.SaveMessage(ctx, task.OwnerSessionID, core.Message{
+	//	Role:    core.RoleSystem,
+	//	Content: fmt.Sprintf("Task '%s' completed.\n\nResult:\n%s", task.Name, result),
+	//})
 
 	return result, nil
 }

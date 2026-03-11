@@ -6,7 +6,7 @@ type UpdateFunc func(Message)
 
 type Agent interface {
 	Run(ctx context.Context, sessionID string, input string, onUpdate UpdateFunc) (string, error)
-	Notify(ctx context.Context, task *Task) error
+	Notify(ctx context.Context, task *Task, result string) error
 }
 
 type SubAgent interface {
