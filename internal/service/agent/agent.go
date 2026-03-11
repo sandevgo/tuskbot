@@ -115,8 +115,7 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 	}
 
 	final, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(m core.Message) error {
-		//return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
-		return nil
+		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
 	})
 	if err != nil {
 		return err
@@ -131,6 +130,7 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 	var validIDs map[string]bool
 	for _, msg := range messages {
 		switch msg.Role {
+		case core.RoleSystem:
 		case core.RoleAssistant:
 			validIDs = make(map[string]bool)
 			for _, tc := range msg.ToolCalls {
