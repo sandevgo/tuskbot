@@ -19,19 +19,20 @@ type EventPublisher interface {
 type EventSubscriber interface {
 	Subscribe(ctx context.Context, eventName string, handler EventHandler)
 }
+
 type EventHandler func(ctx context.Context, event Event)
 
 type ChatEvent struct {
-	Type    string
-	ChatID  int64
-	Message string
+	Type      string
+	SessionID string
+	Message   string
 }
 
-func NewChatEvent(t string, chatID int64, message string) *ChatEvent {
+func NewChatEvent(t string, sessionID string, message string) *ChatEvent {
 	return &ChatEvent{
-		Type:    t,
-		ChatID:  chatID,
-		Message: message,
+		Type:      t,
+		SessionID: sessionID,
+		Message:   message,
 	}
 }
 

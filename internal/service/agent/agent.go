@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -15,6 +16,7 @@ type Agent struct {
 	runner *ReActRunner
 	mcp    core.MCPServer
 	memory core.Memory
+	events core.EventPublisher
 }
 
 func NewAgent(
@@ -22,11 +24,13 @@ func NewAgent(
 	mcp core.MCPServer,
 	memory core.Memory,
 	executor core.ToolExecutor,
+	events core.EventPublisher,
 ) *Agent {
 	return &Agent{
 		runner: NewReActRunner(ai, executor, ChatTimeout),
 		mcp:    mcp,
 		memory: memory,
+		events: events,
 	}
 }
 
@@ -37,36 +41,28 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		Str("session_id", sessionID).
 		Msg("agent received user request")
 
-	// 1. Record the User Input
 	userMsg := core.Message{Role: core.RoleUser, Content: input}
 	if err := a.memory.SaveMessage(ctx, sessionID, userMsg); err != nil {
 		return "", fmt.Errorf("failed to save user message: %w", err)
 	}
 
-	// 2. Recall the "State of the World"
-	// Memory returns [System Prompt + RAG Context + Chronological History]
 	messages, err := a.memory.GetFullContext(ctx, sessionID, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
 
-	// Sanitize history to prevent provider errors (orphaned tool calls)
 	messages = sanitizeToolCalls(ctx, messages)
 
-	// 3. Prepare Tools
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tools: %w", err)
 	}
 
-	// 4. ReAct Loop
 	finalContent, err := a.runner.Run(ctx, messages, tools, func(msg core.Message) error {
-		// Persist every message to memory
 		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
 			return fmt.Errorf("failed to save message: %w", err)
 		}
 
-		// Notify callback only for assistant messages
 		if msg.Role == core.RoleAssistant && onUpdate != nil {
 			onUpdate(msg)
 		}
@@ -82,16 +78,31 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 }
 
 func (a *Agent) Notify(ctx context.Context, task *core.Task) error {
-	// TODO: ???
-	// Check if the agent is in react loop
-	// If not, call Agent with the result of the task and may be special prompt ("here is the result of the task")
-	// Save to the messages
-	// Trigger core.EventTypeTaskCompleted
+	logger := log.FromCtx(ctx)
+
+	messages, err := a.memory.GetMessages(ctx, task.OwnerSessionID, 5)
+	if err != nil {
+		return fmt.Errorf("failed to get messages: %w", err)
+	}
+
+	var result string
+	for _, msg := range messages {
+		if msg.Role == core.RoleSystem && strings.Contains(msg.Content, "Task '"+task.Name+"'") {
+			result = msg.Content
+			break
+		}
+	}
+
+	if result == "" {
+		result = fmt.Sprintf("Task '%s' completed", task.Name)
+	}
+
+	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, result))
+
+	logger.Info().Str("task", task.Name).Str("session", task.OwnerSessionID).Msg("task completion notified")
 	return nil
 }
 
-// sanitizeToolCalls ensures the message history is valid for LLM consumption.
-// It removes Tool messages that do not have a corresponding preceding Assistant tool call.
 func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
 	logger := log.FromCtx(ctx)
 	var sanitized []core.Message
@@ -100,12 +111,10 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 	for i, msg := range messages {
 		switch msg.Role {
 		case core.RoleUser, core.RoleSystem:
-			// User/System messages reset the tool context
 			validToolCallIDs = nil
 			sanitized = append(sanitized, msg)
 
 		case core.RoleAssistant:
-			// Assistant message establishes new tool context
 			validToolCallIDs = make(map[string]bool)
 			for _, tc := range msg.ToolCalls {
 				validToolCallIDs[tc.ID] = true
@@ -113,7 +122,6 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 			sanitized = append(sanitized, msg)
 
 		case core.RoleTool:
-			// Tool message must match a valid ID from the immediate preceding assistant turn
 			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
 				sanitized = append(sanitized, msg)
 			} else {
@@ -125,7 +133,6 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 			}
 
 		default:
-			// Keep other message types
 			sanitized = append(sanitized, msg)
 		}
 	}

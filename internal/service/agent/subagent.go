@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	// TaskExecutionTimeout is the maximum time allowed for a subagent task to complete
 	TaskExecutionTimeout = 10 * time.Minute
 )
 
@@ -34,7 +33,6 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		return "", err
 	}
 
-	// Add overall timeout for the task execution
 	ctx, cancel := context.WithTimeout(ctx, TaskExecutionTimeout)
 	defer cancel()
 
@@ -54,14 +52,23 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		return "", fmt.Errorf("get tools: %w", err)
 	}
 
-	return s.runner.Run(ctx, messages, tools, func(msg core.Message) error {
-		// SubAgent only notifies on complete for assistant messages with content
-		// Does not persist to memory during execution
+	result, err := s.runner.Run(ctx, messages, tools, func(msg core.Message) error {
 		if msg.Role == core.RoleAssistant && msg.Content != "" {
 			onComplete(msg)
 		}
 		return nil
 	})
+
+	if err != nil {
+		return "", err
+	}
+
+	s.memory.SaveMessage(ctx, task.OwnerSessionID, core.Message{
+		Role:    core.RoleSystem,
+		Content: fmt.Sprintf("Task '%s' completed.\n\nResult:\n%s", task.Name, result),
+	})
+
+	return result, nil
 }
 
 func (s *SubAgent) validate(task *core.Task, onComplete core.UpdateFunc) error {
