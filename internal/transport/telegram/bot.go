@@ -93,7 +93,9 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	b.bot.Start()
 
-	// TODO: Subscribe to event bus
+	// Subscribe to push notifications
+	// TODO: Make an abstraction layer for transports
+	b.subs.Subscribe(ctx, core.EventTypeTaskCompleted, b.PushNotification)
 
 	return nil
 }
@@ -101,6 +103,18 @@ func (b *Bot) Start(ctx context.Context) error {
 func (b *Bot) Shutdown(ctx context.Context) error {
 	b.bot.Stop()
 	return nil
+}
+
+// PushNotification handles the task completed event
+// Currently only owner session is notified
+func (b *Bot) PushNotification(ctx context.Context, e core.Event) {
+	event, ok := e.(core.ChatEvent)
+	if !ok {
+		return
+	}
+
+	recipient := tele.ChatID(b.cfg.GetTelegramOwnerID())
+	_ = b.sender.sendMarkdown(ctx, recipient, event.Message, true)
 }
 
 func (b *Bot) handleMessage(c tele.Context) error {

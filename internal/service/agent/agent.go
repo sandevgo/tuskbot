@@ -85,6 +85,7 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task) error {
 	// Notify the user that a task completed
 	// Could send a message to the session or trigger a callback
 	// Implementation depends on transport layer (Telegram, CLI, etc.)
+	// TODO: ???
 	return nil
 }
 
