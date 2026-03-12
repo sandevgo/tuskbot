@@ -27,7 +27,6 @@ func (p *SysPrompt) BuildForAgent() []core.Message {
 		now := time.Now().Format("2006-01-02 15:04:05 GMT-07")
 		sysPrompt := fmt.Sprintf(content, now, p.path)
 		messages = append(messages, core.Message{Role: "system", Content: sysPrompt})
-		fmt.Println(sysPrompt)
 	}
 	if content := readFile(p.cfg.GetIdentityPath()); content != "" {
 		messages = append(messages, core.Message{Role: "system", Content: content})
