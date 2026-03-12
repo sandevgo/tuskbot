@@ -84,7 +84,6 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 
 func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) error {
 	logger := log.FromCtx(ctx)
-	logger.Info().Str("task", task.Name).Msg("1. Starting notification process")
 
 	msg := core.Message{
 		Role:    core.RoleSystem,
@@ -94,7 +93,6 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	logger.Info().Msg("2. Waiting for session lock")
 	for {
 		if a.sessions.TryLock(task.OwnerSessionID) {
 			break
@@ -108,7 +106,6 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 	}
 	defer a.sessions.Unlock(task.OwnerSessionID)
 
-	logger.Info().Msg("3. Loading full context")
 	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
 	if err != nil {
 		return err
@@ -119,15 +116,12 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		Content: "Please inform me about the completed background task and take any necessary follow-up actions.",
 	})
 
-	logger.Info().Msg("4. Fetching MCP tools")
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {
 		return err
 	}
 
 	sanitizedMsgs := sanitizeToolCalls(ctx, messages)
-	logger.Info().Int("msg_count", len(sanitizedMsgs)).Msg("5. Calling LLM Runner...")
-
 	final, err := a.runner.Run(ctx, sanitizedMsgs, tools, func(m core.Message) error {
 		logger.Info().Str("role", m.Role).Msg("6. Runner yielded a message")
 		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
@@ -138,7 +132,6 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	logger.Info().Msg("7. Runner finished, publishing event")
 	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, final))
 	return nil
 }
