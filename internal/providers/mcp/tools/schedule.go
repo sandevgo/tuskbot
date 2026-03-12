@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -47,37 +48,37 @@ const scheduleOnce = `
 }
 `
 
-const scheduleCron = `
-{
-  "name": "schedule_add",
-  "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
-  "inputSchema": {
-	  "parameters": {
-		"type": "object",
-		"properties": {
-		  "task_name": {
-			"type": "string",
-			"description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
-		  },
-		  "instruction": {
-			"type": "string",
-			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
-		  },
-		  "type": {
-			"type": "string",
-			"enum": ["once", "cron"],
-			"description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
-		  },
-		  "time_spec": {
-			"type": "string",
-			"description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
-		  }
-		},
-		"required": ["task_name", "instruction", "type", "time_spec"]
-	  }
-  }
-}
-`
+//const scheduleCron = `
+//{
+//  "name": "schedule_add",
+//  "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
+//  "inputSchema": {
+//	  "parameters": {
+//		"type": "object",
+//		"properties": {
+//		  "task_name": {
+//			"type": "string",
+//			"description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
+//		  },
+//		  "instruction": {
+//			"type": "string",
+//			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
+//		  },
+//		  "type": {
+//			"type": "string",
+//			"enum": ["once", "cron"],
+//			"description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
+//		  },
+//		  "time_spec": {
+//			"type": "string",
+//			"description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
+//		  }
+//		},
+//		"required": ["task_name", "instruction", "type", "time_spec"]
+//	  }
+//  }
+//}
+//`
 
 const scheduleListSchema = `
 {
@@ -218,6 +219,10 @@ func parseScheduleOnce(ctx context.Context, args json.RawMessage) (*ScheduleOnce
 	input.At = strings.TrimSpace(input.At)
 	if input.At == "" {
 		return nil, fmt.Errorf("at cannot be empty")
+	}
+
+	if _, err := time.Parse(time.RFC3339, input.At); err != nil {
+		return nil, fmt.Errorf("at must be a valid RFC3339 timestamp: %w", err)
 	}
 
 	// Validate Instruction
