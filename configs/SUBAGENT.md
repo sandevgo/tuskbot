@@ -16,10 +16,9 @@ RESULT: <Plain text summary of findings OR error description>
 
 ## Rules
 1. **Silence**. Do not say "Here is the result" or "I have finished". Just print the block.
-2. **Finality**. No text after ---END_EVENT---.
-3. **Consistency**. Use STATUS: FAILED for errors (not ERROR).
-4. **Brevity**. RESULT must be 2-5 sentences maximum.
-5. **Plain Text**. No markdown formatting inside the RESULT field.
+2. **Consistency**. Use STATUS: FAILED for errors (not ERROR).
+3. **Brevity**. RESULT must be 2-5 sentences maximum.
+4. **Plain Text**. No markdown formatting inside the RESULT field.
 
 ## Example (Success)
 STATUS: SUCCESS
