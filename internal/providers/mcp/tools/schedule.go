@@ -5,24 +5,49 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
-	"slices"
 	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-type ScheduleAddQuery struct {
-	Type        string `json:"type"`
-	TaskName    string `json:"task_name"`
-	TimeSpec    string `json:"time_spec"`
-	Instruction string `json:"instruction"`
+type ScheduleOnceQuery struct {
+	TaskName string `json:"name"`
+	At       string `json:"at"`
+	Prompt   string `json:"prompt"`
 }
 
 type ScheduleCancelQuery struct {
 	TaskName string `json:"task_id"`
 }
 
-const scheduleAddSchema = `
+const scheduleOnce = `
+{
+  "name": "schedule_once",
+  "description": "Schedule a background task to run exactly once at a specific time. Returns the ID of the created task.",
+  "inputSchema": {
+	  "parameters": {
+		"type": "object",
+		"properties": {
+		  "name": {
+			"type": "string",
+			"description": "Identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
+		  },
+		  "prompt": {
+			"type": "string",
+			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
+		  },
+		  "at": {
+			"type": "string",
+			"description": "Execution time in RFC 3339 format (e.g., 2023-10-25T14:30:00Z). Use UTC if timezone is unknown."
+		  }
+		},
+		"required": ["name", "prompt", "at"]
+	  }
+  }
+}
+`
+
+const scheduleCron = `
 {
   "name": "schedule_add",
   "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
@@ -88,19 +113,18 @@ func NewSchedule(swarm core.Swarm) *Schedule {
 	}
 }
 
-func (s *Schedule) handleAdd(ctx context.Context, args json.RawMessage) (string, error) {
-	query, err := parseScheduleAdd(ctx, args)
+func (s *Schedule) handleOnce(ctx context.Context, args json.RawMessage) (string, error) {
+	query, err := parseScheduleOnce(ctx, args)
 	if err != nil {
 		return "", err
 	}
 
-	// Get sessionID from context
 	sessionID, ok := ctx.Value(core.CtxKeySessionID).(string)
 	if !ok || sessionID == "" {
 		return "", fmt.Errorf("sessionID not found in context")
 	}
 
-	err = s.swarm.ScheduleTask(ctx, sessionID, query.TaskName, query.Type, query.TimeSpec, query.Instruction)
+	err = s.swarm.ScheduleTask(ctx, sessionID, query.TaskName, core.TriggerTypeOnce, query.At, query.Prompt)
 	if err != nil {
 		return "", err
 	}
@@ -145,11 +169,16 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 		Schema      string
 		Handler     core.NativeHandler
 	}{
-		"schedule_add": {
-			Description: "Schedule background job",
-			Schema:      scheduleAddSchema,
-			Handler:     s.handleAdd,
+		"schedule_once": {
+			Description: "Schedule background job to run it once",
+			Schema:      scheduleOnce,
+			Handler:     s.handleOnce,
 		},
+		//"schedule_cron": {
+		//	Description: "Schedule inteval background job",
+		//	Schema:      scheduleCron,
+		//	Handler:     s.handleOnce,
+		//},
 		"schedule_list": {
 			Description: "Get list of scheduled jobs",
 			Schema:      scheduleListSchema,
@@ -166,8 +195,8 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 // slugRegex matches valid task names: alphanumeric, hyphens, and underscores only
 var slugRegex = regexp.MustCompile(`^[a-zA-Z0-9-]+$`)
 
-func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQuery, error) {
-	var input *ScheduleAddQuery
+func parseScheduleOnce(ctx context.Context, args json.RawMessage) (*ScheduleOnceQuery, error) {
+	var input *ScheduleOnceQuery
 	if err := json.Unmarshal(args, &input); err != nil {
 		return nil, fmt.Errorf("invalid arguments: %w", err)
 	}
@@ -176,39 +205,25 @@ func parseScheduleAdd(ctx context.Context, args json.RawMessage) (*ScheduleAddQu
 		return nil, fmt.Errorf("arguments cannot be null")
 	}
 
-	validType := []string{
-		core.TriggerTypeCron,
-		core.TriggerTypeOnce,
-		core.TriggerTypeInterval,
-	}
-
-	if input.Type == "" {
-		return nil, fmt.Errorf("type is required")
-	}
-
-	if !slices.Contains(validType, input.Type) {
-		return nil, fmt.Errorf("invalid type: %s", input.Type)
-	}
-
 	// Validate TaskName
 	input.TaskName = strings.TrimSpace(input.TaskName)
 	if input.TaskName == "" {
-		return nil, fmt.Errorf("task_name cannot be empty")
+		return nil, fmt.Errorf("name cannot be empty")
 	}
 	if !slugRegex.MatchString(input.TaskName) {
-		return nil, fmt.Errorf("task_name must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
+		return nil, fmt.Errorf("name must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
 	}
 
-	// Validate TimeSpec
-	input.TimeSpec = strings.TrimSpace(input.TimeSpec)
-	if input.TimeSpec == "" {
-		return nil, fmt.Errorf("time_spec cannot be empty")
+	// Validate At
+	input.At = strings.TrimSpace(input.At)
+	if input.At == "" {
+		return nil, fmt.Errorf("at cannot be empty")
 	}
 
 	// Validate Instruction
-	input.Instruction = strings.TrimSpace(input.Instruction)
-	if input.Instruction == "" {
-		return nil, fmt.Errorf("instruction cannot be empty")
+	input.Prompt = strings.TrimSpace(input.Prompt)
+	if input.Prompt == "" {
+		return nil, fmt.Errorf("prompt cannot be empty")
 	}
 
 	return input, nil

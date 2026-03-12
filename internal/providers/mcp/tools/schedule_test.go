@@ -17,13 +17,13 @@ func TestParseScheduleAdd(t *testing.T) {
 		args      json.RawMessage
 		wantErr   bool
 		errMsg    string
-		wantQuery *ScheduleAddQuery
+		wantQuery *ScheduleOnceQuery
 	}{
 		{
 			name:    "valid input with all fields",
 			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":"do something"}`),
 			wantErr: false,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeOnce,
 				TaskName:    "test-task",
 				TimeSpec:    "10m",
@@ -34,7 +34,7 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "valid input with cron type",
 			args:    json.RawMessage(`{"type":"cron","task_name":"daily-job","time_spec":"0 9 * * *","instruction":"send daily report"}`),
 			wantErr: false,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeCron,
 				TaskName:    "daily-job",
 				TimeSpec:    "0 9 * * *",
@@ -45,7 +45,7 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "valid input with interval type",
 			args:    json.RawMessage(`{"type":"interval","task_name":"interval-task","time_spec":"30s","instruction":"check status"}`),
 			wantErr: false,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeInterval,
 				TaskName:    "interval-task",
 				TimeSpec:    "30s",
@@ -134,7 +134,7 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "task_name with underscores and numbers",
 			args:    json.RawMessage(`{"type":"once","task_name":"test_task_123","time_spec":"10m","instruction":"do it"}`),
 			wantErr: true,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeOnce,
 				TaskName:    "test_task_123",
 				TimeSpec:    "10m",
@@ -145,7 +145,7 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "task_name with uppercase",
 			args:    json.RawMessage(`{"type":"once","task_name":"Test-Task","time_spec":"10m","instruction":"do it"}`),
 			wantErr: false,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeOnce,
 				TaskName:    "Test-Task",
 				TimeSpec:    "10m",
@@ -156,7 +156,7 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "trimmed fields",
 			args:    json.RawMessage(`{"type":"once","task_name":"  test-task  ","time_spec":"  10m  ","instruction":"  do it  "}`),
 			wantErr: false,
-			wantQuery: &ScheduleAddQuery{
+			wantQuery: &ScheduleOnceQuery{
 				Type:        core.TriggerTypeOnce,
 				TaskName:    "test-task",
 				TimeSpec:    "10m",
@@ -167,40 +167,40 @@ func TestParseScheduleAdd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseScheduleAdd(ctx, tt.args)
+			got, err := parseScheduleOnce(ctx, tt.args)
 
 			if tt.wantErr {
 				if err == nil {
-					t.Errorf("parseScheduleAdd() error = nil, wantErr %v", tt.wantErr)
+					t.Errorf("parseScheduleOnce() error = nil, wantErr %v", tt.wantErr)
 					return
 				}
 				if tt.errMsg != "" && !strings.Contains(err.Error(), tt.errMsg) {
-					t.Errorf("parseScheduleAdd() error message = %v, should contain %v", err.Error(), tt.errMsg)
+					t.Errorf("parseScheduleOnce() error message = %v, should contain %v", err.Error(), tt.errMsg)
 				}
 				return
 			}
 
 			if err != nil {
-				t.Errorf("parseScheduleAdd() unexpected error = %v", err)
+				t.Errorf("parseScheduleOnce() unexpected error = %v", err)
 				return
 			}
 
 			if got == nil {
-				t.Errorf("parseScheduleAdd() returned nil query without error")
+				t.Errorf("parseScheduleOnce() returned nil query without error")
 				return
 			}
 
 			if got.Type != tt.wantQuery.Type {
-				t.Errorf("parseScheduleAdd() Type = %v, want %v", got.Type, tt.wantQuery.Type)
+				t.Errorf("parseScheduleOnce() Type = %v, want %v", got.Type, tt.wantQuery.Type)
 			}
 			if got.TaskName != tt.wantQuery.TaskName {
-				t.Errorf("parseScheduleAdd() TaskName = %v, want %v", got.TaskName, tt.wantQuery.TaskName)
+				t.Errorf("parseScheduleOnce() TaskName = %v, want %v", got.TaskName, tt.wantQuery.TaskName)
 			}
 			if got.TimeSpec != tt.wantQuery.TimeSpec {
-				t.Errorf("parseScheduleAdd() TimeSpec = %v, want %v", got.TimeSpec, tt.wantQuery.TimeSpec)
+				t.Errorf("parseScheduleOnce() TimeSpec = %v, want %v", got.TimeSpec, tt.wantQuery.TimeSpec)
 			}
 			if got.Instruction != tt.wantQuery.Instruction {
-				t.Errorf("parseScheduleAdd() Instruction = %v, want %v", got.Instruction, tt.wantQuery.Instruction)
+				t.Errorf("parseScheduleOnce() Instruction = %v, want %v", got.Instruction, tt.wantQuery.Instruction)
 			}
 		})
 	}
