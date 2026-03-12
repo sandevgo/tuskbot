@@ -91,7 +91,7 @@ func NewServices(ctx context.Context) []srv.Service {
 		messagesRepo,
 		knowledgeRepo,
 		embedder,
-		memory.NewSysPrompt(appCfg),
+		memory.NewSysPrompt(config.GetRuntimePath(), appCfg),
 	)
 
 	executor := agent.NewExecutor(mcpManager)
