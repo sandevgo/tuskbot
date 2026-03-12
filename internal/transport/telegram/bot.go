@@ -108,12 +108,12 @@ func (b *Bot) Shutdown(ctx context.Context) error {
 // PushNotification handles the task completed event
 // Currently only owner session is notified
 func (b *Bot) PushNotification(ctx context.Context, e core.Event) {
-	event, ok := e.(core.ChatEvent)
+	log.FromCtx(ctx).Debug().Msg("telegram bot received push event")
+
+	event, ok := e.(*core.ChatEvent)
 	if !ok {
 		return
 	}
-
-	log.FromCtx(ctx).Debug().Str("message", event.Message).Msg("telegram bot received push event")
 
 	recipient := tele.ChatID(b.cfg.GetTelegramOwnerID())
 	_ = b.sender.sendMarkdown(ctx, recipient, event.Message, true)

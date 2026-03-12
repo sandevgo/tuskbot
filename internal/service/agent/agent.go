@@ -123,7 +123,6 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 
 	sanitizedMsgs := sanitizeToolCalls(ctx, messages)
 	final, err := a.runner.Run(ctx, sanitizedMsgs, tools, func(m core.Message) error {
-		logger.Info().Str("role", m.Role).Msg("6. Runner yielded a message")
 		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
 	})
 
@@ -132,7 +131,8 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	a.events.Publish(ctx, core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, final))
+	event := core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, final)
+	a.events.Publish(ctx, event)
 	return nil
 }
 
