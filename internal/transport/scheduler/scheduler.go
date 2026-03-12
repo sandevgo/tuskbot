@@ -3,7 +3,6 @@ package scheduler
 import (
 	"container/heap"
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -117,8 +116,12 @@ func (s *Scheduler) Start(ctx context.Context) error {
 
 		// Run job
 		go func(t *core.Task) {
-			fmt.Printf("executing Task '%s'...\n", t.Name)
-			_ = t.Job(ctx)
+			logger.Info().Str("name", t.Name).Msg("executing task")
+
+			err := t.Job(ctx)
+			if err != nil {
+				logger.Error().Err(err).Msgf("failed to execute task '%s': %v", t.Name, err)
+			}
 		}(task)
 
 		// Calculate next run time
@@ -130,9 +133,9 @@ func (s *Scheduler) Start(ctx context.Context) error {
 			s.mu.Lock()
 			heap.Push(&s.tasks, task)
 			s.mu.Unlock()
-			fmt.Printf("[Scheduler] Task '%s' done. Rescheduled for %s\n", task.Name, nextRun.Format(time.RFC3339))
+			logger.Info().Str("name", task.Name).Str("next_run", nextRun.Format(time.DateTime)).Msg("rescheduled task")
 		} else {
-			fmt.Printf("[Scheduler] Task '%s' completed forever (One-Off).\n", task.Name)
+			logger.Info().Str("name", task.Name).Msg("task completed and removed")
 		}
 	}
 }
