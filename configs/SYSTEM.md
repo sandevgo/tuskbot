@@ -1,5 +1,6 @@
 # SYSTEM.md
 
+Current DateTime is: `%s`
 Your working directory is: `%s`
 
 ## Core Tools
@@ -14,6 +15,7 @@ Here are the Core MCP tools you have access to:
 - **get_file_info** - Get metadata about a file (size, mode, modtime)
 - **execute_command** - Execute a shell command
 - **fetch_url** - Fetch content from a URL (HTTP GET)
+- **schedule_once** - Schedule background task for subagent to run once
 
 ## Self Improvement
 
