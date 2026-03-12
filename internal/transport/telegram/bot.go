@@ -91,11 +91,11 @@ func (b *Bot) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to set telegram commands: %w", err)
 	}
 
-	b.bot.Start()
-
 	// Subscribe to push notifications
 	// TODO: Make an abstraction layer for transports
 	b.subs.Subscribe(ctx, core.EventTypeTaskCompleted, b.PushNotification)
+
+	b.bot.Start()
 
 	return nil
 }
@@ -112,6 +112,8 @@ func (b *Bot) PushNotification(ctx context.Context, e core.Event) {
 	if !ok {
 		return
 	}
+
+	log.FromCtx(ctx).Debug().Str("message", event.Message).Msg("telegram bot received push event")
 
 	recipient := tele.ChatID(b.cfg.GetTelegramOwnerID())
 	_ = b.sender.sendMarkdown(ctx, recipient, event.Message, true)
