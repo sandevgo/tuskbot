@@ -92,7 +92,6 @@ func (b *Bot) Start(ctx context.Context) error {
 	}
 
 	// Subscribe to push notifications
-	// TODO: Make an abstraction layer for transports
 	b.subs.Subscribe(ctx, core.EventTypeTaskCompleted, b.PushNotification)
 
 	b.bot.Start()
