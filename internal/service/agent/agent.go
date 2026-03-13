@@ -12,155 +12,145 @@ import (
 const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
-	ai       core.AIProvider
-	mcp      core.MCPServer
-	memory   core.Memory
-	executor *Executor
+	runner *ReActRunner
+	mcp    core.MCPServer
+	memory core.Memory
+	events core.EventPublisher
+	lock   chan struct{}
 }
 
 func NewAgent(
 	ai core.AIProvider,
 	mcp core.MCPServer,
 	memory core.Memory,
-	executor *Executor,
+	executor core.ToolExecutor,
+	events core.EventPublisher,
 ) *Agent {
+	lock := make(chan struct{}, 1)
+	lock <- struct{}{}
 	return &Agent{
-		ai:       ai,
-		mcp:      mcp,
-		memory:   memory,
-		executor: executor,
+		runner: NewReActRunner(ai, executor, ChatTimeout),
+		mcp:    mcp,
+		memory: memory,
+		events: events,
+		lock:   lock,
 	}
 }
 
-func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate func(core.Message)) (string, error) {
+func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate core.UpdateFunc) (string, error) {
+	select {
+	case <-ctx.Done():
+		return "", nil
+	case <-a.lock:
+		defer func() { a.lock <- struct{}{} }()
+	}
+
 	logger := log.FromCtx(ctx)
 
 	logger.Debug().
 		Str("session_id", sessionID).
 		Msg("agent received user request")
 
-	// 1. Record the User Input
 	userMsg := core.Message{Role: core.RoleUser, Content: input}
 	if err := a.memory.SaveMessage(ctx, sessionID, userMsg); err != nil {
 		return "", fmt.Errorf("failed to save user message: %w", err)
 	}
 
-	// 2. Recall the "State of the World"
-	// Memory returns [System Prompt + RAG Context + Chronological History]
 	messages, err := a.memory.GetFullContext(ctx, sessionID, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
 
-	// Sanitize history to prevent provider errors (orphaned tool calls)
-	messages = sanitizeToolCalls(ctx, messages)
-
-	// 3. Prepare Tools
 	tools, err := a.mcp.GetTools(ctx)
 	if err != nil {
 		return "", fmt.Errorf("failed to get tools: %w", err)
 	}
 
-	var finalContent string
-
-	// 4. ReAct Loop
-	for {
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent sending request to llm")
-
-		chatCtx, cancel := context.WithTimeout(ctx, ChatTimeout)
-		responseMsg, err := a.ai.Chat(chatCtx, messages, tools)
-		cancel()
-
-		if err != nil {
-			return "", fmt.Errorf("ai chat error: %w", err)
+	finalContent, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(msg core.Message) error {
+		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
+			return fmt.Errorf("failed to save message: %w", err)
 		}
 
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent received llm response")
-
-		// Save Assistant Response and update local context
-		if err := a.memory.SaveMessage(ctx, sessionID, responseMsg); err != nil {
-			return "", fmt.Errorf("failed to save assistant message: %w", err)
-		}
-		messages = append(messages, responseMsg)
-
-		if onUpdate != nil {
-			onUpdate(responseMsg)
+		if msg.Role == core.RoleAssistant && onUpdate != nil {
+			onUpdate(msg)
 		}
 
-		if responseMsg.Content != "" {
-			finalContent = responseMsg.Content
-		}
+		return nil
+	})
 
-		// If no tools are called, we are done
-		if len(responseMsg.ToolCalls) == 0 {
-			break
-		}
-
-		// 5. Execute Tool Calls
-		logger.Debug().
-			Str("session_id", sessionID).
-			Msg("agent called mcp tool")
-
-		toolResults := a.executor.Execute(ctx, responseMsg.ToolCalls)
-
-		for _, toolMsg := range toolResults {
-			if err := a.memory.SaveMessage(ctx, sessionID, toolMsg); err != nil {
-				return "", fmt.Errorf("failed to save tool message: %w", err)
-			}
-			messages = append(messages, toolMsg)
-		}
-
-		// Update tool set (if model added new tools)
-		tools, err = a.mcp.GetTools(ctx)
-		if err != nil {
-			return "", fmt.Errorf("failed to get tools: %w", err)
-		}
+	if err != nil {
+		return "", err
 	}
 
 	return finalContent, nil
 }
 
-// sanitizeToolCalls ensures the message history is valid for LLM consumption.
-// It removes Tool messages that do not have a corresponding preceding Assistant tool call.
-func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
+func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) error {
 	logger := log.FromCtx(ctx)
+
+	msg := core.Message{
+		Role:    core.RoleSystem,
+		Content: fmt.Sprintf("Background Task '%s' completed.\n%s", task.Name, result),
+	}
+	if err := a.memory.SaveMessage(ctx, task.OwnerSessionID, msg); err != nil {
+		return err
+	}
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-a.lock:
+		defer func() { a.lock <- struct{}{} }()
+	}
+
+	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
+	if err != nil {
+		return err
+	}
+
+	messages = append(messages, core.Message{
+		Role:    core.RoleUser,
+		Content: "Please inform me about the completed background task and take any necessary follow-up actions.",
+	})
+
+	tools, err := a.mcp.GetTools(ctx)
+	if err != nil {
+		return err
+	}
+
+	sanitizedMsgs := sanitizeToolCalls(ctx, messages)
+	final, err := a.runner.Run(ctx, sanitizedMsgs, tools, func(m core.Message) error {
+		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
+	})
+
+	if err != nil {
+		logger.Error().Err(err).Msg("Runner returned an error")
+		return err
+	}
+
+	event := core.NewChatEvent(core.EventTypeTaskCompleted, task.OwnerSessionID, final)
+	a.events.Publish(ctx, event)
+	return nil
+}
+
+func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Message {
 	var sanitized []core.Message
-	var validToolCallIDs map[string]bool
-
-	for i, msg := range messages {
+	var validIDs map[string]bool
+	for _, msg := range messages {
 		switch msg.Role {
-		case core.RoleUser, core.RoleSystem:
-			// User/System messages reset the tool context
-			validToolCallIDs = nil
-			sanitized = append(sanitized, msg)
-
 		case core.RoleAssistant:
-			// Assistant message establishes new tool context
-			validToolCallIDs = make(map[string]bool)
+			validIDs = make(map[string]bool)
 			for _, tc := range msg.ToolCalls {
-				validToolCallIDs[tc.ID] = true
+				validIDs[tc.ID] = true
 			}
 			sanitized = append(sanitized, msg)
-
 		case core.RoleTool:
-			// Tool message must match a valid ID from the immediate preceding assistant turn
-			if validToolCallIDs != nil && validToolCallIDs[msg.ToolCallID] {
+			if validIDs != nil && validIDs[msg.ToolCallID] {
 				sanitized = append(sanitized, msg)
-			} else {
-				logger.Warn().
-					Int("msg_index", i).
-					Str("tool_call_id", msg.ToolCallID).
-					Interface("valid_ids_in_context", validToolCallIDs).
-					Msg("dropping invalid tool message (orphaned or ID mismatch)")
 			}
-
 		default:
-			// Keep other message types
 			sanitized = append(sanitized, msg)
+			validIDs = nil
 		}
 	}
 	return sanitized

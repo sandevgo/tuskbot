@@ -1,9 +1,5 @@
 package core
 
-import (
-	"encoding/json"
-)
-
 const (
 	RoleUser      = "user"
 	RoleAssistant = "assistant"
@@ -18,27 +14,9 @@ const (
 	TaskVersion       = "0.1.0"
 )
 
-type Function struct {
-	Name        string          `json:"name"`
-	Description string          `json:"description,omitempty"`
-	Parameters  json.RawMessage `json:"parameters"` // JSON Schema
-}
-
-type Tool struct {
-	Type     string   `json:"type"`
-	Function Function `json:"function"`
-}
-
-type ToolCall struct {
-	ID       string       `json:"id"`
-	Type     string       `json:"type"`
-	Function FunctionCall `json:"function"`
-}
-
-type FunctionCall struct {
-	Name      string `json:"name"`
-	Arguments string `json:"arguments"`
-}
+const (
+	CtxKeySessionID = "session_id"
+)
 
 type Message struct {
 	Role       string     `json:"role"`

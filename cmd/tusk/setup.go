@@ -9,14 +9,18 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/sandevgo/tuskbot/internal/config"
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/internal/providers/eventbus"
 	"github.com/sandevgo/tuskbot/internal/providers/llm"
 	"github.com/sandevgo/tuskbot/internal/providers/mcp"
+	"github.com/sandevgo/tuskbot/internal/providers/mcp/tools"
 	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
 	"github.com/sandevgo/tuskbot/internal/service/state"
+	"github.com/sandevgo/tuskbot/internal/service/swarm"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
+	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
 	"github.com/sandevgo/tuskbot/pkg/log"
 	"github.com/sandevgo/tuskbot/pkg/srv"
@@ -62,6 +66,9 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	embedder := rag.NewEmbedder(embedModel)
 
+	// 4.1 EventBus
+	ebus := eventbus.New(100)
+
 	// 5. Knowledge Extractor Service
 	// Runs in background to convert conversation history into atomic facts
 	extractor := memory.NewExtractor(knowledgeRepo, aiProvider, embedder)
@@ -83,7 +90,7 @@ func NewServices(ctx context.Context) []srv.Service {
 		messagesRepo,
 		knowledgeRepo,
 		embedder,
-		memory.NewSysPrompt(appCfg),
+		memory.NewSysPrompt(config.GetRuntimePath(), appCfg),
 	)
 
 	executor := agent.NewExecutor(mcpManager)
@@ -94,14 +101,34 @@ func NewServices(ctx context.Context) []srv.Service {
 		mcpManager,
 		mem,
 		executor,
+		ebus,
 	)
+
+	// Scheduler
+	scheduleService := scheduler.NewScheduler()
+	services = append(services, scheduleService)
+
+	// TaskRepo
+	taskRepo := sqlite.NewTaskRepo(db)
+
+	// SubAgent
+	subAgent := agent.NewSubAgent(aiProvider, mcpManager, mem, executor)
+
+	// Swarm
+	swarmService := swarm.NewService(scheduleService, ag, subAgent, taskRepo)
+
+	// Register tools
+	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))
+	mcpManager.RegisterNativeTool(tools.NewShell(appCfg.GetRuntimePath()))
+	mcpManager.RegisterNativeTool(tools.NewFetch())
+	mcpManager.RegisterNativeTool(tools.NewSchedule(swarmService))
 
 	// commands
 	commands := command.NewCommands(appCfg, globState, mcpManager)
 	cmdRouter := command.New(commands)
 
 	// 8. Transports
-	transports, err := initTransports(ctx, appCfg, ag, cmdRouter)
+	transports, err := initTransports(ctx, appCfg, ag, cmdRouter, ebus)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize transports")
 	}
@@ -122,7 +149,6 @@ func initStorage(ctx context.Context, cfg *config.AppConfig) (*sql.DB, core.Mess
 func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	filStorage := mcp.NewFileStorage(cfg.GetMCPConfigPath())
 	mgr, err := mcp.NewService(
-		config.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
 		mcp.NewToolCache(),
@@ -134,12 +160,18 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 	return mgr, nil
 }
 
-func initTransports(ctx context.Context, cfg *config.AppConfig, ag *agent.Agent, router core.CmdRouter) ([]srv.Service, error) {
+func initTransports(
+	ctx context.Context,
+	cfg *config.AppConfig,
+	ag *agent.Agent,
+	router core.CmdRouter,
+	subs core.EventSubscriber,
+) ([]srv.Service, error) {
 	var services []srv.Service
 
 	// Telegram Bot
 	if cfg.IsTelegramSelected() {
-		bot, err := telegram.NewBot(cfg, ag, router)
+		bot, err := telegram.NewBot(cfg, ag, router, subs)
 		if err != nil {
 			return nil, err
 		}

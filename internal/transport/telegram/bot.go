@@ -16,8 +16,9 @@ const baseContextKey = "base_context"
 type Bot struct {
 	bot     *tele.Bot
 	cfg     core.TelegramConfig
-	agent   *agent.Agent
+	agent   core.Agent
 	router  core.CmdRouter
+	subs    core.EventSubscriber
 	ownerID int64
 	sender  *sender
 }
@@ -26,6 +27,7 @@ func NewBot(
 	cfg core.TelegramConfig,
 	agent *agent.Agent,
 	router core.CmdRouter,
+	subs core.EventSubscriber,
 ) (*Bot, error) {
 	pref := tele.Settings{
 		Token:  cfg.GetTelegramToken(),
@@ -42,6 +44,7 @@ func NewBot(
 		cfg:     cfg,
 		agent:   agent,
 		router:  router,
+		subs:    subs,
 		ownerID: cfg.GetTelegramOwnerID(),
 		sender:  newSender(b),
 	}, nil
@@ -88,7 +91,11 @@ func (b *Bot) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to set telegram commands: %w", err)
 	}
 
+	// Subscribe to push notifications
+	b.subs.Subscribe(ctx, core.EventTypeTaskCompleted, b.PushNotification)
+
 	b.bot.Start()
+
 	return nil
 }
 
@@ -97,11 +104,28 @@ func (b *Bot) Shutdown(ctx context.Context) error {
 	return nil
 }
 
+// PushNotification handles the task completed event
+// Currently only owner session is notified
+func (b *Bot) PushNotification(ctx context.Context, e core.Event) {
+	log.FromCtx(ctx).Debug().Msg("telegram bot received push event")
+
+	event, ok := e.(*core.ChatEvent)
+	if !ok {
+		return
+	}
+
+	recipient := tele.ChatID(b.cfg.GetTelegramOwnerID())
+	_ = b.sender.sendMarkdown(ctx, recipient, event.Message, true)
+}
+
 func (b *Bot) handleMessage(c tele.Context) error {
 	// Create a context for this request
 	ctx := c.Get(baseContextKey).(context.Context)
 	logger := log.FromCtx(ctx)
+
+	// Save session ID
 	sessionID := fmt.Sprintf("telegram-%d", c.Chat().ID)
+	ctx = context.WithValue(ctx, core.CtxKeySessionID, sessionID)
 
 	// Check if it's a command
 	if response, isCmd := b.router.Execute(ctx, sessionID, c.Text()); isCmd {

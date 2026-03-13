@@ -34,7 +34,7 @@ func NewMemory(
 }
 
 func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string) ([]core.Message, error) {
-	messages := s.prompter.Build()
+	messages := s.prompter.BuildForAgent()
 
 	if rag := s.getContext(ctx, sessionID, userQuery); rag != "" {
 		messages = append(messages, core.Message{
@@ -89,7 +89,7 @@ func (s *Memory) getContext(ctx context.Context, sessionID, userQuery string) st
 	var sb strings.Builder
 
 	if len(facts) > 0 {
-		sb.WriteString("\n### Relevant Knowledge\n")
+		sb.WriteString("\n### Relevant Knowledge (RAG)\n")
 		sb.WriteString(strings.Join(facts, "\n"))
 		sb.WriteString("\n")
 	}
@@ -105,4 +105,13 @@ func (s *Memory) getContext(ctx context.Context, sessionID, userQuery string) st
 
 func (s *Memory) SaveMessage(ctx context.Context, sessionID string, msg core.Message) error {
 	return s.msgRepo.AddMessage(ctx, sessionID, msg)
+}
+
+func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction string) ([]core.Message, error) {
+	messages := s.prompter.BuildForSubAgent()
+	messages = append(messages, core.Message{
+		Role:    core.RoleUser,
+		Content: instruction,
+	})
+	return messages, nil
 }

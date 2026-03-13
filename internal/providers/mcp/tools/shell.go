@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 const executeCommandSchema = `
@@ -95,13 +97,17 @@ func (s *Shell) truncateOutput(output string) string {
 func (s *Shell) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
-	Handler     func(context.Context, json.RawMessage) (string, error)
+	Handler     core.NativeHandler
 } {
 	return map[string]struct {
 		Description string
 		Schema      string
-		Handler     func(context.Context, json.RawMessage) (string, error)
+		Handler     core.NativeHandler
 	}{
-		"execute_command": {"Execute a shell command", executeCommandSchema, s.ExecuteCommand},
+		"execute_command": {
+			Description: "Execute a shell command",
+			Schema:      executeCommandSchema,
+			Handler:     s.ExecuteCommand,
+		},
 	}
 }

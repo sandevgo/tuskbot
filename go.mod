@@ -3,11 +3,11 @@ module github.com/sandevgo/tuskbot
 go 1.25.6
 
 require (
-	github.com/caarlos0/env/v11 v11.3.1
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
 	github.com/inbucket/html2text v1.0.0
 	github.com/joho/godotenv v1.5.1

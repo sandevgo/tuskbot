@@ -3,6 +3,8 @@ package core
 import (
 	"context"
 	"time"
+
+	"github.com/gofrs/uuid"
 )
 
 type MessagesRepository interface {
@@ -18,6 +20,13 @@ type KnowledgeRepository interface {
 	MarkMessagesExtracted(ctx context.Context, messageIDs []int64) error
 	GetUnextractedMessages(ctx context.Context, limit int) ([]StoredMessage, error)
 	GetRecentExtractedMessages(ctx context.Context, limit int, before time.Time, threshold time.Duration) ([]StoredMessage, error)
+}
+
+type TaskRepository interface {
+	Create(ctx context.Context, task *StoredTask) error
+	GetByName(ctx context.Context, name string) (*StoredTask, error)
+	Cancel(ctx context.Context, name string) error
+	List(ctx context.Context) ([]StoredTask, error)
 }
 
 type StoredMessage struct {
@@ -41,4 +50,17 @@ type StoredKnowledge struct {
 	Embedding []float32  `json:"-"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+type StoredTask struct {
+	ID             uuid.UUID
+	Name           string
+	OwnerSessionID string
+	Prompt         string
+	TriggerType    string
+	TriggerSpec    string
+	LastRun        time.Time
+	IsActive       bool
+	CreatedAt      time.Time
+	UpdatedAt      *time.Time
 }

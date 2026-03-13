@@ -10,7 +10,7 @@ import (
 
 const (
 	EmbedderBatchSize    = 30
-	EmbedderPollInterval = 5 * time.Second
+	EmbedderPollInterval = 5 * time.Minute
 )
 
 type EmbedderWorker struct {

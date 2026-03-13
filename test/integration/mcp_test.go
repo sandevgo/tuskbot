@@ -99,7 +99,6 @@ func initMcp(ctx context.Context, t *testing.T) *mcp.Service {
 
 	filStorage := mcp.NewFileStorage(appCfg.GetMCPConfigPath())
 	mcpService, err := mcp.NewService(
-		config.GetRuntimePath(),
 		mcp.NewPool(),
 		mcp.NewRegistry(filStorage),
 		mcp.NewToolCache(),
