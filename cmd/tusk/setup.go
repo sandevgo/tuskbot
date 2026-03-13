@@ -17,7 +17,6 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
-	"github.com/sandevgo/tuskbot/internal/service/session"
 	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/service/swarm"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
@@ -103,7 +102,6 @@ func NewServices(ctx context.Context) []srv.Service {
 		mem,
 		executor,
 		ebus,
-		session.NewManager(),
 	)
 
 	// Scheduler

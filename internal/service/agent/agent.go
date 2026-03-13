@@ -12,11 +12,11 @@ import (
 const ChatTimeout = 2 * time.Minute
 
 type Agent struct {
-	runner   *ReActRunner
-	mcp      core.MCPServer
-	memory   core.Memory
-	events   core.EventPublisher
-	sessions core.SessionManager
+	runner *ReActRunner
+	mcp    core.MCPServer
+	memory core.Memory
+	events core.EventPublisher
+	lock   chan struct{}
 }
 
 func NewAgent(
@@ -25,22 +25,25 @@ func NewAgent(
 	memory core.Memory,
 	executor core.ToolExecutor,
 	events core.EventPublisher,
-	sessions core.SessionManager,
 ) *Agent {
+	lock := make(chan struct{}, 1)
+	lock <- struct{}{}
 	return &Agent{
-		runner:   NewReActRunner(ai, executor, ChatTimeout),
-		mcp:      mcp,
-		memory:   memory,
-		events:   events,
-		sessions: sessions,
+		runner: NewReActRunner(ai, executor, ChatTimeout),
+		mcp:    mcp,
+		memory: memory,
+		events: events,
+		lock:   lock,
 	}
 }
 
 func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdate core.UpdateFunc) (string, error) {
-	if !a.sessions.TryLock(sessionID) {
-		return "", fmt.Errorf("agent is busy")
+	select {
+	case <-ctx.Done():
+		return "", nil
+	case <-a.lock:
+		defer func() { a.lock <- struct{}{} }()
 	}
-	defer a.sessions.Unlock(sessionID)
 
 	logger := log.FromCtx(ctx)
 
@@ -93,18 +96,12 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	for {
-		if a.sessions.TryLock(task.OwnerSessionID) {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(1 * time.Second):
-			continue
-		}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-a.lock:
+		defer func() { a.lock <- struct{}{} }()
 	}
-	defer a.sessions.Unlock(task.OwnerSessionID)
 
 	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
 	if err != nil {
