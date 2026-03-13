@@ -114,7 +114,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	// SubAgent
 	subAgent := agent.NewSubAgent(aiProvider, mcpManager, mem, executor)
 
-	// Swam
+	// Swarm
 	swarmService := swarm.NewService(scheduleService, ag, subAgent, taskRepo)
 
 	// Register tools
