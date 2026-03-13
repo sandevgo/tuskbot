@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-func TestParseScheduleAdd(t *testing.T) {
+func TestParseScheduleOnce(t *testing.T) {
 	ctx := context.Background()
+
+	// Create a valid RFC3339 timestamp for testing
+	validTime := time.Now().Add(1 * time.Hour).Format(time.RFC3339)
 
 	tests := []struct {
 		name      string
@@ -21,35 +25,22 @@ func TestParseScheduleAdd(t *testing.T) {
 	}{
 		{
 			name:    "valid input with all fields",
-			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":"do something"}`),
+			args:    json.RawMessage(`{"name":"test-task","at":"` + validTime + `","prompt":"do something"}`),
 			wantErr: false,
 			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeOnce,
-				TaskName:    "test-task",
-				TimeSpec:    "10m",
-				Instruction: "do something",
+				TaskName: "test-task",
+				At:       validTime,
+				Prompt:   "do something",
 			},
 		},
 		{
-			name:    "valid input with cron type",
-			args:    json.RawMessage(`{"type":"cron","task_name":"daily-job","time_spec":"0 9 * * *","instruction":"send daily report"}`),
+			name:    "valid input with future time",
+			args:    json.RawMessage(`{"name":"future-task","at":"2025-12-31T23:59:59Z","prompt":"end of year task"}`),
 			wantErr: false,
 			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeCron,
-				TaskName:    "daily-job",
-				TimeSpec:    "0 9 * * *",
-				Instruction: "send daily report",
-			},
-		},
-		{
-			name:    "valid input with interval type",
-			args:    json.RawMessage(`{"type":"interval","task_name":"interval-task","time_spec":"30s","instruction":"check status"}`),
-			wantErr: false,
-			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeInterval,
-				TaskName:    "interval-task",
-				TimeSpec:    "30s",
-				Instruction: "check status",
+				TaskName: "future-task",
+				At:       "2025-12-31T23:59:59Z",
+				Prompt:   "end of year task",
 			},
 		},
 		{
@@ -68,99 +59,102 @@ func TestParseScheduleAdd(t *testing.T) {
 			name:    "empty json object",
 			args:    json.RawMessage(`{}`),
 			wantErr: true,
-			errMsg:  "invalid type",
+			errMsg:  "name cannot be empty",
 		},
 		{
-			name:    "invalid type",
-			args:    json.RawMessage(`{"type":"invalid","task_name":"test","time_spec":"10m","instruction":"do it"}`),
+			name:    "missing name",
+			args:    json.RawMessage(`{"at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "invalid type",
+			errMsg:  "name cannot be empty",
 		},
 		{
-			name:    "missing type",
-			args:    json.RawMessage(`{"task_name":"test","time_spec":"10m","instruction":"do it"}`),
+			name:    "empty name",
+			args:    json.RawMessage(`{"name":"","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "invalid type",
+			errMsg:  "name cannot be empty",
 		},
 		{
-			name:    "empty task_name",
-			args:    json.RawMessage(`{"type":"once","task_name":"","time_spec":"10m","instruction":"do it"}`),
+			name:    "whitespace only name",
+			args:    json.RawMessage(`{"name":"   ","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "task_name cannot be empty",
+			errMsg:  "name cannot be empty",
 		},
 		{
-			name:    "whitespace only task_name",
-			args:    json.RawMessage(`{"type":"once","task_name":"   ","time_spec":"10m","instruction":"do it"}`),
+			name:    "name with spaces",
+			args:    json.RawMessage(`{"name":"test task","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "task_name cannot be empty",
+			errMsg:  "name must be a valid slug",
 		},
 		{
-			name:    "task_name with spaces",
-			args:    json.RawMessage(`{"type":"once","task_name":"test task","time_spec":"10m","instruction":"do it"}`),
+			name:    "name with special characters",
+			args:    json.RawMessage(`{"name":"test@task!","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "task_name must be a valid slug",
+			errMsg:  "name must be a valid slug",
 		},
 		{
-			name:    "task_name with special characters",
-			args:    json.RawMessage(`{"type":"once","task_name":"test@task!","time_spec":"10m","instruction":"do it"}`),
+			name:    "name with underscores",
+			args:    json.RawMessage(`{"name":"test_task","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: true,
-			errMsg:  "task_name must be a valid slug",
+			errMsg:  "name must be a valid slug",
 		},
 		{
-			name:    "empty time_spec",
-			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"","instruction":"do it"}`),
-			wantErr: true,
-			errMsg:  "time_spec cannot be empty",
-		},
-		{
-			name:    "whitespace only time_spec",
-			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"   ","instruction":"do it"}`),
-			wantErr: true,
-			errMsg:  "time_spec cannot be empty",
-		},
-		{
-			name:    "empty instruction",
-			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":""}`),
-			wantErr: true,
-			errMsg:  "instruction cannot be empty",
-		},
-		{
-			name:    "whitespace only instruction",
-			args:    json.RawMessage(`{"type":"once","task_name":"test-task","time_spec":"10m","instruction":"   "}`),
-			wantErr: true,
-			errMsg:  "instruction cannot be empty",
-		},
-		{
-			name:    "task_name with underscores and numbers",
-			args:    json.RawMessage(`{"type":"once","task_name":"test_task_123","time_spec":"10m","instruction":"do it"}`),
-			wantErr: true,
-			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeOnce,
-				TaskName:    "test_task_123",
-				TimeSpec:    "10m",
-				Instruction: "do it",
-			},
-		},
-		{
-			name:    "task_name with uppercase",
-			args:    json.RawMessage(`{"type":"once","task_name":"Test-Task","time_spec":"10m","instruction":"do it"}`),
+			name:    "name with uppercase",
+			args:    json.RawMessage(`{"name":"Test-Task","at":"` + validTime + `","prompt":"do it"}`),
 			wantErr: false,
 			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeOnce,
-				TaskName:    "Test-Task",
-				TimeSpec:    "10m",
-				Instruction: "do it",
+				TaskName: "Test-Task",
+				At:       validTime,
+				Prompt:   "do it",
 			},
+		},
+		{
+			name:    "name with numbers and hyphens",
+			args:    json.RawMessage(`{"name":"test-task-123","at":"` + validTime + `","prompt":"do it"}`),
+			wantErr: false,
+			wantQuery: &ScheduleOnceQuery{
+				TaskName: "test-task-123",
+				At:       validTime,
+				Prompt:   "do it",
+			},
+		},
+		{
+			name:    "empty at",
+			args:    json.RawMessage(`{"name":"test-task","at":"","prompt":"do it"}`),
+			wantErr: true,
+			errMsg:  "at cannot be empty",
+		},
+		{
+			name:    "whitespace only at",
+			args:    json.RawMessage(`{"name":"test-task","at":"   ","prompt":"do it"}`),
+			wantErr: true,
+			errMsg:  "at cannot be empty",
+		},
+		{
+			name:    "invalid at format",
+			args:    json.RawMessage(`{"name":"test-task","at":"not-a-date","prompt":"do it"}`),
+			wantErr: true,
+			errMsg:  "at must be a valid RFC3339 timestamp",
+		},
+		{
+			name:    "empty prompt",
+			args:    json.RawMessage(`{"name":"test-task","at":"` + validTime + `","prompt":""}`),
+			wantErr: true,
+			errMsg:  "prompt cannot be empty",
+		},
+		{
+			name:    "whitespace only prompt",
+			args:    json.RawMessage(`{"name":"test-task","at":"` + validTime + `","prompt":"   "}`),
+			wantErr: true,
+			errMsg:  "prompt cannot be empty",
 		},
 		{
 			name:    "trimmed fields",
-			args:    json.RawMessage(`{"type":"once","task_name":"  test-task  ","time_spec":"  10m  ","instruction":"  do it  "}`),
+			args:    json.RawMessage(`{"name":"  test-task  ","at":"  ` + validTime + `  ","prompt":"  do it  "}`),
 			wantErr: false,
 			wantQuery: &ScheduleOnceQuery{
-				Type:        core.TriggerTypeOnce,
-				TaskName:    "test-task",
-				TimeSpec:    "10m",
-				Instruction: "do it",
+				TaskName: "test-task",
+				At:       validTime,
+				Prompt:   "do it",
 			},
 		},
 	}
@@ -190,17 +184,14 @@ func TestParseScheduleAdd(t *testing.T) {
 				return
 			}
 
-			if got.Type != tt.wantQuery.Type {
-				t.Errorf("parseScheduleOnce() Type = %v, want %v", got.Type, tt.wantQuery.Type)
-			}
 			if got.TaskName != tt.wantQuery.TaskName {
 				t.Errorf("parseScheduleOnce() TaskName = %v, want %v", got.TaskName, tt.wantQuery.TaskName)
 			}
-			if got.TimeSpec != tt.wantQuery.TimeSpec {
-				t.Errorf("parseScheduleOnce() TimeSpec = %v, want %v", got.TimeSpec, tt.wantQuery.TimeSpec)
+			if got.At != tt.wantQuery.At {
+				t.Errorf("parseScheduleOnce() At = %v, want %v", got.At, tt.wantQuery.At)
 			}
-			if got.Instruction != tt.wantQuery.Instruction {
-				t.Errorf("parseScheduleOnce() Instruction = %v, want %v", got.Instruction, tt.wantQuery.Instruction)
+			if got.Prompt != tt.wantQuery.Prompt {
+				t.Errorf("parseScheduleOnce() Prompt = %v, want %v", got.Prompt, tt.wantQuery.Prompt)
 			}
 		})
 	}
@@ -336,4 +327,58 @@ func TestParseScheduleCancel(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestScheduleGetDefinitions(t *testing.T) {
+	swarm := &mockSwarm{}
+	s := NewSchedule(swarm)
+
+	defs := s.GetDefinitions()
+
+	// Check that all expected tools are defined
+	expectedTools := []string{"schedule_once", "schedule_list", "schedule_cancel"}
+	for _, tool := range expectedTools {
+		if _, ok := defs[tool]; !ok {
+			t.Errorf("GetDefinitions() missing tool: %s", tool)
+		}
+	}
+
+	// Check schedule_once has required fields
+	if defs["schedule_once"].Schema == "" {
+		t.Error("schedule_once schema is empty")
+	}
+	if defs["schedule_once"].Handler == nil {
+		t.Error("schedule_once handler is nil")
+	}
+
+	// Check schedule_list has required fields
+	if defs["schedule_list"].Schema == "" {
+		t.Error("schedule_list schema is empty")
+	}
+	if defs["schedule_list"].Handler == nil {
+		t.Error("schedule_list handler is nil")
+	}
+
+	// Check schedule_cancel has required fields
+	if defs["schedule_cancel"].Schema == "" {
+		t.Error("schedule_cancel schema is empty")
+	}
+	if defs["schedule_cancel"].Handler == nil {
+		t.Error("schedule_cancel handler is nil")
+	}
+}
+
+// Mock implementation for testing
+type mockSwarm struct{}
+
+func (m *mockSwarm) ScheduleTask(ctx context.Context, sessionID, name, taskType, timeSpec, instruction string) error {
+	return nil
+}
+
+func (m *mockSwarm) CancelTask(ctx context.Context, name string) error {
+	return nil
+}
+
+func (m *mockSwarm) ListTasks(ctx context.Context) ([]core.Task, error) {
+	return []core.Task{}, nil
 }
