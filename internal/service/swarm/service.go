@@ -73,25 +73,25 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 	return nil
 }
 
-func (s *Service) CancelTask(ctx context.Context, name string) error {
-	storedTask, err := s.taskRepo.GetByName(ctx, name)
+func (s *Service) CancelTask(ctx context.Context, id string) error {
+	err := s.taskRepo.Cancel(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to get task by name %w", err)
-	}
-
-	task, err := s.toDomain(storedTask)
-	if err != nil {
-		return fmt.Errorf("failed to convert to domain task %w", err)
+		return fmt.Errorf("failed to cancel task in repo: %w", err)
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Remove from local tracking
-	delete(s.tasks, name)
-	s.scheduler.DelTask(task)
+	// Find task by ID in local tracking
+	for name, task := range s.tasks {
+		if task.ID.String() == id {
+			s.scheduler.DelTask(task)
+			delete(s.tasks, name)
+			return nil
+		}
+	}
 
-	return nil
+	return fmt.Errorf("task not found in local tracking: %s", id)
 }
 
 func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {

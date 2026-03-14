@@ -22,7 +22,7 @@ type ScheduleOnceQuery struct {
 }
 
 type ScheduleCancelQuery struct {
-	TaskName string `json:"task_id"`
+	TaskID string `json:"task_id"`
 }
 
 const scheduleOnce = `
@@ -93,12 +93,12 @@ const scheduleCancelSchema = `
   "parameters": {
     "type": "object",
     "properties": {
-      "task_name": {
+      "task_id": {
         "type": "string",
-        "description": "The unique slug-formatted name of the task to be cancelled (e.g., 'write-hokku-task')."
+        "description": "The unique UUID of the task to be cancelled."
       }
     },
-    "required": ["task_name"]
+    "required": ["task_id"]
   }
 }
 `
@@ -170,7 +170,7 @@ func (s *Schedule) handleCancel(ctx context.Context, args json.RawMessage) (stri
 		return "", err
 	}
 
-	err = s.swarm.CancelTask(ctx, query.TaskName)
+	err = s.swarm.CancelTask(ctx, query.TaskID)
 	if err != nil {
 		return "", err
 	}
@@ -204,7 +204,7 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 			Handler:     s.handleList,
 		},
 		"schedule_cancel": {
-			Description: "Cancel and remove a scheduled job by name",
+			Description: "Cancel and remove a scheduled job by ID",
 			Schema:      scheduleCancelSchema,
 			Handler:     s.handleCancel,
 		},
@@ -302,13 +302,8 @@ func parseScheduleCancel(ctx context.Context, args json.RawMessage) (*ScheduleCa
 		return nil, fmt.Errorf("arguments cannot be null")
 	}
 
-	// Validate TaskName (task_id in JSON)
-	input.TaskName = strings.TrimSpace(input.TaskName)
-	if input.TaskName == "" {
+	if input.TaskID == "" {
 		return nil, fmt.Errorf("task_id cannot be empty")
-	}
-	if !slugRegex.MatchString(input.TaskName) {
-		return nil, fmt.Errorf("task_id must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
 	}
 
 	return input, nil
