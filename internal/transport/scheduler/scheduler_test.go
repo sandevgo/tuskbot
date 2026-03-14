@@ -184,7 +184,11 @@ func TestScheduler_CronTrigger(t *testing.T) {
 		{
 			name:           "every day at 9 AM",
 			cronExpression: "0 9 * * *",
-			expectedNext:   time.Now().Truncate(24 * time.Hour).AddDate(0, 0, 1).Hour(9).Minute(0).Second(0),
+			expectedNext:   func() time.Time {
+				now := time.Now()
+				tomorrow := now.AddDate(0, 0, 1)
+				return time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 9, 0, 0, 0, now.Location())
+			}(),
 		},
 	}
 
