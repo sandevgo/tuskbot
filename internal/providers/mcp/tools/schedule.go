@@ -8,13 +8,17 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type ScheduleOnceQuery struct {
-	TaskName string `json:"name"`
-	At       string `json:"at"`
-	Prompt   string `json:"prompt"`
+	TaskName  string `json:"name"`
+	At        string `json:"at"`
+	Prompt    string `json:"prompt"`
+	Type      string `json:"type"`
+	TimeSpec  string `json:"time_spec"`
+	Instruction string `json:"instruction"`
 }
 
 type ScheduleCancelQuery struct {
@@ -48,37 +52,37 @@ const scheduleOnce = `
 }
 `
 
-//const scheduleCron = `
-//{
-//  "name": "schedule_add",
-//  "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
-//  "inputSchema": {
-//	  "parameters": {
-//		"type": "object",
-//		"properties": {
-//		  "task_name": {
-//			"type": "string",
-//			"description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
-//		  },
-//		  "instruction": {
-//			"type": "string",
-//			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
-//		  },
-//		  "type": {
-//			"type": "string",
-//			"enum": ["once", "cron"],
-//			"description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
-//		  },
-//		  "time_spec": {
-//			"type": "string",
-//			"description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
-//		  }
-//		},
-//		"required": ["task_name", "instruction", "type", "time_spec"]
-//	  }
-//  }
-//}
-//`
+const scheduleCron = `
+{
+  "name": "schedule_cron",
+  "description": "Schedules a recurring task for background execution. All parameters are strictly required. Returns the ID of the created task.",
+  "inputSchema": {
+	  "parameters": {
+		"type": "object",
+		"properties": {
+		  "task_name": {
+			"type": "string",
+			"description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
+		  },
+		  "instruction": {
+			"type": "string",
+			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
+		  },
+		  "type": {
+			"type": "string",
+			"enum": ["once", "cron"],
+			"description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
+		  },
+		  "time_spec": {
+			"type": "string",
+			"description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
+		  }
+		},
+		"required": ["task_name", "instruction", "type", "time_spec"]
+	  }
+  }
+}
+`
 
 const scheduleListSchema = `
 {
@@ -133,6 +137,25 @@ func (s *Schedule) handleOnce(ctx context.Context, args json.RawMessage) (string
 	return "", nil
 }
 
+func (s *Schedule) handleCron(ctx context.Context, args json.RawMessage) (string, error) {
+	query, err := parseScheduleCron(ctx, args)
+	if err != nil {
+		return "", err
+	}
+
+	sessionID, ok := ctx.Value(core.CtxKeySessionID).(string)
+	if !ok || sessionID == "" {
+		return "", fmt.Errorf("sessionID not found in context")
+	}
+
+	err = s.swarm.ScheduleTask(ctx, sessionID, query.TaskName, core.TriggerTypeCron, query.TimeSpec, query.Instruction)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
+}
+
 func (s *Schedule) handleList(ctx context.Context, args json.RawMessage) (string, error) {
 	tasks, err := s.swarm.ListTasks(ctx)
 	if err != nil {
@@ -175,11 +198,11 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 			Schema:      scheduleOnce,
 			Handler:     s.handleOnce,
 		},
-		//"schedule_cron": {
-		//	Description: "Schedule inteval background job",
-		//	Schema:      scheduleCron,
-		//	Handler:     s.handleOnce,
-		//},
+		"schedule_cron": {
+			Description: "Schedule recurring background job",
+			Schema:      scheduleCron,
+			Handler:     s.handleCron,
+		},
 		"schedule_list": {
 			Description: "Get list of scheduled jobs",
 			Schema:      scheduleListSchema,
@@ -229,6 +252,62 @@ func parseScheduleOnce(ctx context.Context, args json.RawMessage) (*ScheduleOnce
 	input.Prompt = strings.TrimSpace(input.Prompt)
 	if input.Prompt == "" {
 		return nil, fmt.Errorf("prompt cannot be empty")
+	}
+
+	return input, nil
+}
+
+func parseScheduleCron(ctx context.Context, args json.RawMessage) (*ScheduleOnceQuery, error) {
+	var input *ScheduleOnceQuery
+	if err := json.Unmarshal(args, &input); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	if input == nil {
+		return nil, fmt.Errorf("arguments cannot be null")
+	}
+
+	// Validate TaskName
+	input.TaskName = strings.TrimSpace(input.TaskName)
+	if input.TaskName == "" {
+		return nil, fmt.Errorf("task_name cannot be empty")
+	}
+	if !slugRegex.MatchString(input.TaskName) {
+		return nil, fmt.Errorf("task_name must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
+	}
+
+	// Validate Type
+	input.Type = strings.TrimSpace(input.Type)
+	if input.Type != "once" && input.Type != "cron" {
+		return nil, fmt.Errorf("type must be 'once' or 'cron'")
+	}
+
+	// Validate TimeSpec
+	input.TimeSpec = strings.TrimSpace(input.TimeSpec)
+	if input.TimeSpec == "" {
+		return nil, fmt.Errorf("time_spec cannot be empty")
+	}
+
+	// Validate based on type
+	if input.Type == "cron" {
+		// Try parsing as cron expression
+		_, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(input.TimeSpec)
+		if err != nil {
+			return nil, fmt.Errorf("time_spec must be a valid cron expression: %w", err)
+		}
+	} else {
+		// For "once", validate as duration or RFC3339
+		if _, err := time.ParseDuration(input.TimeSpec); err != nil {
+			if _, err := time.Parse(time.RFC3339, input.TimeSpec); err != nil {
+				return nil, fmt.Errorf("time_spec must be a duration or RFC3339 timestamp: %w", err)
+			}
+		}
+	}
+
+	// Validate Instruction
+	input.Instruction = strings.TrimSpace(input.Instruction)
+	if input.Instruction == "" {
+		return nil, fmt.Errorf("instruction cannot be empty")
 	}
 
 	return input, nil
