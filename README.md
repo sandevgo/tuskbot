@@ -1,6 +1,7 @@
 # TuskBot 🦣
 
 [![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=flat-square)](https://github.com/sandevgo/tuskbot/actions)
+[![Go Report](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)
 [![Release](https://img.shields.io/github/v/release/sandevgo/tuskbot?include_prereleases&style=flat-square)](https://github.com/sandevgo/tuskbot/releases)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot?style=flat-square&color=00ADD8)](https://github.com/sandevgo/tuskbot/blob/main/go.mod)
 [![License](https://img.shields.io/github/license/sandevgo/TuskBot?style=flat-square)](https://github.com/sandevgo/tuskbot/LICENSE)
