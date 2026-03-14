@@ -176,7 +176,7 @@ func TestScheduler_CronTrigger(t *testing.T) {
 			cronExpression: "* * * * * *",
 			validateNext: func(now, next time.Time) bool {
 				// Should fire at the next second
-				expected := now.Add(time.Second - now.UnixNano()/1e9*time.Nanosecond)
+				expected := now.Truncate(time.Second).Add(time.Second)
 				diff := next.Sub(expected)
 				if diff < 0 {
 					diff = -diff

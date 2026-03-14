@@ -48,7 +48,7 @@ func (t *OneOffTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
 // CronTrigger Cron implementation
 type CronTrigger struct {
 	Expression string
-	parser     *cron.Parser
+	parser     cron.Parser
 }
 
 func NewCronTrigger(expression string) (*CronTrigger, error) {
@@ -59,7 +59,7 @@ func NewCronTrigger(expression string) (*CronTrigger, error) {
 	}
 	return &CronTrigger{
 		Expression: expression,
-		parser:     &p,
+		parser:     p,
 	}, nil
 }
 
