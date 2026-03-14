@@ -163,7 +163,7 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 func initTransports(
 	ctx context.Context,
 	cfg *config.AppConfig,
-	ag *agent.Agent,
+	ag core.Agent,
 	router core.CmdRouter,
 	subs core.EventSubscriber,
 ) ([]srv.Service, error) {
