@@ -173,17 +173,17 @@ func TestScheduler_CronTrigger(t *testing.T) {
 	}{
 		{
 			name:           "every minute",
-			cronExpression: "* * * * *",
+			cronExpression: "* * * * * *",
 			expectedNext:   time.Now().Truncate(time.Minute).Add(time.Minute),
 		},
 		{
 			name:           "every hour",
-			cronExpression: "0 * * * *",
+			cronExpression: "0 * * * * *",
 			expectedNext:   time.Now().Truncate(time.Hour).Add(time.Hour),
 		},
 		{
 			name:           "every day at 9 AM",
-			cronExpression: "0 9 * * *",
+			cronExpression: "0 9 * * * *",
 			expectedNext:   func() time.Time {
 				now := time.Now()
 				tomorrow := now.AddDate(0, 0, 1)
@@ -218,7 +218,7 @@ func TestScheduler_CronTaskExecution(t *testing.T) {
 	// Cron task that runs every 100ms (using a simplified expression for testing)
 	// Note: In real cron, we'd use something like "*/1 * * * * *" for every second
 	// For testing, we'll use a custom interval that mimics cron behavior
-	cronTrigger, err := NewCronTrigger("* * * * *")
+	cronTrigger, err := NewCronTrigger("* * * * * *")
 	require.NoError(t, err)
 	
 	job := func(ctx context.Context) error {
@@ -254,7 +254,7 @@ func TestScheduler_CronMultipleTasks(t *testing.T) {
 	counters["cron2"] = new(int32)
 	
 	// Two cron tasks with different schedules
-	cronTrigger1, err := NewCronTrigger("* * * * *")
+	cronTrigger1, err := NewCronTrigger("* * * * * *")
 	require.NoError(t, err)
 	
 	job1 := func(ctx context.Context) error {
@@ -268,7 +268,7 @@ func TestScheduler_CronMultipleTasks(t *testing.T) {
 		Job:     job1,
 	})
 	
-	cronTrigger2, err := NewCronTrigger("*/2 * * * *")
+	cronTrigger2, err := NewCronTrigger("*/2 * * * * *")
 	require.NoError(t, err)
 	
 	job2 := func(ctx context.Context) error {
