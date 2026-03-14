@@ -59,7 +59,7 @@ func NewCronTrigger(expression string) (*CronTrigger, error) {
 	}
 	return &CronTrigger{
 		Expression: expression,
-		parser:     p,
+		parser:     &p,
 	}, nil
 }
 
