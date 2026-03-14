@@ -126,25 +126,26 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 		err := repo.Create(ctx, task)
 		require.NoError(t, err)
 
-		err = repo.Cancel(ctx, task.Name)
+		err = repo.Cancel(ctx, task.ID.String())
 		require.NoError(t, err)
 
 		// Verify task is inactive
 		var isActive bool
-		err = db.QueryRow("SELECT is_active FROM task WHERE name = ?", task.Name).Scan(&isActive)
+		err = db.QueryRow("SELECT is_active FROM task WHERE id = ?", task.ID.String()).Scan(&isActive)
 		require.NoError(t, err)
 		assert.False(t, isActive)
 	})
 
 	t.Run("returns error when task not found", func(t *testing.T) {
-		err := repo.Cancel(ctx, "non-existent-task")
+		err := repo.Cancel(ctx, uuid.Must(uuid.NewV7()).String())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "task not found or already cancelled")
 	})
 
 	t.Run("returns error when task already cancelled", func(t *testing.T) {
+		id := uuid.Must(uuid.NewV7())
 		task := &core.StoredTask{
-			ID:             uuid.FromStringOrNil("55555555-5555-5555-5555-555555555555"),
+			ID:             id,
 			Name:           "already-cancelled-task",
 			OwnerSessionID: "session-123",
 			Prompt:         "Test prompt",
@@ -157,7 +158,7 @@ func TestScheduledTaskRepo_Cancel(t *testing.T) {
 		err := repo.Create(ctx, task)
 		require.NoError(t, err)
 
-		err = repo.Cancel(ctx, task.Name)
+		err = repo.Cancel(ctx, id.String())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "task not found or already cancelled")
 	})
