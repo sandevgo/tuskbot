@@ -70,7 +70,7 @@ const scheduleCron = `
 		  },
 		  "at": {
 			"type": "string",
-			"description": "Cron expression for scheduling (e.g., '0 9 * * *' for daily at 9 AM). Format: second minute hour day-of-month month day-of-week."
+			"description": "Cron expression for scheduling (e.g., '0 9 * * * *' for daily at 9 AM). Format: second minute hour day-of-month month day-of-week (6 fields)."
 		  }
 		},
 		"required": ["name", "prompt", "at"]
