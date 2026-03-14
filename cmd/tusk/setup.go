@@ -116,6 +116,7 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	// Swarm
 	swarmService := swarm.NewService(scheduleService, ag, subAgent, taskRepo)
+	services = append(services, swarmService)
 
 	// Register tools
 	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))

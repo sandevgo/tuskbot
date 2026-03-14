@@ -44,6 +44,27 @@ func NewService(
 	}
 }
 
+func (s *Service) Start(ctx context.Context) error {
+	storedTasks, err := s.taskRepo.List(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list tasks on startup: %w", err)
+	}
+
+	for _, st := range storedTasks {
+		task, err := s.toDomain(&st)
+		if err != nil {
+			log.FromCtx(ctx).Error().Err(err).Str("task", st.Name).Msg("failed to hydrate task")
+			continue
+		}
+		s.registerTask(task)
+	}
+	return nil
+}
+
+func (s *Service) Shutdown(ctx context.Context) error {
+	return nil
+}
+
 func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskType, timeSpec, instruction string) error {
 	taskID, err := uuid.NewV7()
 	if err != nil {
@@ -57,6 +78,8 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		TriggerType:    taskType,
 		TriggerSpec:    timeSpec,
 		OwnerSessionID: ownerSessionID,
+		IsActive:       true,
+		CreatedAt:      time.Now(),
 	}
 
 	err = s.taskRepo.Create(ctx, storedTask)
@@ -125,6 +148,7 @@ func (s *Service) toDomain(st *core.StoredTask) (*core.Task, error) {
 		SessionID:      generateSessionID(st.Name),
 		OwnerSessionID: st.OwnerSessionID,
 		Trigger:        trigger,
+		LastRun:        st.LastRun,
 	}
 
 	s.assignJob(task)
