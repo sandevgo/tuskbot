@@ -165,6 +165,136 @@ func TestScheduler_Triggers(t *testing.T) {
 	}
 }
 
+func TestScheduler_CronTrigger(t *testing.T) {
+	tests := []struct {
+		name           string
+		cronExpression string
+		expectedNext   time.Time
+	}{
+		{
+			name:           "every minute",
+			cronExpression: "* * * * *",
+			expectedNext:   time.Now().Truncate(time.Minute).Add(time.Minute),
+		},
+		{
+			name:           "every hour",
+			cronExpression: "0 * * * *",
+			expectedNext:   time.Now().Truncate(time.Hour).Add(time.Hour),
+		},
+		{
+			name:           "every day at 9 AM",
+			cronExpression: "0 9 * * *",
+			expectedNext:   time.Now().Truncate(24 * time.Hour).AddDate(0, 0, 1).Hour(9).Minute(0).Second(0),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trigger, err := NewCronTrigger(tt.cronExpression)
+			require.NoError(t, err, "should create cron trigger")
+
+			now := time.Now()
+			next := trigger.NextFireTime(now, time.Time{})
+
+			// Allow 1 second tolerance for timing
+			diff := next.Sub(tt.expectedNext)
+			if diff < 0 {
+				diff = -diff
+			}
+			assert.Less(t, diff, time.Second, "next fire time should be close to expected")
+		})
+	}
+}
+
+func TestScheduler_CronTaskExecution(t *testing.T) {
+	s := NewScheduler()
+	
+	var executionCount int32
+	
+	// Cron task that runs every 100ms (using a simplified expression for testing)
+	// Note: In real cron, we'd use something like "*/1 * * * * *" for every second
+	// For testing, we'll use a custom interval that mimics cron behavior
+	cronTrigger, err := NewCronTrigger("* * * * *")
+	require.NoError(t, err)
+	
+	job := func(ctx context.Context) error {
+		atomic.AddInt32(&executionCount, 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "cron-task",
+		Trigger: cronTrigger,
+		Job:     job,
+	})
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	
+	go func() {
+		_ = s.Start(ctx)
+	}()
+	
+	<-ctx.Done()
+	
+	// Should have executed at least once (at time 0)
+	val := atomic.LoadInt32(&executionCount)
+	assert.GreaterOrEqual(t, val, int32(1), "cron task should execute at least once")
+}
+
+func TestScheduler_CronMultipleTasks(t *testing.T) {
+	s := NewScheduler()
+	
+	counters := make(map[string]*int32)
+	counters["cron1"] = new(int32)
+	counters["cron2"] = new(int32)
+	
+	// Two cron tasks with different schedules
+	cronTrigger1, err := NewCronTrigger("* * * * *")
+	require.NoError(t, err)
+	
+	job1 := func(ctx context.Context) error {
+		atomic.AddInt32(counters["cron1"], 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "cron-task-1",
+		Trigger: cronTrigger1,
+		Job:     job1,
+	})
+	
+	cronTrigger2, err := NewCronTrigger("*/2 * * * *")
+	require.NoError(t, err)
+	
+	job2 := func(ctx context.Context) error {
+		atomic.AddInt32(counters["cron2"], 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "cron-task-2",
+		Trigger: cronTrigger2,
+		Job:     job2,
+	})
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	
+	go func() {
+		_ = s.Start(ctx)
+	}()
+	
+	<-ctx.Done()
+	
+	// Both tasks should have executed
+	val1 := atomic.LoadInt32(counters["cron1"])
+	val2 := atomic.LoadInt32(counters["cron2"])
+	
+	assert.GreaterOrEqual(t, val1, int32(1), "cron task 1 should execute at least once")
+	assert.GreaterOrEqual(t, val2, int32(1), "cron task 2 should execute at least once")
+}
+
 func TestScheduler_ExecutionOrder(t *testing.T) {
 	s := NewScheduler()
 	
