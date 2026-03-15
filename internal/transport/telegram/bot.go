@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
-	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/pkg/log"
 	tele "gopkg.in/telebot.v3"
 )
@@ -25,7 +24,7 @@ type Bot struct {
 
 func NewBot(
 	cfg core.TelegramConfig,
-	agent *agent.Agent,
+	agent core.Agent,
 	router core.CmdRouter,
 	subs core.EventSubscriber,
 ) (*Bot, error) {

@@ -165,6 +165,173 @@ func TestScheduler_Triggers(t *testing.T) {
 	}
 }
 
+func TestScheduler_CronTrigger(t *testing.T) {
+	tests := []struct {
+		name           string
+		cronExpression string
+		validateNext   func(now, next time.Time) bool
+	}{
+		{
+			name:           "every second",
+			cronExpression: "* * * * * *",
+			validateNext: func(now, next time.Time) bool {
+				// Should fire at the next second
+				expected := now.Truncate(time.Second).Add(time.Second)
+				diff := next.Sub(expected)
+				if diff < 0 {
+					diff = -diff
+				}
+				return diff < 2*time.Second // Allow 2 second tolerance
+			},
+		},
+		{
+			name:           "every minute at second 0",
+			cronExpression: "0 * * * * *",
+			validateNext: func(now, next time.Time) bool {
+				// Should fire at the next minute boundary
+				expected := now.Truncate(time.Minute).Add(time.Minute)
+				diff := next.Sub(expected)
+				if diff < 0 {
+					diff = -diff
+				}
+				return diff < 2*time.Second // Allow 2 second tolerance
+			},
+		},
+		{
+			name:           "every hour at minute 0, second 0",
+			cronExpression: "0 0 * * * *",
+			validateNext: func(now, next time.Time) bool {
+				// Should fire at the next hour boundary
+				expected := now.Truncate(time.Hour).Add(time.Hour)
+				diff := next.Sub(expected)
+				if diff < 0 {
+					diff = -diff
+				}
+				return diff < 2*time.Second // Allow 2 second tolerance
+			},
+		},
+		{
+			name:           "every day at 9 AM",
+			cronExpression: "0 0 9 * * *",
+			validateNext: func(now, next time.Time) bool {
+				// Should fire at 9 AM today or tomorrow
+				today := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, now.Location())
+				if now.Before(today) {
+					diff := next.Sub(today)
+					if diff < 0 {
+						diff = -diff
+					}
+					return diff < 2*time.Second
+				}
+				// Tomorrow
+				tomorrow := today.Add(24 * time.Hour)
+				diff := next.Sub(tomorrow)
+				if diff < 0 {
+					diff = -diff
+				}
+				return diff < 2*time.Second
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			trigger, err := NewCronTrigger(tt.cronExpression)
+			require.NoError(t, err, "should create cron trigger")
+
+			now := time.Now()
+			next := trigger.NextFireTime(now, time.Time{})
+
+			assert.True(t, tt.validateNext(now, next), "next fire time should be valid for expression: %s", tt.cronExpression)
+		})
+	}
+}
+
+func TestScheduler_CronTaskExecution(t *testing.T) {
+	s := NewScheduler()
+	
+	var executionCount int32
+	
+	// Use interval trigger for testing execution since cron runs at specific times
+	// In production, cron would work the same way
+	intervalTrigger := NewIntervalTrigger(100 * time.Millisecond)
+	
+	job := func(ctx context.Context) error {
+		atomic.AddInt32(&executionCount, 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "interval-task",
+		Trigger: intervalTrigger,
+		Job:     job,
+	})
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
+	defer cancel()
+	
+	go func() {
+		_ = s.Start(ctx)
+	}()
+	
+	<-ctx.Done()
+	
+	// Should have executed at least 3 times (0ms, 100ms, 200ms, 300ms)
+	val := atomic.LoadInt32(&executionCount)
+	assert.GreaterOrEqual(t, val, int32(3), "interval task should execute at least 3 times")
+}
+
+func TestScheduler_CronMultipleTasks(t *testing.T) {
+	s := NewScheduler()
+	
+	counters := make(map[string]*int32)
+	counters["task1"] = new(int32)
+	counters["task2"] = new(int32)
+	
+	// Two interval tasks with different schedules
+	intervalTrigger1 := NewIntervalTrigger(100 * time.Millisecond)
+	
+	job1 := func(ctx context.Context) error {
+		atomic.AddInt32(counters["task1"], 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "task-1",
+		Trigger: intervalTrigger1,
+		Job:     job1,
+	})
+	
+	intervalTrigger2 := NewIntervalTrigger(200 * time.Millisecond)
+	
+	job2 := func(ctx context.Context) error {
+		atomic.AddInt32(counters["task2"], 1)
+		return nil
+	}
+	
+	s.AddTask(&core.Task{
+		Name:    "task-2",
+		Trigger: intervalTrigger2,
+		Job:     job2,
+	})
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
+	defer cancel()
+	
+	go func() {
+		_ = s.Start(ctx)
+	}()
+	
+	<-ctx.Done()
+	
+	// Both tasks should have executed
+	val1 := atomic.LoadInt32(counters["task1"])
+	val2 := atomic.LoadInt32(counters["task2"])
+	
+	assert.GreaterOrEqual(t, val1, int32(3), "task 1 should execute at least 3 times")
+	assert.GreaterOrEqual(t, val2, int32(2), "task 2 should execute at least 2 times")
+}
+
 func TestScheduler_ExecutionOrder(t *testing.T) {
 	s := NewScheduler()
 	

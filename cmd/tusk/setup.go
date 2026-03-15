@@ -116,6 +116,7 @@ func NewServices(ctx context.Context) []srv.Service {
 
 	// Swarm
 	swarmService := swarm.NewService(scheduleService, ag, subAgent, taskRepo)
+	services = append(services, swarmService)
 
 	// Register tools
 	mcpManager.RegisterNativeTool(tools.NewFilesystem(appCfg.GetRuntimePath()))
@@ -163,7 +164,7 @@ func initMCP(ctx context.Context, cfg *config.AppConfig) (*mcp.Service, error) {
 func initTransports(
 	ctx context.Context,
 	cfg *config.AppConfig,
-	ag *agent.Agent,
+	ag core.Agent,
 	router core.CmdRouter,
 	subs core.EventSubscriber,
 ) ([]srv.Service, error) {

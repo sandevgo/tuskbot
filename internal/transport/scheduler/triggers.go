@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
@@ -45,14 +46,29 @@ func (t *OneOffTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
 }
 
 // CronTrigger Cron implementation
-// TODO: implement cron trigger with robfig/cron later
 type CronTrigger struct {
 	Expression string
+	parser     cron.Parser
+}
+
+func NewCronTrigger(expression string) (*CronTrigger, error) {
+	p := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	_, err := p.Parse(expression)
+	if err != nil {
+		return nil, err
+	}
+	return &CronTrigger{
+		Expression: expression,
+		parser:     p,
+	}, nil
 }
 
 func (c CronTrigger) NextFireTime(now time.Time, lastRun time.Time) time.Time {
-	//TODO implement me
-	return time.Time{}
+	schedule, err := c.parser.Parse(c.Expression)
+	if err != nil {
+		return time.Time{}
+	}
+	return schedule.Next(now)
 }
 
 func CreateTrigger(taskType, timeSpec string) (core.Trigger, error) {
@@ -62,7 +78,7 @@ func CreateTrigger(taskType, timeSpec string) (core.Trigger, error) {
 	case core.TriggerTypeOnce:
 		return createOneOffTrigger(timeSpec)
 	case core.TriggerTypeCron:
-		return nil, fmt.Errorf("not implemented yet")
+		return NewCronTrigger(timeSpec)
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", taskType)
 	}

@@ -8,17 +8,21 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type ScheduleOnceQuery struct {
-	TaskName string `json:"name"`
-	At       string `json:"at"`
-	Prompt   string `json:"prompt"`
+	TaskName  string `json:"name"`
+	At        string `json:"at"`
+	Prompt    string `json:"prompt"`
+	Type      string `json:"type"`
+	TimeSpec  string `json:"time_spec"`
+	Instruction string `json:"instruction"`
 }
 
 type ScheduleCancelQuery struct {
-	TaskName string `json:"task_id"`
+	TaskID string `json:"task_id"`
 }
 
 const scheduleOnce = `
@@ -48,37 +52,32 @@ const scheduleOnce = `
 }
 `
 
-//const scheduleCron = `
-//{
-//  "name": "schedule_add",
-//  "description": "Schedules a task for background execution. All parameters are strictly required. Returns the ID of the created task.",
-//  "inputSchema": {
-//	  "parameters": {
-//		"type": "object",
-//		"properties": {
-//		  "task_name": {
-//			"type": "string",
-//			"description": "Unique identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
-//		  },
-//		  "instruction": {
-//			"type": "string",
-//			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
-//		  },
-//		  "type": {
-//			"type": "string",
-//			"enum": ["once", "cron"],
-//			"description": "The scheduling strategy. Use 'once' for a single execution, 'cron' for recurring tasks."
-//		  },
-//		  "time_spec": {
-//			"type": "string",
-//			"description": "For 'once': a duration string (e.g., '30s', '5m', '2h', '1d') or an RFC3339 timestamp. For 'cron': a standard cron expression (e.g., '0 9 * * *')."
-//		  }
-//		},
-//		"required": ["task_name", "instruction", "type", "time_spec"]
-//	  }
-//  }
-//}
-//`
+const scheduleCron = `
+{
+  "name": "schedule_cron",
+  "description": "Schedules a recurring task for background execution using a cron expression. Returns the ID of the created task.",
+  "inputSchema": {
+	  "parameters": {
+		"type": "object",
+		"properties": {
+		  "name": {
+			"type": "string",
+			"description": "Identifier for the task. Must be a valid slug (lowercase letters, numbers, and hyphens only). Example: 'daily-report-task'."
+		  },
+		  "prompt": {
+			"type": "string",
+			"description": "A clear natural language prompt describing exactly what the AI should do when the task is triggered."
+		  },
+		  "at": {
+			"type": "string",
+			"description": "Cron expression for scheduling (e.g., '0 9 * * * *' for daily at 9 AM). Format: second minute hour day-of-month month day-of-week (6 fields)."
+		  }
+		},
+		"required": ["name", "prompt", "at"]
+	  }
+  }
+}
+`
 
 const scheduleListSchema = `
 {
@@ -94,12 +93,12 @@ const scheduleCancelSchema = `
   "parameters": {
     "type": "object",
     "properties": {
-      "task_name": {
+      "task_id": {
         "type": "string",
-        "description": "The unique slug-formatted name of the task to be cancelled (e.g., 'write-hokku-task')."
+        "description": "The unique UUID of the task to be cancelled."
       }
     },
-    "required": ["task_name"]
+    "required": ["task_id"]
   }
 }
 `
@@ -133,6 +132,25 @@ func (s *Schedule) handleOnce(ctx context.Context, args json.RawMessage) (string
 	return "", nil
 }
 
+func (s *Schedule) handleCron(ctx context.Context, args json.RawMessage) (string, error) {
+	query, err := parseScheduleCron(ctx, args)
+	if err != nil {
+		return "", err
+	}
+
+	sessionID, ok := ctx.Value(core.CtxKeySessionID).(string)
+	if !ok || sessionID == "" {
+		return "", fmt.Errorf("sessionID not found in context")
+	}
+
+	err = s.swarm.ScheduleTask(ctx, sessionID, query.TaskName, core.TriggerTypeCron, query.At, query.Prompt)
+	if err != nil {
+		return "", err
+	}
+
+	return "", nil
+}
+
 func (s *Schedule) handleList(ctx context.Context, args json.RawMessage) (string, error) {
 	tasks, err := s.swarm.ListTasks(ctx)
 	if err != nil {
@@ -152,7 +170,7 @@ func (s *Schedule) handleCancel(ctx context.Context, args json.RawMessage) (stri
 		return "", err
 	}
 
-	err = s.swarm.CancelTask(ctx, query.TaskName)
+	err = s.swarm.CancelTask(ctx, query.TaskID)
 	if err != nil {
 		return "", err
 	}
@@ -175,18 +193,18 @@ func (s *Schedule) GetDefinitions() map[string]struct {
 			Schema:      scheduleOnce,
 			Handler:     s.handleOnce,
 		},
-		//"schedule_cron": {
-		//	Description: "Schedule inteval background job",
-		//	Schema:      scheduleCron,
-		//	Handler:     s.handleOnce,
-		//},
+		"schedule_cron": {
+			Description: "Schedule recurring background job",
+			Schema:      scheduleCron,
+			Handler:     s.handleCron,
+		},
 		"schedule_list": {
 			Description: "Get list of scheduled jobs",
 			Schema:      scheduleListSchema,
 			Handler:     s.handleList,
 		},
 		"schedule_cancel": {
-			Description: "Cancel and remove a scheduled job by name",
+			Description: "Cancel and remove a scheduled job by ID",
 			Schema:      scheduleCancelSchema,
 			Handler:     s.handleCancel,
 		},
@@ -234,6 +252,46 @@ func parseScheduleOnce(ctx context.Context, args json.RawMessage) (*ScheduleOnce
 	return input, nil
 }
 
+func parseScheduleCron(ctx context.Context, args json.RawMessage) (*ScheduleOnceQuery, error) {
+	var input *ScheduleOnceQuery
+	if err := json.Unmarshal(args, &input); err != nil {
+		return nil, fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	if input == nil {
+		return nil, fmt.Errorf("arguments cannot be null")
+	}
+
+	// Validate TaskName
+	input.TaskName = strings.TrimSpace(input.TaskName)
+	if input.TaskName == "" {
+		return nil, fmt.Errorf("name cannot be empty")
+	}
+	if !slugRegex.MatchString(input.TaskName) {
+		return nil, fmt.Errorf("name must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
+	}
+
+	// Validate At (cron expression)
+	input.At = strings.TrimSpace(input.At)
+	if input.At == "" {
+		return nil, fmt.Errorf("at cannot be empty")
+	}
+
+	// Validate as cron expression
+	_, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(input.At)
+	if err != nil {
+		return nil, fmt.Errorf("at must be a valid cron expression: %w", err)
+	}
+
+	// Validate Instruction
+	input.Prompt = strings.TrimSpace(input.Prompt)
+	if input.Prompt == "" {
+		return nil, fmt.Errorf("prompt cannot be empty")
+	}
+
+	return input, nil
+}
+
 func parseScheduleCancel(ctx context.Context, args json.RawMessage) (*ScheduleCancelQuery, error) {
 	var input *ScheduleCancelQuery
 	if err := json.Unmarshal(args, &input); err != nil {
@@ -244,13 +302,8 @@ func parseScheduleCancel(ctx context.Context, args json.RawMessage) (*ScheduleCa
 		return nil, fmt.Errorf("arguments cannot be null")
 	}
 
-	// Validate TaskName (task_id in JSON)
-	input.TaskName = strings.TrimSpace(input.TaskName)
-	if input.TaskName == "" {
+	if input.TaskID == "" {
 		return nil, fmt.Errorf("task_id cannot be empty")
-	}
-	if !slugRegex.MatchString(input.TaskName) {
-		return nil, fmt.Errorf("task_id must be a valid slug (alphanumeric and hyphens only): %s", input.TaskName)
 	}
 
 	return input, nil

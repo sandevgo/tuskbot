@@ -40,13 +40,13 @@ func (r *TaskRepo) Create(ctx context.Context, task *core.StoredTask) error {
 	return nil
 }
 
-func (r *TaskRepo) Cancel(ctx context.Context, name string) error {
+func (r *TaskRepo) Cancel(ctx context.Context, id string) error {
 	query := `
 		UPDATE task 
 		SET is_active = FALSE, updated_at = ?
-		WHERE name = ? AND is_active = TRUE
+		WHERE id = ? AND is_active = TRUE
 	`
-	result, err := r.db.ExecContext(ctx, query, time.Now(), name)
+	result, err := r.db.ExecContext(ctx, query, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to cancel scheduled task: %w", err)
 	}
@@ -56,14 +56,50 @@ func (r *TaskRepo) Cancel(ctx context.Context, name string) error {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rows == 0 {
-		return fmt.Errorf("task not found or already cancelled: %s", name)
+		return fmt.Errorf("task not found or already cancelled: %s", id)
 	}
 
 	return nil
 }
 
 func (r *TaskRepo) GetByName(ctx context.Context, name string) (*core.StoredTask, error) {
-	return nil, nil
+	query := `
+		SELECT id, name, owner_session_id, prompt, trigger_type, trigger_spec, last_run, is_active, created_at, updated_at
+		FROM task
+		WHERE name = ? AND is_active = TRUE
+		LIMIT 1
+	`
+	var task core.StoredTask
+	var lastRun sql.NullTime
+	var updatedAt sql.NullTime
+
+	err := r.db.QueryRowContext(ctx, query, name).Scan(
+		&task.ID,
+		&task.Name,
+		&task.OwnerSessionID,
+		&task.Prompt,
+		&task.TriggerType,
+		&task.TriggerSpec,
+		&lastRun,
+		&task.IsActive,
+		&task.CreatedAt,
+		&updatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("task not found: %s", name)
+		}
+		return nil, err
+	}
+
+	if lastRun.Valid {
+		task.LastRun = lastRun.Time
+	}
+	if updatedAt.Valid {
+		task.UpdatedAt = &updatedAt.Time
+	}
+
+	return &task, nil
 }
 
 func (r *TaskRepo) List(ctx context.Context) ([]core.StoredTask, error) {
