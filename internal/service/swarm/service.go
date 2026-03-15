@@ -105,7 +105,6 @@ func (s *Service) CancelTask(ctx context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Find task by ID in local tracking
 	for name, task := range s.tasks {
 		if task.ID.String() == id {
 			s.scheduler.DelTask(task)
@@ -126,10 +125,11 @@ func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
 		infos = append(infos, core.Task{
 			ID:             t.ID,
 			Name:           t.Name,
-			NextRun:        t.NextRun,
-			LastRun:        t.LastRun,
 			Prompt:         t.Prompt,
 			OwnerSessionID: t.OwnerSessionID,
+			Trigger:        t.Trigger,
+			LastRun:        t.LastRun,
+			NextRun:        t.NextRun,
 		})
 	}
 	return infos, nil
