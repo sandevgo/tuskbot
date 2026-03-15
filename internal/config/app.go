@@ -79,7 +79,7 @@ func (c *AppConfig) GetDatabasePath() string {
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {
-	return filepath.Join(c.runtimePath, "mcp_config.json")
+	return filepath.Join(c.runtimePath, "config/mcp_config.json")
 }
 
 func (c *AppConfig) GetContextWindowSize() int {
