@@ -9,24 +9,19 @@ import (
 	"github.com/sandevgo/tuskbot/configs"
 )
 
-// Migration defines a function that performs a filesystem or config change
 type Migration func(runtimePath string) error
 
-// Migrations is the registry of all migrations to be run in order.
 var Migrations = []Migration{
 	setupInitialFiles,
 }
 
-// setupInitialFiles handles directory creation and default file extraction.
 func setupInitialFiles(p string) error {
-	// 1. Create directories
-	for _, dir := range []string{"prompt", "data", "models"} {
+	for _, dir := range []string{"config", "models", "prompt"} {
 		if err := os.MkdirAll(filepath.Join(p, dir), 0755); err != nil {
 			return err
 		}
 	}
 
-	// 2. Copy embedded files if they don't exist
 	files := []string{"IDENTITY.md", "MEMORY.md", "SYSTEM.md", "USER.md", "mcp_config.json"}
 	for _, name := range files {
 		// Determine destination
@@ -48,7 +43,6 @@ func setupInitialFiles(p string) error {
 	return nil
 }
 
-// Run executes all pending migrations using sqlite user_version for tracking.
 func Run(db *sql.DB, runtimePath string) error {
 	var current int
 	err := db.QueryRow("PRAGMA user_version").Scan(&current)
