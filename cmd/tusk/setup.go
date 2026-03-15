@@ -48,7 +48,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	services = append(services, srv.NewCleanup(db.Close))
 
 	// Run migrations after DB is ready
-	if err := migration.Run(db, config.GetRuntimePath()); err != nil {
+	if err := migration.Run(db, appCfg); err != nil {
 		logger.Fatal().Err(err).Msg("failed to run migrations")
 	}
 

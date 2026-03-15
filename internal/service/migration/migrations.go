@@ -7,29 +7,40 @@ import (
 	"path/filepath"
 
 	"github.com/sandevgo/tuskbot/configs"
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-type Migration func(runtimePath string) error
+type Migration func(cfg config) error
 
 var Migrations = []Migration{
 	setupInitialFiles,
 }
 
-func setupInitialFiles(p string) error {
-	for _, dir := range []string{"config", "models", "prompt"} {
-		if err := os.MkdirAll(filepath.Join(p, dir), 0755); err != nil {
+type config interface {
+	core.AppConfig
+	core.PromptConfig
+}
+
+func setupInitialFiles(cfg config) error {
+	dirs := []string{
+		filepath.Dir(cfg.GetConfigPath()),
+		filepath.Dir(cfg.GetPromptPath()),
+	}
+	for _, dir := range dirs {
+		if err := os.MkdirAll(dir, 0755); err != nil {
 			return err
 		}
 	}
 
-	files := []string{"IDENTITY.md", "MEMORY.md", "SYSTEM.md", "USER.md", "mcp_config.json"}
-	for _, name := range files {
-		// Determine destination
-		dest := filepath.Join(p, "prompt", name)
-		if name == "mcp_config.json" {
-			dest = filepath.Join(p, name)
-		}
+	fileMap := map[string]string{
+		"IDENTITY.md":     cfg.GetIdentityPath(),
+		"MEMORY.md":       cfg.GetMemoryPath(),
+		"SYSTEM.md":       cfg.GetSystemPath(),
+		"USER.md":         cfg.GetUserProfilePath(),
+		"mcp_config.json": cfg.GetMCPConfigPath(),
+	}
 
+	for name, dest := range fileMap {
 		if _, err := os.Stat(dest); os.IsNotExist(err) {
 			content, err := configs.FS.ReadFile(name)
 			if err != nil {
@@ -43,7 +54,7 @@ func setupInitialFiles(p string) error {
 	return nil
 }
 
-func Run(db *sql.DB, runtimePath string) error {
+func Run(db *sql.DB, cfg config) error {
 	var current int
 	err := db.QueryRow("PRAGMA user_version").Scan(&current)
 	if err != nil {
@@ -51,7 +62,7 @@ func Run(db *sql.DB, runtimePath string) error {
 	}
 
 	for i := current; i < len(Migrations); i++ {
-		if err := Migrations[i](runtimePath); err != nil {
+		if err := Migrations[i](cfg); err != nil {
 			return fmt.Errorf("migration %d failed: %w", i, err)
 		}
 

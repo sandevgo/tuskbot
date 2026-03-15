@@ -54,32 +54,40 @@ func (c *AppConfig) GetRuntimePath() string {
 	return c.runtimePath
 }
 
+func (c *AppConfig) GetConfigPath() string {
+	return filepath.Join(c.runtimePath, "config")
+}
+
+func (c *AppConfig) GetPromptPath() string {
+	return filepath.Join(c.runtimePath, "prompt")
+}
+
 func (c *AppConfig) GetDatabasePath() string {
 	return filepath.Join(c.runtimePath, "tuskbot.db")
 }
 
 func (c *AppConfig) GetSystemPath() string {
-	return filepath.Join(c.runtimePath, "prompt/SYSTEM.md")
+	return filepath.Join(c.runtimePath, "prompt", "SYSTEM.md")
 }
 
 func (c *AppConfig) GetIdentityPath() string {
-	return filepath.Join(c.runtimePath, "prompt/IDENTITY.md")
+	return filepath.Join(c.runtimePath, "prompt", "IDENTITY.md")
 }
 
 func (c *AppConfig) GetUserProfilePath() string {
-	return filepath.Join(c.runtimePath, "prompt/USER.md")
+	return filepath.Join(c.runtimePath, "prompt", "USER.md")
 }
 
 func (c *AppConfig) GetMemoryPath() string {
-	return filepath.Join(c.runtimePath, "prompt/MEMORY.md")
+	return filepath.Join(c.runtimePath, "prompt", "MEMORY.md")
 }
 
 func (c *AppConfig) GetSubAgentPath() string {
-	return filepath.Join(c.runtimePath, "prompt/SUBAGENT.md")
+	return filepath.Join(c.runtimePath, "prompt", "SUBAGENT.md")
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {
-	return filepath.Join(c.runtimePath, "config/mcp_config.json")
+	return filepath.Join(c.runtimePath, "config", "mcp_config.json")
 }
 
 func (c *AppConfig) GetContextWindowSize() int {

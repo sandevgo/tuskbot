@@ -6,6 +6,8 @@ import (
 
 type AppConfig interface {
 	GetRuntimePath() string
+	GetConfigPath() string
+	GetPromptPath() string
 	GetDatabasePath() string
 	GetMCPConfigPath() string
 	GetContextWindowSize() int
