@@ -69,7 +69,7 @@ func (c *AppConfig) GetModelsPath() string {
 }
 
 func (c *AppConfig) GetPromptPath() string {
-	return filepath.Join(c.runtimePath, "prompt")
+	return filepath.Join(c.runtimePath, dirPrompt)
 }
 
 func (c *AppConfig) GetDatabasePath() string {
@@ -77,23 +77,23 @@ func (c *AppConfig) GetDatabasePath() string {
 }
 
 func (c *AppConfig) GetSystemPath() string {
-	return filepath.Join(c.runtimePath, "prompt", "SYSTEM.md")
+	return filepath.Join(c.runtimePath, dirPrompt, "SYSTEM.md")
 }
 
 func (c *AppConfig) GetIdentityPath() string {
-	return filepath.Join(c.runtimePath, "prompt", "IDENTITY.md")
+	return filepath.Join(c.runtimePath, dirPrompt, "IDENTITY.md")
 }
 
 func (c *AppConfig) GetUserProfilePath() string {
-	return filepath.Join(c.runtimePath, "prompt", "USER.md")
+	return filepath.Join(c.runtimePath, dirPrompt, "USER.md")
 }
 
 func (c *AppConfig) GetMemoryPath() string {
-	return filepath.Join(c.runtimePath, "prompt", "MEMORY.md")
+	return filepath.Join(c.runtimePath, dirPrompt, "MEMORY.md")
 }
 
 func (c *AppConfig) GetSubAgentPath() string {
-	return filepath.Join(c.runtimePath, "prompt", "SUBAGENT.md")
+	return filepath.Join(c.runtimePath, dirPrompt, "SUBAGENT.md")
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {

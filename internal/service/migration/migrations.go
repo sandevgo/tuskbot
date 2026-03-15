@@ -48,8 +48,9 @@ func setupInitialFiles(cfg config) error {
 	fileMap := map[string]string{
 		"IDENTITY.md":     cfg.GetIdentityPath(),
 		"MEMORY.md":       cfg.GetMemoryPath(),
-		"SYSTEM.md":       cfg.GetSystemPath(),
 		"USER.md":         cfg.GetUserProfilePath(),
+		"SUBAGENT.md":     cfg.GetSubAgentPath(),
+		"SYSTEM.md":       cfg.GetSystemPath(),
 		"mcp_config.json": cfg.GetMCPConfigPath(),
 	}
 
