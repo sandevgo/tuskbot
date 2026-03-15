@@ -37,7 +37,8 @@ type ProviderConfig interface {
 }
 
 type EmbeddingConfig interface {
-	GetEmbeddingModel() string
+	GetEmbeddingModelPath() string
+	GetEmbeddingModelName() string
 }
 
 type TelegramConfig interface {

@@ -24,10 +24,10 @@ type config interface {
 }
 
 func checkEmbeddingModel(cfg config) error {
-	if _, err := os.Stat(cfg.GetEmbeddingModel()); os.IsNotExist(err) {
+	if _, err := os.Stat(cfg.GetEmbeddingModelPath()); os.IsNotExist(err) {
 		return fmt.Errorf(
 			"embedding model not found at %s\nRun 'tusk install' to download it",
-			cfg.GetEmbeddingModel(),
+			cfg.GetEmbeddingModelPath(),
 		)
 	}
 	return nil

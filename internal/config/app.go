@@ -161,7 +161,11 @@ func (c *AppConfig) SetModel(model string) error {
 	return c.persist()
 }
 
-func (c *AppConfig) GetEmbeddingModel() string {
+func (c *AppConfig) GetEmbeddingModelName() string {
+	return c.EmbedModel
+}
+
+func (c *AppConfig) GetEmbeddingModelPath() string {
 	return filepath.Join(c.runtimePath, dirModels, c.EmbedModel)
 }
 
