@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/sandevgo/tuskbot/configs"
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -36,8 +35,8 @@ func checkEmbeddingModel(cfg config) error {
 
 func setupInitialFiles(cfg config) error {
 	dirs := []string{
-		filepath.Dir(cfg.GetConfigPath()),
-		filepath.Dir(cfg.GetPromptPath()),
+		cfg.GetConfigPath(),
+		cfg.GetPromptPath(),
 	}
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
@@ -55,7 +54,8 @@ func setupInitialFiles(cfg config) error {
 	}
 
 	for name, dest := range fileMap {
-		if _, err := os.Stat(dest); os.IsNotExist(err) {
+		_, err := os.Stat(dest)
+		if err != nil {
 			content, err := configs.FS.ReadFile(name)
 			if err != nil {
 				return err
