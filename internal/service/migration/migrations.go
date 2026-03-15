@@ -1,15 +1,13 @@
 package migration
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/sandevgo/tuskbot/configs"
 )
-
-const versionFile = ".version"
 
 // Migration defines a function that performs a filesystem or config change
 type Migration func(runtimePath string) error
@@ -50,29 +48,24 @@ func setupInitialFiles(p string) error {
 	return nil
 }
 
-// Run executes all pending migrations.
-func Run(runtimePath string) error {
-	current := getCurrentVersion(runtimePath)
+// Run executes all pending migrations using sqlite user_version for tracking.
+func Run(db *sql.DB, runtimePath string) error {
+	var current int
+	err := db.QueryRow("PRAGMA user_version").Scan(&current)
+	if err != nil {
+		return fmt.Errorf("failed to get user_version: %w", err)
+	}
+
 	for i := current; i < len(Migrations); i++ {
 		if err := Migrations[i](runtimePath); err != nil {
 			return fmt.Errorf("migration %d failed: %w", i, err)
 		}
-		if err := saveVersion(runtimePath, i+1); err != nil {
-			return err
+
+		newVersion := i + 1
+		_, err := db.Exec(fmt.Sprintf("PRAGMA user_version = %d", newVersion))
+		if err != nil {
+			return fmt.Errorf("failed to set user_version to %d: %w", newVersion, err)
 		}
 	}
 	return nil
-}
-
-func getCurrentVersion(runtimePath string) int {
-	data, err := os.ReadFile(filepath.Join(runtimePath, versionFile))
-	if err != nil {
-		return 0
-	}
-	v, _ := strconv.Atoi(string(data))
-	return v
-}
-
-func saveVersion(runtimePath string, version int) error {
-	return os.WriteFile(filepath.Join(runtimePath, versionFile), []byte(strconv.Itoa(version)), 0644)
 }
