@@ -33,7 +33,6 @@ func getSteps() []Step {
 		NewTelegramOwnerStep(),
 		NewFinalizationStep(),
 		NewSaveEnvStep(),
-		NewInitializeFilesStep(),
 	}
 }
 
