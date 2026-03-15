@@ -117,6 +117,6 @@ TuskBot uses environment variables for configuration.
 ## 🗺 Roadmap
 
 *   **[X] Unified Command Interface:** Support of slash-commands (`/`).
+*   **[X] Cron/heartbeat:** Scheduled tasks and periodic checks.
+*   **[X] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
 *   **[ ] MCP Skills:** Skills for agents to perform specific actions.
-*   **[ ] Cron/heartbeat:** Scheduled tasks and periodic checks.
-*   **[ ] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
