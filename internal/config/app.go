@@ -13,6 +13,12 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
+const (
+	dirConfig = "config"
+	dirModels = "models"
+	dirPrompt = "prompt"
+)
+
 type AppConfig struct {
 	MainModel  string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
 	EmbedModel string `env:"TUSK_EMBEDDING_MODEL,required,notEmpty"`
@@ -55,7 +61,11 @@ func (c *AppConfig) GetRuntimePath() string {
 }
 
 func (c *AppConfig) GetConfigPath() string {
-	return filepath.Join(c.runtimePath, "config")
+	return filepath.Join(c.runtimePath, dirConfig)
+}
+
+func (c *AppConfig) GetModelsPath() string {
+	return filepath.Join(c.runtimePath, dirModels)
 }
 
 func (c *AppConfig) GetPromptPath() string {
@@ -87,7 +97,7 @@ func (c *AppConfig) GetSubAgentPath() string {
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {
-	return filepath.Join(c.runtimePath, "config", "mcp_config.json")
+	return filepath.Join(c.runtimePath, dirConfig, "mcp_config.json")
 }
 
 func (c *AppConfig) GetContextWindowSize() int {
@@ -152,7 +162,7 @@ func (c *AppConfig) SetModel(model string) error {
 }
 
 func (c *AppConfig) GetEmbeddingModel() string {
-	return c.EmbedModel
+	return filepath.Join(c.runtimePath, dirModels, c.EmbedModel)
 }
 
 func (c *AppConfig) GetTelegramToken() string {

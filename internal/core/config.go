@@ -7,6 +7,7 @@ import (
 type AppConfig interface {
 	GetRuntimePath() string
 	GetConfigPath() string
+	GetModelsPath() string
 	GetPromptPath() string
 	GetDatabasePath() string
 	GetMCPConfigPath() string

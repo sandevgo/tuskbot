@@ -13,12 +13,24 @@ import (
 type Migration func(cfg config) error
 
 var Migrations = []Migration{
+	checkEmbeddingModel,
 	setupInitialFiles,
 }
 
 type config interface {
 	core.AppConfig
 	core.PromptConfig
+	core.EmbeddingConfig
+}
+
+func checkEmbeddingModel(cfg config) error {
+	if _, err := os.Stat(cfg.GetEmbeddingModel()); os.IsNotExist(err) {
+		return fmt.Errorf(
+			"embedding model not found at %s\nRun 'tusk install' to download it",
+			cfg.GetEmbeddingModel(),
+		)
+	}
+	return nil
 }
 
 func setupInitialFiles(cfg config) error {
