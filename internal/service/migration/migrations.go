@@ -14,39 +14,43 @@ const versionFile = ".version"
 // Migration defines a function that performs a filesystem or config change
 type Migration func(runtimePath string) error
 
+// Migrations is the registry of all migrations to be run in order.
 var Migrations = []Migration{
-	// Version 0: Initial Setup
-	func(p string) error {
-		// 1. Create directories
-		for _, dir := range []string{"prompt", "data", "models"} {
-			if err := os.MkdirAll(filepath.Join(p, dir), 0755); err != nil {
+	setupInitialFiles,
+}
+
+// setupInitialFiles handles directory creation and default file extraction.
+func setupInitialFiles(p string) error {
+	// 1. Create directories
+	for _, dir := range []string{"prompt", "data", "models"} {
+		if err := os.MkdirAll(filepath.Join(p, dir), 0755); err != nil {
+			return err
+		}
+	}
+
+	// 2. Copy embedded files if they don't exist
+	files := []string{"IDENTITY.md", "MEMORY.md", "SYSTEM.md", "USER.md", "mcp_config.json"}
+	for _, name := range files {
+		// Determine destination
+		dest := filepath.Join(p, "prompt", name)
+		if name == "mcp_config.json" {
+			dest = filepath.Join(p, name)
+		}
+
+		if _, err := os.Stat(dest); os.IsNotExist(err) {
+			content, err := configs.FS.ReadFile(name)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(dest, content, 0644); err != nil {
 				return err
 			}
 		}
-
-		// 2. Copy embedded files if they don't exist
-		files := []string{"IDENTITY.md", "MEMORY.md", "SYSTEM.md", "USER.md", "mcp_config.json"}
-		for _, name := range files {
-			// Determine destination
-			dest := filepath.Join(p, "prompt", name)
-			if name == "mcp_config.json" {
-				dest = filepath.Join(p, name)
-			}
-
-			if _, err := os.Stat(dest); os.IsNotExist(err) {
-				content, err := configs.FS.ReadFile(name)
-				if err != nil {
-					return err
-				}
-				if err := os.WriteFile(dest, content, 0644); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	},
+	}
+	return nil
 }
 
+// Run executes all pending migrations.
 func Run(runtimePath string) error {
 	current := getCurrentVersion(runtimePath)
 	for i := current; i < len(Migrations); i++ {
