@@ -54,28 +54,28 @@ func (c *AppConfig) GetRuntimePath() string {
 	return c.runtimePath
 }
 
+func (c *AppConfig) GetDatabasePath() string {
+	return filepath.Join(c.runtimePath, "tuskbot.db")
+}
+
 func (c *AppConfig) GetSystemPath() string {
-	return filepath.Join(c.runtimePath, "SYSTEM.md")
+	return filepath.Join(c.runtimePath, "prompt/SYSTEM.md")
 }
 
 func (c *AppConfig) GetIdentityPath() string {
-	return filepath.Join(c.runtimePath, "IDENTITY.md")
+	return filepath.Join(c.runtimePath, "prompt/IDENTITY.md")
 }
 
 func (c *AppConfig) GetUserProfilePath() string {
-	return filepath.Join(c.runtimePath, "USER.md")
+	return filepath.Join(c.runtimePath, "prompt/USER.md")
 }
 
 func (c *AppConfig) GetMemoryPath() string {
-	return filepath.Join(c.runtimePath, "MEMORY.md")
+	return filepath.Join(c.runtimePath, "prompt/MEMORY.md")
 }
 
 func (c *AppConfig) GetSubAgentPath() string {
-	return filepath.Join(c.runtimePath, "SUBAGENT.md")
-}
-
-func (c *AppConfig) GetDatabasePath() string {
-	return filepath.Join(c.runtimePath, "tuskbot.db")
+	return filepath.Join(c.runtimePath, "prompt/SUBAGENT.md")
 }
 
 func (c *AppConfig) GetMCPConfigPath() string {
