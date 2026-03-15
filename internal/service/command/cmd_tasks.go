@@ -43,7 +43,10 @@ func (c *TasksCommand) Execute(ctx context.Context, sessionID string, args []str
 
 	var taskList []string
 	for _, t := range tasks {
-		nextRun := t.NextFireTime(time.Now()).Format("2006-01-02 15:04")
+		nextRun := "N/A"
+		if t.Trigger != nil {
+			nextRun = t.NextFireTime(time.Now()).Format("2006-01-02 15:04")
+		}
 		taskList = append(taskList, fmt.Sprintf("**%s** (ID: `%s`) - Next: %s", t.Name, t.ID, nextRun))
 	}
 
