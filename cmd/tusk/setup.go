@@ -125,7 +125,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	mcpManager.RegisterNativeTool(tools.NewSchedule(swarmService))
 
 	// commands
-	commands := command.NewCommands(appCfg, globState, mcpManager)
+	commands := command.NewCommands(appCfg, globState, mcpManager, swarmService)
 	cmdRouter := command.New(commands)
 
 	// 8. Transports
