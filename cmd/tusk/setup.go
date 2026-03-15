@@ -17,6 +17,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
+	"github.com/sandevgo/tuskbot/internal/service/migration"
 	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/service/swarm"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
@@ -28,6 +29,12 @@ import (
 
 func NewServices(ctx context.Context) []srv.Service {
 	logger := log.FromCtx(ctx)
+
+	// Run migrations first
+	if err := migration.Run(config.GetRuntimePath()); err != nil {
+		logger.Fatal().Err(err).Msg("failed to run migrations")
+	}
+
 	services := make([]srv.Service, 0)
 
 	// init env
