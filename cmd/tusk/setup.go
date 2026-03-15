@@ -30,6 +30,12 @@ import (
 func NewServices(ctx context.Context) []srv.Service {
 	logger := log.FromCtx(ctx)
 
+	// init env
+	err := initEnv(ctx, config.GetRuntimePath())
+	if err != nil {
+		logger.Fatal().Err(err).Msg("failed to init env")
+	}
+
 	// 1. Configuration
 	appCfg := config.NewAppConfig(ctx, config.GetRuntimePath())
 
@@ -44,12 +50,6 @@ func NewServices(ctx context.Context) []srv.Service {
 	// Run migrations after DB is ready
 	if err := migration.Run(db, config.GetRuntimePath()); err != nil {
 		logger.Fatal().Err(err).Msg("failed to run migrations")
-	}
-
-	// init env
-	err = initEnv(ctx, config.GetRuntimePath())
-	if err != nil {
-		logger.Fatal().Err(err).Msg("failed to init env")
 	}
 
 	// Knowledge Repo
