@@ -18,4 +18,4 @@ Configure Telegram as the active chat transport.
 
 ## Bot Command Menu
 
-Tusk registers it's slash commands with Telegram's Bot API.
+Tusk registers its slash commands with Telegram's Bot API.
