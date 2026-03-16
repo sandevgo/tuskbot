@@ -34,7 +34,8 @@ func (c *HelpCommand) Execute(ctx context.Context, sessionID string, args []stri
 	}
 
 	return c.formatter.Combine(
-		c.formatter.Info("Available Commands"),
+		c.formatter.Info("Welcome to TuskBot!"),
+		c.formatter.Label("Version", core.TaskVersion),
 		c.formatter.List(list),
 	), nil
 }
