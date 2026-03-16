@@ -6,16 +6,16 @@ import (
 	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
-	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 type Memory struct {
-	cfg      core.AppConfig
-	msgRepo  core.MessagesRepository
-	knowRepo core.KnowledgeRepository
-	embedder core.Embedder
-	prompter *SysPrompt
+	cfg          core.AppConfig
+	msgRepo      core.MessagesRepository
+	knowRepo     core.KnowledgeRepository
+	embedder     core.Embedder
+	tokenCounter core.TokenCounter
+	prompter     *SysPrompt
 }
 
 func NewMemory(
@@ -23,14 +23,16 @@ func NewMemory(
 	msgRepo core.MessagesRepository,
 	knowRepo core.KnowledgeRepository,
 	embedder core.Embedder,
+	tokenCounter core.TokenCounter,
 	prompter *SysPrompt,
 ) *Memory {
 	return &Memory{
-		cfg:      cfg,
-		msgRepo:  msgRepo,
-		knowRepo: knowRepo,
-		embedder: embedder,
-		prompter: prompter,
+		cfg:          cfg,
+		msgRepo:      msgRepo,
+		knowRepo:     knowRepo,
+		embedder:     embedder,
+		tokenCounter: tokenCounter,
+		prompter:     prompter,
 	}
 }
 
@@ -120,10 +122,10 @@ func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction stri
 func (s *Memory) CountTokens(messages []core.Message) int {
 	total := 0
 	for _, m := range messages {
-		total += rag.CountTokensUnicode(m.Role)
-		total += rag.CountTokensUnicode(m.Content)
+		total += s.tokenCounter.CountTokens(m.Role)
+		total += s.tokenCounter.CountTokens(m.Content)
 		if m.Reasoning != "" {
-			total += rag.CountTokensUnicode(m.Reasoning)
+			total += s.tokenCounter.CountTokens(m.Reasoning)
 		}
 	}
 	return total

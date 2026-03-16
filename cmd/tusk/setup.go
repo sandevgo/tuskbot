@@ -96,6 +96,7 @@ func NewServices(ctx context.Context) []srv.Service {
 		messagesRepo,
 		knowledgeRepo,
 		embedder,
+		rag.NewTiktokenCounter(),
 		memory.NewSysPrompt(config.GetRuntimePath(), appCfg),
 	)
 

@@ -216,6 +216,16 @@ func getTokenizer() *tiktoken.Tiktoken {
 	return tk
 }
 
+type TiktokenCounter struct{}
+
+func NewTiktokenCounter() *TiktokenCounter {
+	return &TiktokenCounter{}
+}
+
+func (c *TiktokenCounter) CountTokens(text string) int {
+	return CountTokensUnicode(text)
+}
+
 func CountTokensUnicode(text string) int {
 	if text == "" {
 		return 0

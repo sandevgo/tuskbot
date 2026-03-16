@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+type TokenCounter interface {
+	CountTokens(text string) int
+}
+
 type Memory interface {
 	GetFullContext(ctx context.Context, sessionID, userQuery string) ([]Message, error)
 	GetTaskContext(ctx context.Context, sessionID, instruction string) ([]Message, error)
