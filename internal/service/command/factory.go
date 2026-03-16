@@ -15,7 +15,6 @@ func NewCommands(
 		NewModelCommand(cfg, state),
 		NewMCPCommand(mcp),
 		NewTaskCommand(swarm),
-		NewStartCommand(),
 	}
 
 	// Append HelpCommand (which needs the list of all commands)
