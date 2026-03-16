@@ -14,6 +14,7 @@ const (
 type Scheduler interface {
 	AddTask(task *Task)
 	DelTask(task *Task)
+	ListTasks() []*Task
 }
 
 type Trigger interface {

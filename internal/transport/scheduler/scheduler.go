@@ -62,6 +62,17 @@ func (s *Scheduler) DelTask(task *core.Task) {
 	}
 }
 
+func (s *Scheduler) ListTasks() []*core.Task {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	result := make([]*core.Task, len(s.tasks))
+	for i, t := range s.tasks {
+		result[i] = t
+	}
+	return result
+}
+
 func (s *Scheduler) Start(ctx context.Context) error {
 	logger := log.FromCtx(ctx)
 	logger.Info().Msg("starting scheduler")
