@@ -159,9 +159,9 @@ func TestCountTokensUnicode(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := countTokensUnicode(tt.text)
+		got := CountTokensUnicode(tt.text)
 		if got != tt.want {
-			t.Errorf("countTokensUnicode(%q) = %d, want %d", tt.text, got, tt.want)
+			t.Errorf("CountTokensUnicode(%q) = %d, want %d", tt.text, got, tt.want)
 		}
 	}
 }
