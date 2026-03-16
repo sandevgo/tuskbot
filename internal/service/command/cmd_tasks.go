@@ -21,7 +21,7 @@ func NewTasksCommand(swarm core.Swarm) core.Command {
 }
 
 func (c *TasksCommand) Name() string {
-	return "task"
+	return "tasks"
 }
 
 func (c *TasksCommand) Description() string {
