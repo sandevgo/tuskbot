@@ -100,7 +100,7 @@ func (s *Service) CancelTask(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to cancel task in repo: %w", err)
 	}
 
-	// Find task in scheduler and remove it
+	// Map will be more effective, but it's fine for small scale
 	for _, task := range s.scheduler.ListTasks() {
 		if task.ID.String() == id {
 			s.scheduler.DelTask(task)
