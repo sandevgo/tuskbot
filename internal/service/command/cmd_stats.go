@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
