@@ -10,9 +10,16 @@ func NewCommands(
 	mcp core.MCPServer,
 	swarm core.Swarm,
 ) []core.Command {
-	return []core.Command{
+	// Create base commands
+	cmds := []core.Command{
 		NewModelCommand(cfg, state),
 		NewMCPCommand(mcp),
 		NewTaskCommand(swarm),
+		NewStartCommand(),
 	}
+
+	// Append HelpCommand (which needs the list of all commands)
+	cmds = append(cmds, NewHelpCommand(cmds))
+
+	return cmds
 }
