@@ -12,21 +12,31 @@ TuskBot provides a set of administrative commands to manage the agent's state an
 | `/stats` | Show session statistics (context tokens and message count). | `/stats` |
 | `/help` | Display all available commands and basic usage instructions. | `/help` |
 
-## Model Management
+## Command Behavior
 
-The `/model` command allows for hot-swapping the underlying LLM without restarting the service.
+### `/model`
 
-- **View Current**: Invoke `/model` without arguments to see the active provider and model.
-- **Switch Model**: Provide the model identifier in `provider/model` format.
-  - Example: `/model anthropic/claude-3-5-sonnet`
-  - Example: `/model openai/gpt-4o`
+- Run `/model` with no arguments to display current provider and model.
+- Run `/model <provider>/<model>` to switch the active model.
+- Expect persistent configuration updates after successful model change.
 
-## MCP Inspection
+### `/mcp`
 
-The `/mcp` command provides visibility into the tool ecosystem currently available to the agent.
+- Run `/mcp` to list MCP tools currently available to the agent.
 
-## Task & Session Inspection
+### `/task`
 
-- **`/task`**: Lists active one-time and recurring scheduled tasks.
-- **`/stats`**: Shows the current session ID, context size in tokens, and total messages in context.
-- **`/help`**: Prints the command list with descriptions.
+- Run `/task` to list active scheduled tasks.
+- Read `next run` values as formatted strings (`YYYY-MM-DD HH:MM`).
+
+### `/stats`
+
+- Run `/stats` to inspect session statistics.
+- Read the output fields:
+    - `Session ID: string`
+    - `Context Size: string` (token count)
+    - `Messages: string` (count)
+
+### `/help`
+
+- Run `/help` to list all registered commands with descriptions.
