@@ -26,8 +26,7 @@ func (t *IntervalTrigger) NextFireTime(now time.Time, last time.Time) time.Time 
 
 // OneOffTrigger At implementation
 type OneOffTrigger struct {
-	At    time.Time
-	fired bool
+	At time.Time
 }
 
 func NewOneOffTrigger(at time.Time) *OneOffTrigger {
@@ -35,13 +34,14 @@ func NewOneOffTrigger(at time.Time) *OneOffTrigger {
 }
 
 func (t *OneOffTrigger) NextFireTime(now time.Time, last time.Time) time.Time {
-	if t.fired {
-		return time.Time{} // Done forever
+	if !last.IsZero() {
+		return time.Time{}
 	}
-	t.fired = true
+
 	if t.At.Before(now) {
-		return now // Execute immediately if already passed
+		return now
 	}
+
 	return t.At
 }
 
