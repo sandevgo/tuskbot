@@ -71,6 +71,7 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		return err
 	}
 
+	now := time.Now()
 	storedTask := &core.StoredTask{
 		ID:             taskID,
 		Name:           name,
@@ -79,7 +80,8 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		TriggerSpec:    timeSpec,
 		OwnerSessionID: ownerSessionID,
 		IsActive:       true,
-		CreatedAt:      time.Now(),
+		CreatedAt:      now,
+		UpdatedAt:      &now,
 	}
 
 	err = s.taskRepo.Create(ctx, storedTask)
@@ -171,6 +173,11 @@ func (s *Service) assignJob(task *core.Task) {
 		})
 		if err != nil {
 			return err
+		}
+
+		task.LastRun = time.Now()
+		if err := s.taskRepo.UpdateExecution(ctx, task.ID, task.LastRun); err != nil {
+			logger.Error().Err(err).Str("task", task.Name).Msg("failed to persist last_run")
 		}
 
 		return s.agent.Notify(ctx, task, result)

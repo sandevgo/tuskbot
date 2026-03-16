@@ -47,7 +47,7 @@ func (c *TaskCommand) Execute(ctx context.Context, sessionID string, args []stri
 		if t.Trigger != nil {
 			nextRun = t.NextFireTime(time.Now()).Format("2006-01-02 15:04")
 		}
-		taskList = append(taskList, fmt.Sprintf("**%s**\n Next run at: %s", t.Name, nextRun))
+		taskList = append(taskList, fmt.Sprintf("**%s**\n Next run at: %s\n", t.Name, nextRun))
 	}
 
 	return c.formatter.Combine(
