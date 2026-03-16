@@ -20,15 +20,15 @@ jobs:
 
       - name: Build Linux amd64
         run: |
-          make release-linux
+          make VERSION=${GITHUB_REF_NAME#v} release-linux
 
       - name: Build Linux arm64
         run: |
-          make release-linux-arm64
+          make VERSION=${GITHUB_REF_NAME#v} release-linux-arm64
 
       - name: Build MacOS arm64
         run: |
-          make release-macos
+          make VERSION=${GITHUB_REF_NAME#v} release-macos
 
       - name: Tar linux-amd64
         run: |

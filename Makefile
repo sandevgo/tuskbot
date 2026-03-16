@@ -1,6 +1,8 @@
 # Define variables
 PROJECT_NAME := tuskbot
-GO_FLAGS := -trimpath -ldflags="-s -w"
+VERSION ?= dev
+LDFLAGS := -s -w -X github.com/sandevgo/tuskbot/internal/core.TaskVersion=$(VERSION)
+GO_FLAGS := -trimpath -ldflags="$(LDFLAGS)"
 
 .PHONY: all build test clean run format llamacpp release-linux release-macos _build_linux_amd64 _build_darwin_arm64
 
@@ -26,6 +28,7 @@ release-linux:
 		--target export \
 		--output bin \
 		--build-arg BUILD_TARGET=linux_amd64 \
+		--build-arg VERSION=$(VERSION) \
 		.
 	@mv bin/tusk bin/tusk-linux-amd64
 
@@ -36,6 +39,7 @@ release-linux-arm64:
 		--target export \
 		--output bin \
 		--build-arg BUILD_TARGET=linux_arm64 \
+		--build-arg VERSION=$(VERSION) \
 		.
 	@mv bin/tusk bin/tusk-linux-arm64
 
@@ -46,6 +50,7 @@ release-macos:
 		--target export \
 		--output bin \
 		--build-arg BUILD_TARGET=darwin_arm64 \
+		--build-arg VERSION=$(VERSION) \
 		.
 	@mv bin/tusk bin/tusk-darwin-arm64
 
