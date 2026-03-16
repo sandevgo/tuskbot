@@ -52,7 +52,7 @@ type CronTrigger struct {
 }
 
 func NewCronTrigger(expression string) (*CronTrigger, error) {
-	p := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	p := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	_, err := p.Parse(expression)
 	if err != nil {
 		return nil, err

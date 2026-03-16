@@ -13,11 +13,11 @@ import (
 )
 
 type ScheduleOnceQuery struct {
-	TaskName  string `json:"name"`
-	At        string `json:"at"`
-	Prompt    string `json:"prompt"`
-	Type      string `json:"type"`
-	TimeSpec  string `json:"time_spec"`
+	TaskName    string `json:"name"`
+	At          string `json:"at"`
+	Prompt      string `json:"prompt"`
+	Type        string `json:"type"`
+	TimeSpec    string `json:"time_spec"`
 	Instruction string `json:"instruction"`
 }
 
@@ -70,7 +70,7 @@ const scheduleCron = `
 		  },
 		  "at": {
 			"type": "string",
-			"description": "Cron expression for scheduling (e.g., '0 9 * * * *' for daily at 9 AM). Format: second minute hour day-of-month month day-of-week (6 fields)."
+			"description": "Cron expression for scheduling (e.g., '0 9 * * *' for daily at 9 AM). Format: minute hour day-of-month month day-of-week (5 fields)."
 		  }
 		},
 		"required": ["name", "prompt", "at"]
@@ -278,7 +278,7 @@ func parseScheduleCron(ctx context.Context, args json.RawMessage) (*ScheduleOnce
 	}
 
 	// Validate as cron expression
-	_, err := cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(input.At)
+	_, err := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow).Parse(input.At)
 	if err != nil {
 		return nil, fmt.Errorf("at must be a valid cron expression: %w", err)
 	}

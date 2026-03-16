@@ -63,7 +63,7 @@ The schedule interface lets the agent create, list, and cancel background tasks.
 
 ### Scheduling Notes
 - `schedule_once` expects `at` in RFC3339 format (for example, `2026-03-16T14:30:00Z`).
-- `schedule_cron` expects a 6-field cron expression with seconds.
+- `schedule_cron` expects a 5-field cron expression.
 - Task names must use alphanumeric characters and hyphens.
 
 ## Security & Governance
