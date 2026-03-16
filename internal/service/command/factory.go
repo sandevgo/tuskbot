@@ -9,12 +9,14 @@ func NewCommands(
 	state core.GlobalState,
 	mcp core.MCPServer,
 	swarm core.Swarm,
+	memory core.Memory,
 ) []core.Command {
 	// Create base commands
 	cmds := []core.Command{
 		NewModelCommand(cfg, state),
 		NewMCPCommand(mcp),
 		NewTaskCommand(swarm),
+		NewStatsCommand(memory),
 	}
 
 	// Append HelpCommand (which needs the list of all commands)

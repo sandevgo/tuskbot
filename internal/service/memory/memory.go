@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/internal/providers/rag"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -114,4 +115,16 @@ func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction stri
 		Content: instruction,
 	})
 	return messages, nil
+}
+
+func (s *Memory) CountTokens(messages []core.Message) int {
+	total := 0
+	for _, m := range messages {
+		total += rag.CountTokensUnicode(m.Role)
+		total += rag.CountTokensUnicode(m.Content)
+		if m.Reasoning != "" {
+			total += rag.CountTokensUnicode(m.Reasoning)
+		}
+	}
+	return total
 }
