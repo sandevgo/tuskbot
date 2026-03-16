@@ -8,27 +8,27 @@ import (
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-type TaskCommand struct {
+type TasksCommand struct {
 	swarm     core.Swarm
 	formatter *ResponseFormatter
 }
 
-func NewTaskCommand(swarm core.Swarm) core.Command {
-	return &TaskCommand{
+func NewTasksCommand(swarm core.Swarm) core.Command {
+	return &TasksCommand{
 		swarm:     swarm,
 		formatter: NewResponseFormatter(),
 	}
 }
 
-func (c *TaskCommand) Name() string {
+func (c *TasksCommand) Name() string {
 	return "task"
 }
 
-func (c *TaskCommand) Description() string {
+func (c *TasksCommand) Description() string {
 	return "List active scheduled tasks"
 }
 
-func (c *TaskCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
+func (c *TasksCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
 	tasks, err := c.swarm.ListTasks(ctx)
 	if err != nil {
 		return "", err

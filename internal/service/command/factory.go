@@ -15,7 +15,7 @@ func NewCommands(
 	cmds := []core.Command{
 		NewModelCommand(cfg, state),
 		NewMCPCommand(mcp),
-		NewTaskCommand(swarm),
+		NewTasksCommand(swarm),
 		NewStatsCommand(memory),
 	}
 
