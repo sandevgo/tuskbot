@@ -1,15 +1,55 @@
 # Runtime Data
 
-TuskBot maintains a specific directory structure within the `TUSK_RUNTIME_PATH` to ensure persistence of state, configuration, and local models.
+TuskBot stores local state under `TUSK_RUNTIME_PATH` (default: `~/.tuskbot`).
 
-## Filesystem Hierarchy
+## Runtime Layout
 
-Upon initialization, the system generates the following structure:
+```text
+<TUSK_RUNTIME_PATH>/
+├── .env
+├── tuskbot.db
+├── config/
+│   └── mcp_config.json
+├── models/
+│   └── <TUSK_EMBEDDING_MODEL>
+└── prompt/
+    ├── SYSTEM.md
+    ├── IDENTITY.md
+    ├── USER.md
+    ├── MEMORY.md
+    └── SUBAGENT.md
+```
 
-- `tuskbot.db`: SQLite database containing message history and vector embeddings.
-- `mcp_config.json`: JSON-encoded configuration for external MCP servers.
-- `models/`: Directory for local GGUF model storage.
-- `.env`: Local environment variable overrides.
-- `IDENTITY.md`: System identity prompt definition.
-- `USER.md`: User profile and preference data.
-- `MEMORY.md`: Long-term memory extraction rules.
+## Bootstrap Behavior
+
+Runtime bootstrap is handled by `internal/service/migration/migrations.go`.
+
+On startup, TuskBot:
+
+- Ensures `config/` and `prompt/` directories exist.
+- Creates these files from embedded defaults **if they are missing**:
+  - `config/mcp_config.json`
+  - `prompt/SYSTEM.md`
+  - `prompt/IDENTITY.md`
+  - `prompt/USER.md`
+  - `prompt/MEMORY.md`
+  - `prompt/SUBAGENT.md`
+- Verifies the embedding model exists at `models/<TUSK_EMBEDDING_MODEL>`.
+  - If it is missing, startup fails and asks you to run `tusk install`.
+
+## Database (`tuskbot.db`)
+
+`internal/config/app.go` resolves the database path as `<TUSK_RUNTIME_PATH>/tuskbot.db`.
+
+Schema is managed by SQL migrations in `internal/storage/sqlite/migrations/` and currently includes:
+
+- `messages`
+- `messages_vec` (vector storage)
+- `knowledge`
+- `knowledge_vec` (vector storage)
+- `task` (scheduled/background jobs)
+
+## Environment File (`.env`)
+
+`.env` is stored in the runtime root and loaded at startup when present.
+Configuration updates that call `SetModel(...)` persist values back to this file.
