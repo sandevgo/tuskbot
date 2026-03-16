@@ -14,10 +14,10 @@ import (
 
 func TestScheduler_AddTask(t *testing.T) {
 	s := NewScheduler()
-	
+
 	trigger := NewIntervalTrigger(1 * time.Second)
 	job := func(ctx context.Context) error { return nil }
-	
+
 	// Should not panic
 	require.NotPanics(t, func() {
 		s.AddTask(&core.Task{
@@ -128,7 +128,7 @@ func TestScheduler_Triggers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := NewScheduler()
 			counters := make(map[string]*int32)
-			
+
 			// Initialize counters for this test
 			for k := range tt.expectedCounts {
 				counters[k] = new(int32)
@@ -172,64 +172,54 @@ func TestScheduler_CronTrigger(t *testing.T) {
 		validateNext   func(now, next time.Time) bool
 	}{
 		{
-			name:           "every second",
-			cronExpression: "* * * * * *",
-			validateNext: func(now, next time.Time) bool {
-				// Should fire at the next second
-				expected := now.Truncate(time.Second).Add(time.Second)
-				diff := next.Sub(expected)
-				if diff < 0 {
-					diff = -diff
-				}
-				return diff < 2*time.Second // Allow 2 second tolerance
-			},
-		},
-		{
-			name:           "every minute at second 0",
-			cronExpression: "0 * * * * *",
+			name:           "every minute",
+			cronExpression: "* * * * *",
 			validateNext: func(now, next time.Time) bool {
 				// Should fire at the next minute boundary
 				expected := now.Truncate(time.Minute).Add(time.Minute)
-				diff := next.Sub(expected)
-				if diff < 0 {
-					diff = -diff
-				}
-				return diff < 2*time.Second // Allow 2 second tolerance
+				return next.Equal(expected)
 			},
 		},
 		{
-			name:           "every hour at minute 0, second 0",
-			cronExpression: "0 0 * * * *",
+			name:           "every hour at minute 0",
+			cronExpression: "0 * * * *",
 			validateNext: func(now, next time.Time) bool {
 				// Should fire at the next hour boundary
 				expected := now.Truncate(time.Hour).Add(time.Hour)
-				diff := next.Sub(expected)
-				if diff < 0 {
-					diff = -diff
+				return next.Equal(expected)
+			},
+		},
+		{
+			name:           "every day at midnight",
+			cronExpression: "0 0 * * *",
+			validateNext: func(now, next time.Time) bool {
+				// Construct midnight for today
+				midnight := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+				// If now is already past midnight, the next run is tomorrow at midnight
+				var expected time.Time
+				if now.Before(midnight) {
+					expected = midnight
+				} else {
+					expected = midnight.Add(24 * time.Hour)
 				}
-				return diff < 2*time.Second // Allow 2 second tolerance
+
+				return next.Equal(expected)
 			},
 		},
 		{
 			name:           "every day at 9 AM",
-			cronExpression: "0 0 9 * * *",
+			cronExpression: "0 9 * * *",
 			validateNext: func(now, next time.Time) bool {
 				// Should fire at 9 AM today or tomorrow
-				today := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, now.Location())
-				if now.Before(today) {
-					diff := next.Sub(today)
-					if diff < 0 {
-						diff = -diff
-					}
-					return diff < 2*time.Second
+				today9AM := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, now.Location())
+				var expected time.Time
+				if now.Before(today9AM) {
+					expected = today9AM
+				} else {
+					expected = today9AM.Add(24 * time.Hour)
 				}
-				// Tomorrow
-				tomorrow := today.Add(24 * time.Hour)
-				diff := next.Sub(tomorrow)
-				if diff < 0 {
-					diff = -diff
-				}
-				return diff < 2*time.Second
+				return next.Equal(expected)
 			},
 		},
 	}
@@ -249,33 +239,33 @@ func TestScheduler_CronTrigger(t *testing.T) {
 
 func TestScheduler_CronTaskExecution(t *testing.T) {
 	s := NewScheduler()
-	
+
 	var executionCount int32
-	
+
 	// Use interval trigger for testing execution since cron runs at specific times
 	// In production, cron would work the same way
 	intervalTrigger := NewIntervalTrigger(100 * time.Millisecond)
-	
+
 	job := func(ctx context.Context) error {
 		atomic.AddInt32(&executionCount, 1)
 		return nil
 	}
-	
+
 	s.AddTask(&core.Task{
 		Name:    "interval-task",
 		Trigger: intervalTrigger,
 		Job:     job,
 	})
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
 	defer cancel()
-	
+
 	go func() {
 		_ = s.Start(ctx)
 	}()
-	
+
 	<-ctx.Done()
-	
+
 	// Should have executed at least 3 times (0ms, 100ms, 200ms, 300ms)
 	val := atomic.LoadInt32(&executionCount)
 	assert.GreaterOrEqual(t, val, int32(3), "interval task should execute at least 3 times")
@@ -283,61 +273,61 @@ func TestScheduler_CronTaskExecution(t *testing.T) {
 
 func TestScheduler_CronMultipleTasks(t *testing.T) {
 	s := NewScheduler()
-	
+
 	counters := make(map[string]*int32)
 	counters["task1"] = new(int32)
 	counters["task2"] = new(int32)
-	
+
 	// Two interval tasks with different schedules
 	intervalTrigger1 := NewIntervalTrigger(100 * time.Millisecond)
-	
+
 	job1 := func(ctx context.Context) error {
 		atomic.AddInt32(counters["task1"], 1)
 		return nil
 	}
-	
+
 	s.AddTask(&core.Task{
 		Name:    "task-1",
 		Trigger: intervalTrigger1,
 		Job:     job1,
 	})
-	
+
 	intervalTrigger2 := NewIntervalTrigger(200 * time.Millisecond)
-	
+
 	job2 := func(ctx context.Context) error {
 		atomic.AddInt32(counters["task2"], 1)
 		return nil
 	}
-	
+
 	s.AddTask(&core.Task{
 		Name:    "task-2",
 		Trigger: intervalTrigger2,
 		Job:     job2,
 	})
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 350*time.Millisecond)
 	defer cancel()
-	
+
 	go func() {
 		_ = s.Start(ctx)
 	}()
-	
+
 	<-ctx.Done()
-	
+
 	// Both tasks should have executed
 	val1 := atomic.LoadInt32(counters["task1"])
 	val2 := atomic.LoadInt32(counters["task2"])
-	
+
 	assert.GreaterOrEqual(t, val1, int32(3), "task 1 should execute at least 3 times")
 	assert.GreaterOrEqual(t, val2, int32(2), "task 2 should execute at least 2 times")
 }
 
 func TestScheduler_ExecutionOrder(t *testing.T) {
 	s := NewScheduler()
-	
+
 	var executionOrder []string
 	var mu sync.Mutex
-	
+
 	// Task that runs immediately
 	nowTrigger := NewOneOffTrigger(time.Now())
 	job1 := func(ctx context.Context) error {
@@ -365,19 +355,19 @@ func TestScheduler_ExecutionOrder(t *testing.T) {
 		Trigger: futureTrigger,
 		Job:     job2,
 	})
-	
+
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
-	
+
 	go func() {
 		_ = s.Start(ctx)
 	}()
-	
+
 	<-ctx.Done()
-	
+
 	mu.Lock()
 	defer mu.Unlock()
-	
+
 	require.Len(t, executionOrder, 2)
 	assert.Equal(t, "immediate", executionOrder[0])
 	assert.Equal(t, "delayed", executionOrder[1])

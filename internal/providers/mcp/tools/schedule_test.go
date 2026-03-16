@@ -70,10 +70,10 @@ func TestParseScheduleCron(t *testing.T) {
 	}{
 		{
 			name: "valid cron task",
-			args: `{"name": "cron-task", "at": "0 9 * * * *", "prompt": "daily report"}`,
+			args: `{"name": "cron-task", "at": "0 9 * * *", "prompt": "daily report"}`,
 			wantQuery: &ScheduleOnceQuery{
 				TaskName: "cron-task",
-				At:       "0 9 * * * *",
+				At:       "0 9 * * *",
 				Prompt:   "daily report",
 			},
 			wantErr: false,
