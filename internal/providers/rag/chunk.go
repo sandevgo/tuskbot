@@ -49,7 +49,7 @@ func ChunkText(text string, cfg ChunkerConfig) []Chunk {
 	chunkIndex := 0
 
 	for i, sentence := range sentences {
-		sentenceTokens := countTokensUnicode(sentence)
+		sentenceTokens := CountTokensUnicode(sentence)
 
 		// Case A: Sentence is huge (larger than MaxTokens)
 		if sentenceTokens > cfg.MaxTokens {
@@ -91,7 +91,7 @@ func ChunkText(text string, cfg ChunkerConfig) []Chunk {
 			overlap := getOverlapFromSentences(sentences, i, cfg.OverlapTokens)
 			currentChunk.Reset()
 			currentChunk.WriteString(overlap)
-			currentTokens = countTokensUnicode(overlap)
+			currentTokens = CountTokensUnicode(overlap)
 		}
 
 		// Append sentence to buffer
@@ -216,7 +216,17 @@ func getTokenizer() *tiktoken.Tiktoken {
 	return tk
 }
 
-func countTokensUnicode(text string) int {
+type TiktokenCounter struct{}
+
+func NewTiktokenCounter() *TiktokenCounter {
+	return &TiktokenCounter{}
+}
+
+func (c *TiktokenCounter) CountTokens(text string) int {
+	return CountTokensUnicode(text)
+}
+
+func CountTokensUnicode(text string) int {
 	if text == "" {
 		return 0
 	}
@@ -233,7 +243,7 @@ func getOverlapFromSentences(sentences []string, currentIdx int, targetTokens in
 	tokens := 0
 
 	for i := currentIdx - 1; i >= 0 && tokens < targetTokens; i-- {
-		sentTokens := countTokensUnicode(sentences[i])
+		sentTokens := CountTokensUnicode(sentences[i])
 		overlap = append([]string{sentences[i]}, overlap...)
 		tokens += sentTokens
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/agent"
 	"github.com/sandevgo/tuskbot/internal/service/command"
 	"github.com/sandevgo/tuskbot/internal/service/memory"
+	"github.com/sandevgo/tuskbot/internal/service/migration"
 	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/service/swarm"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
@@ -28,7 +29,6 @@ import (
 
 func NewServices(ctx context.Context) []srv.Service {
 	logger := log.FromCtx(ctx)
-	services := make([]srv.Service, 0)
 
 	// init env
 	err := initEnv(ctx, config.GetRuntimePath())
@@ -44,7 +44,13 @@ func NewServices(ctx context.Context) []srv.Service {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to initialize storage")
 	}
+	services := make([]srv.Service, 0)
 	services = append(services, srv.NewCleanup(db.Close))
+
+	// Run migrations after DB is ready
+	if err := migration.Run(db, appCfg); err != nil {
+		logger.Fatal().Err(err).Msg("failed to run migrations")
+	}
 
 	// Knowledge Repo
 	knowledgeRepo := sqlite.NewKnowledgeRepo(db)
@@ -90,6 +96,7 @@ func NewServices(ctx context.Context) []srv.Service {
 		messagesRepo,
 		knowledgeRepo,
 		embedder,
+		rag.NewTiktokenCounter(),
 		memory.NewSysPrompt(config.GetRuntimePath(), appCfg),
 	)
 
@@ -125,7 +132,7 @@ func NewServices(ctx context.Context) []srv.Service {
 	mcpManager.RegisterNativeTool(tools.NewSchedule(swarmService))
 
 	// commands
-	commands := command.NewCommands(appCfg, globState, mcpManager)
+	commands := command.NewCommands(appCfg, globState, mcpManager, swarmService, mem)
 	cmdRouter := command.New(commands)
 
 	// 8. Transports

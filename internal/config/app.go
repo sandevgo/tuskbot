@@ -13,6 +13,12 @@ import (
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
+const (
+	dirConfig = "config"
+	dirModels = "models"
+	dirPrompt = "prompt"
+)
+
 type AppConfig struct {
 	MainModel  string `env:"TUSK_MAIN_MODEL,required,notEmpty"`
 	EmbedModel string `env:"TUSK_EMBEDDING_MODEL,required,notEmpty"`
@@ -54,32 +60,44 @@ func (c *AppConfig) GetRuntimePath() string {
 	return c.runtimePath
 }
 
-func (c *AppConfig) GetSystemPath() string {
-	return filepath.Join(c.runtimePath, "SYSTEM.md")
+func (c *AppConfig) GetConfigPath() string {
+	return filepath.Join(c.runtimePath, dirConfig)
 }
 
-func (c *AppConfig) GetIdentityPath() string {
-	return filepath.Join(c.runtimePath, "IDENTITY.md")
+func (c *AppConfig) GetModelsPath() string {
+	return filepath.Join(c.runtimePath, dirModels)
 }
 
-func (c *AppConfig) GetUserProfilePath() string {
-	return filepath.Join(c.runtimePath, "USER.md")
-}
-
-func (c *AppConfig) GetMemoryPath() string {
-	return filepath.Join(c.runtimePath, "MEMORY.md")
-}
-
-func (c *AppConfig) GetSubAgentPath() string {
-	return filepath.Join(c.runtimePath, "SUBAGENT.md")
+func (c *AppConfig) GetPromptPath() string {
+	return filepath.Join(c.runtimePath, dirPrompt)
 }
 
 func (c *AppConfig) GetDatabasePath() string {
 	return filepath.Join(c.runtimePath, "tuskbot.db")
 }
 
+func (c *AppConfig) GetSystemPath() string {
+	return filepath.Join(c.runtimePath, dirPrompt, "SYSTEM.md")
+}
+
+func (c *AppConfig) GetIdentityPath() string {
+	return filepath.Join(c.runtimePath, dirPrompt, "IDENTITY.md")
+}
+
+func (c *AppConfig) GetUserProfilePath() string {
+	return filepath.Join(c.runtimePath, dirPrompt, "USER.md")
+}
+
+func (c *AppConfig) GetMemoryPath() string {
+	return filepath.Join(c.runtimePath, dirPrompt, "MEMORY.md")
+}
+
+func (c *AppConfig) GetSubAgentPath() string {
+	return filepath.Join(c.runtimePath, dirPrompt, "SUBAGENT.md")
+}
+
 func (c *AppConfig) GetMCPConfigPath() string {
-	return filepath.Join(c.runtimePath, "mcp_config.json")
+	return filepath.Join(c.runtimePath, dirConfig, "mcp_config.json")
 }
 
 func (c *AppConfig) GetContextWindowSize() int {
@@ -143,8 +161,12 @@ func (c *AppConfig) SetModel(model string) error {
 	return c.persist()
 }
 
-func (c *AppConfig) GetEmbeddingModel() string {
+func (c *AppConfig) GetEmbeddingModelName() string {
 	return c.EmbedModel
+}
+
+func (c *AppConfig) GetEmbeddingModelPath() string {
+	return filepath.Join(c.runtimePath, dirModels, c.EmbedModel)
 }
 
 func (c *AppConfig) GetTelegramToken() string {

@@ -37,7 +37,8 @@ RUN make deps
 
 # Build the binary using Makefile target
 ARG BUILD_TARGET
-RUN make _build_${BUILD_TARGET}
+ARG VERSION=dev
+RUN make VERSION=${VERSION} _build_${BUILD_TARGET}
 
 # Export stage
 FROM scratch AS export

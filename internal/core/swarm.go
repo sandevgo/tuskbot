@@ -19,6 +19,7 @@ type Task struct {
 	Prompt         string
 	SessionID      string
 	OwnerSessionID string
+	IsActive       bool
 
 	Trigger Trigger
 	Job     Job

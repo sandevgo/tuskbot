@@ -11,8 +11,9 @@ const (
 	TuskName          = "TuskBot"
 	TuskUserAgent     = "TuskBot-Agent/0.1"
 	TuskRepositoryURL = "https://github.com/sandevgo/tuskbot"
-	TaskVersion       = "0.1.0"
 )
+
+var TaskVersion = "dev"
 
 const (
 	CtxKeySessionID = "session_id"

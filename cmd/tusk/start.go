@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/log"
 	"github.com/sandevgo/tuskbot/pkg/srv"
 	"github.com/spf13/cobra"
@@ -23,7 +24,7 @@ var startCmd = &cobra.Command{
 		defer flushLog()
 
 		logger := log.FromCtx(ctx)
-		logger.Info().Msg("starting tuskbot")
+		logger.Info().Msgf("starting tuskbot %s", core.TaskVersion)
 
 		// Define services using the setup.go logic
 		services := NewServices(ctx)

@@ -6,6 +6,9 @@ import (
 
 type AppConfig interface {
 	GetRuntimePath() string
+	GetConfigPath() string
+	GetModelsPath() string
+	GetPromptPath() string
 	GetDatabasePath() string
 	GetMCPConfigPath() string
 	GetContextWindowSize() int
@@ -34,7 +37,8 @@ type ProviderConfig interface {
 }
 
 type EmbeddingConfig interface {
-	GetEmbeddingModel() string
+	GetEmbeddingModelPath() string
+	GetEmbeddingModelName() string
 }
 
 type TelegramConfig interface {

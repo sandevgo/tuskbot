@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
@@ -36,6 +37,19 @@ func (r *TaskRepo) Create(ctx context.Context, task *core.StoredTask) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create scheduled task: %w", err)
+	}
+	return nil
+}
+
+func (r *TaskRepo) UpdateExecution(ctx context.Context, id uuid.UUID, lastRun time.Time) error {
+	query := `
+        UPDATE task
+        SET last_run = ?, updated_at = ?
+        WHERE id = ?
+    `
+	_, err := r.db.ExecContext(ctx, query, lastRun, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update task execution: %w", err)
 	}
 	return nil
 }

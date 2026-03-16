@@ -10,11 +10,12 @@ import (
 )
 
 type Memory struct {
-	cfg      core.AppConfig
-	msgRepo  core.MessagesRepository
-	knowRepo core.KnowledgeRepository
-	embedder core.Embedder
-	prompter *SysPrompt
+	cfg          core.AppConfig
+	msgRepo      core.MessagesRepository
+	knowRepo     core.KnowledgeRepository
+	embedder     core.Embedder
+	tokenCounter core.TokenCounter
+	prompter     *SysPrompt
 }
 
 func NewMemory(
@@ -22,14 +23,16 @@ func NewMemory(
 	msgRepo core.MessagesRepository,
 	knowRepo core.KnowledgeRepository,
 	embedder core.Embedder,
+	tokenCounter core.TokenCounter,
 	prompter *SysPrompt,
 ) *Memory {
 	return &Memory{
-		cfg:      cfg,
-		msgRepo:  msgRepo,
-		knowRepo: knowRepo,
-		embedder: embedder,
-		prompter: prompter,
+		cfg:          cfg,
+		msgRepo:      msgRepo,
+		knowRepo:     knowRepo,
+		embedder:     embedder,
+		tokenCounter: tokenCounter,
+		prompter:     prompter,
 	}
 }
 
@@ -114,4 +117,16 @@ func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction stri
 		Content: instruction,
 	})
 	return messages, nil
+}
+
+func (s *Memory) CountTokens(messages []core.Message) int {
+	total := 0
+	for _, m := range messages {
+		total += s.tokenCounter.CountTokens(m.Role)
+		total += s.tokenCounter.CountTokens(m.Content)
+		if m.Reasoning != "" {
+			total += s.tokenCounter.CountTokens(m.Reasoning)
+		}
+	}
+	return total
 }

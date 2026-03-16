@@ -3,7 +3,6 @@ package swarm
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -25,8 +24,6 @@ type Service struct {
 	agent     core.Agent
 	subagent  core.SubAgent
 	taskRepo  core.TaskRepository
-	mu        sync.RWMutex
-	tasks     map[string]*core.Task
 }
 
 func NewService(
@@ -40,7 +37,6 @@ func NewService(
 		agent:     agent,
 		subagent:  subagent,
 		taskRepo:  taskRepo,
-		tasks:     make(map[string]*core.Task),
 	}
 }
 
@@ -71,6 +67,7 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		return err
 	}
 
+	now := time.Now()
 	storedTask := &core.StoredTask{
 		ID:             taskID,
 		Name:           name,
@@ -79,7 +76,8 @@ func (s *Service) ScheduleTask(ctx context.Context, ownerSessionID, name, taskTy
 		TriggerSpec:    timeSpec,
 		OwnerSessionID: ownerSessionID,
 		IsActive:       true,
-		CreatedAt:      time.Now(),
+		CreatedAt:      now,
+		UpdatedAt:      &now,
 	}
 
 	err = s.taskRepo.Create(ctx, storedTask)
@@ -102,34 +100,30 @@ func (s *Service) CancelTask(ctx context.Context, id string) error {
 		return fmt.Errorf("failed to cancel task in repo: %w", err)
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	// Find task by ID in local tracking
-	for name, task := range s.tasks {
+	// Map will be more effective, but it's fine for small scale
+	for _, task := range s.scheduler.ListTasks() {
 		if task.ID.String() == id {
 			s.scheduler.DelTask(task)
-			delete(s.tasks, name)
 			return nil
 		}
 	}
 
-	return fmt.Errorf("task not found in local tracking: %s", id)
+	return fmt.Errorf("task not found in scheduler: %s", id)
 }
 
 func (s *Service) ListTasks(ctx context.Context) ([]core.Task, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	tasks := s.scheduler.ListTasks()
 
 	var infos []core.Task
-	for _, t := range s.tasks {
+	for _, t := range tasks {
 		infos = append(infos, core.Task{
 			ID:             t.ID,
 			Name:           t.Name,
-			NextRun:        t.NextRun,
-			LastRun:        t.LastRun,
 			Prompt:         t.Prompt,
 			OwnerSessionID: t.OwnerSessionID,
+			Trigger:        t.Trigger,
+			LastRun:        t.LastRun,
+			NextRun:        t.NextRun,
 		})
 	}
 	return infos, nil
@@ -147,6 +141,7 @@ func (s *Service) toDomain(st *core.StoredTask) (*core.Task, error) {
 		Prompt:         st.Prompt,
 		SessionID:      generateSessionID(st.Name),
 		OwnerSessionID: st.OwnerSessionID,
+		IsActive:       st.IsActive,
 		Trigger:        trigger,
 		LastRun:        st.LastRun,
 	}
@@ -173,14 +168,16 @@ func (s *Service) assignJob(task *core.Task) {
 			return err
 		}
 
+		// Update and persist LastRun
+		task.LastRun = time.Now()
+		if err := s.taskRepo.UpdateExecution(ctx, task.ID, task.LastRun); err != nil {
+			logger.Error().Err(err).Str("task", task.Name).Msg("failed to persist last_run")
+		}
+
 		return s.agent.Notify(ctx, task, result)
 	}
 }
 
 func (s *Service) registerTask(task *core.Task) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.tasks[task.Name] = task
 	s.scheduler.AddTask(task)
 }

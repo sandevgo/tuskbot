@@ -1,16 +1,21 @@
-# Telegram Setup
+# Telegram Transport Specification
 
-TuskBot uses the Telegram Bot API as its primary interface.
+Configure Telegram as the active chat transport.
 
-## Required Settings
+## Required Environment Variables
 
-- `TUSK_TELEGRAM_TOKEN`: The API token obtained from [@BotFather](https://t.me/botfather).
-- `TUSK_TELEGRAM_OWNER_ID`: Your numeric Telegram User ID. TuskBot implements a strict security policy where it only responds to this specific ID.
+| Variable | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `TUSK_TELEGRAM_TOKEN` | `string` | Yes | Bot API token issued by `@BotFather`. |
+| `TUSK_TELEGRAM_OWNER_ID` | `int64` | Yes | Numeric Telegram user ID authorized to interact with the bot. |
+| `TUSK_CHAT_CHANNEL` | `string` | Yes | Must be set to `telegram` to enable Telegram transport. |
 
-## Chat Channel
-The variable `TUSK_CHAT_CHANNEL` must be set to `telegram` to enable the Telegram transport layer.
+## Access Control
 
-## Bot Menu
-It is recommended to configure the following commands in BotFather for quick access:
-- `/model` - View or change the current LLM provider.
-- `/mcp` - List connected MCP servers and tools.
+- Set `TUSK_TELEGRAM_OWNER_ID` to a single trusted user ID.
+- Send messages only from that account.
+- Expect all other senders to be ignored.
+
+## Bot Command Menu
+
+Tusk registers its slash commands with Telegram's Bot API.
