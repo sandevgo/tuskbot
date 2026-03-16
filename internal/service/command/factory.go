@@ -13,6 +13,6 @@ func NewCommands(
 	return []core.Command{
 		NewModelCommand(cfg, state),
 		NewMCPCommand(mcp),
-		NewTasksCommand(swarm),
+		NewTaskCommand(swarm),
 	}
 }
