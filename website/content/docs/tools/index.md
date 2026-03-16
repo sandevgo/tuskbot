@@ -48,6 +48,24 @@ The fetch interface provides idempotent HTTP GET capabilities with automated con
 - **Resiliency**: Implements an exponential backoff retry strategy for 5xx status codes and network-level errors.
 - **Timeout**: Request lifecycle is limited to 15 seconds.
 
+## Schedule Interface
+
+The schedule interface lets the agent create, list, and cancel background tasks.
+
+### Methods
+
+| Method | Description | Parameters |
+| :--- | :--- | :--- |
+| `schedule_once` | Schedules a task to run once at a specific RFC3339 time. | `name: string`, `prompt: string`, `at: string` |
+| `schedule_cron` | Schedules a recurring task using a cron expression. | `name: string`, `prompt: string`, `at: string` |
+| `schedule_list` | Lists all currently scheduled tasks. | None |
+| `schedule_cancel` | Cancels a scheduled task by ID. | `task_id: string` |
+
+### Scheduling Notes
+- `schedule_once` expects `at` in RFC3339 format (for example, `2026-03-16T14:30:00Z`).
+- `schedule_cron` expects a 6-field cron expression with seconds.
+- Task names must use alphanumeric characters and hyphens.
+
 ## Security & Governance
 
 - **Path Scoping**: Filesystem operations are restricted to paths relative to the `TUSK_RUNTIME_PATH` environment variable.

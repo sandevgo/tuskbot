@@ -13,4 +13,7 @@ The variable `TUSK_CHAT_CHANNEL` must be set to `telegram` to enable the Telegra
 ## Bot Menu
 It is recommended to configure the following commands in BotFather for quick access:
 - `/model` - View or change the current LLM provider.
-- `/mcp` - List connected MCP servers and tools.
+- `/mcp` - List currently available MCP tools.
+- `/task` - List active scheduled tasks.
+- `/stats` - Show current session statistics.
+- `/help` - Show all available commands.
