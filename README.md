@@ -114,6 +114,11 @@ TuskBot uses environment variables for configuration.
 *   `TUSK_CUSTOM_OPENAI_BASE_URL`: Base URL for Custom OpenAI provider.
 *   `TUSK_CUSTOM_OPENAI_API_KEY`: API Key for Custom OpenAI provider.
 
+### System Service
+
+*   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
+*   `TUSK_SERVICE_SANDBOX_MODE`: Enable OS-native service hardening profile for installed services (systemd/launchd) (default: `true`).
+
 ## 🗺 Roadmap
 
 *   **[X] Unified Command Interface:** Support of slash-commands (`/`).

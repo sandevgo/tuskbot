@@ -230,5 +230,6 @@ func NewSystemService(ctx context.Context) (core.SystemService, error) {
 		Arguments:        []string{"run"},
 		WorkingDirectory: runtimePath,
 		UserService:      svcCfg.UserService,
+		SandboxMode:      svcCfg.SandboxMode,
 	})
 }

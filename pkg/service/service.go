@@ -8,4 +8,5 @@ type Config struct {
 	Arguments        []string
 	WorkingDirectory string
 	UserService      bool
+	SandboxMode      bool
 }
