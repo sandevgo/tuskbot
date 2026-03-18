@@ -21,12 +21,13 @@ func runWithSystemService(action func(cmd *cobra.Command, ctx context.Context, s
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "Manage TuskBot system service",
+	Short: "Manage TuskBot user/system service",
 }
 
 var serviceInstallCmd = &cobra.Command{
 	Use:   "install",
-	Short: "Install TuskBot as a system service",
+	Short: "Install TuskBot service",
+	Long:  `Installs TuskBot as a service for current user by default (TUSK_SERVICE_USER_MODE=true).`,
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
 		return svc.Install(ctx)
 	}),
@@ -34,7 +35,7 @@ var serviceInstallCmd = &cobra.Command{
 
 var serviceUninstallCmd = &cobra.Command{
 	Use:   "uninstall",
-	Short: "Uninstall TuskBot system service",
+	Short: "Uninstall TuskBot service",
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
 		return svc.Uninstall(ctx)
 	}),
@@ -42,8 +43,8 @@ var serviceUninstallCmd = &cobra.Command{
 
 var serviceStartCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start TuskBot system service",
-	Long:  `Starts installed TuskBot system service. Alias: 'tusk start'.`,
+	Short: "Start TuskBot service",
+	Long:  `Starts installed TuskBot service. Alias: 'tusk start'.`,
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
 		return svc.Start(ctx)
 	}),
@@ -51,8 +52,8 @@ var serviceStartCmd = &cobra.Command{
 
 var serviceStopCmd = &cobra.Command{
 	Use:   "stop",
-	Short: "Stop TuskBot system service",
-	Long:  `Stops installed TuskBot system service. Alias: 'tusk stop'.`,
+	Short: "Stop TuskBot service",
+	Long:  `Stops installed TuskBot service. Alias: 'tusk stop'.`,
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
 		return svc.Stop(ctx)
 	}),

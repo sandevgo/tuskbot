@@ -7,4 +7,5 @@ type Config struct {
 	Executable       string
 	Arguments        []string
 	WorkingDirectory string
+	UserService      bool
 }

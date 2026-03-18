@@ -229,5 +229,6 @@ func NewSystemService(ctx context.Context) (core.SystemService, error) {
 		Executable:       execPath,
 		Arguments:        []string{"run"},
 		WorkingDirectory: runtimePath,
+		UserService:      svcCfg.UserService,
 	})
 }

@@ -22,6 +22,7 @@ func NewKardianosManager(cfg Config) (*kardianosManager, error) {
 		Arguments:   cfg.Arguments,
 		Option: kservice.KeyValue{
 			"WorkingDirectory": cfg.WorkingDirectory,
+			"UserService":      cfg.UserService,
 		},
 	}
 	if cfg.Executable != "" {
