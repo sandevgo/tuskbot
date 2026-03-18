@@ -40,7 +40,7 @@ var installCmd = &cobra.Command{
 		}
 
 		logger.Info().Msgf("initialized runtime directory at: %s", runtimePath)
-		logger.Info().Msg("Installation complete! You can now run 'tusk start'.")
+		logger.Info().Msg("Installation complete! You can now run 'tusk run' (foreground) or 'tusk service install && tusk service start' (background service).")
 		return nil
 	},
 }
