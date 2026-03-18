@@ -16,10 +16,7 @@ var startCmd = &cobra.Command{
 	Short: "Start TuskBot user/system service",
 	Long:  `Starts installed TuskBot service (alias for 'tusk service start'). Use 'tusk run' for foreground mode.`,
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) (string, error) {
-		if err := svc.Start(ctx); err != nil {
-			return "", err
-		}
-		return "Service started.", nil
+		return startServiceWithAdvice(ctx, svc)
 	}),
 }
 

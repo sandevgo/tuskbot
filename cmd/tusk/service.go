@@ -27,6 +27,21 @@ func runWithSystemService(action func(cmd *cobra.Command, ctx context.Context, s
 	}
 }
 
+func startServiceWithAdvice(ctx context.Context, svc core.SystemService) (string, error) {
+	status, err := svc.Status(ctx)
+	if err != nil {
+		return "", err
+	}
+	if status == core.SystemServiceStatusUnknown {
+		return "Service is not installed. Run 'tusk service install' first, or use 'tusk run' for foreground mode.", nil
+	}
+
+	if err := svc.Start(ctx); err != nil {
+		return "", err
+	}
+	return "Service started.", nil
+}
+
 var serviceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Manage TuskBot user/system service",
@@ -60,10 +75,7 @@ var serviceStartCmd = &cobra.Command{
 	Short: "Start TuskBot service",
 	Long:  `Starts installed TuskBot service. Alias: 'tusk start'.`,
 	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) (string, error) {
-		if err := svc.Start(ctx); err != nil {
-			return "", err
-		}
-		return "Service started.", nil
+		return startServiceWithAdvice(ctx, svc)
 	}),
 }
 
