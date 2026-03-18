@@ -11,6 +11,7 @@ require (
 	github.com/gomarkdown/markdown v0.0.0-20250810172220-2e2c11897d1a
 	github.com/inbucket/html2text v1.0.0
 	github.com/joho/godotenv v1.5.1
+	github.com/kardianos/service v1.2.4
 	github.com/mark3labs/mcp-go v0.44.0
 	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/microcosm-cc/bluemonday v1.0.27
