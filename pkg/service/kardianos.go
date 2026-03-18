@@ -5,13 +5,16 @@ import (
 	"fmt"
 
 	kservice "github.com/kardianos/service"
+	"github.com/sandevgo/tuskbot/internal/core"
 )
 
 type kardianosManager struct {
 	svc kservice.Service
 }
 
-func NewKardianosManager(cfg Config) (Manager, error) {
+var _ core.SystemService = (*kardianosManager)(nil)
+
+func NewKardianosManager(cfg Config) (*kardianosManager, error) {
 	svcCfg := &kservice.Config{
 		Name:        cfg.Name,
 		DisplayName: cfg.DisplayName,
@@ -61,22 +64,22 @@ func (m *kardianosManager) Stop(ctx context.Context) error {
 	return m.svc.Stop()
 }
 
-func (m *kardianosManager) Status(ctx context.Context) (Status, error) {
+func (m *kardianosManager) Status(ctx context.Context) (core.SystemServiceStatus, error) {
 	if err := ctx.Err(); err != nil {
-		return StatusUnknown, err
+		return core.SystemServiceStatusUnknown, err
 	}
 
 	st, err := m.svc.Status()
 	if err != nil {
-		return StatusUnknown, err
+		return core.SystemServiceStatusUnknown, err
 	}
 
 	switch st {
 	case kservice.StatusRunning:
-		return StatusRunning, nil
+		return core.SystemServiceStatusRunning, nil
 	case kservice.StatusStopped:
-		return StatusStopped, nil
+		return core.SystemServiceStatusStopped, nil
 	default:
-		return StatusUnknown, nil
+		return core.SystemServiceStatusUnknown, nil
 	}
 }

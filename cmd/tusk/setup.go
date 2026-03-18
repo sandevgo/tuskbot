@@ -20,7 +20,6 @@ import (
 	"github.com/sandevgo/tuskbot/internal/service/migration"
 	"github.com/sandevgo/tuskbot/internal/service/state"
 	"github.com/sandevgo/tuskbot/internal/service/swarm"
-	systemsvc "github.com/sandevgo/tuskbot/internal/service/system"
 	"github.com/sandevgo/tuskbot/internal/storage/sqlite"
 	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
@@ -223,7 +222,7 @@ func NewSystemService(ctx context.Context) (core.SystemService, error) {
 		return nil, err
 	}
 
-	mgr, err := pkgservice.NewKardianosManager(pkgservice.Config{
+	return pkgservice.NewKardianosManager(pkgservice.Config{
 		Name:             svcCfg.Name,
 		DisplayName:      svcCfg.DisplayName,
 		Description:      svcCfg.Description,
@@ -231,9 +230,4 @@ func NewSystemService(ctx context.Context) (core.SystemService, error) {
 		Arguments:        []string{"run"},
 		WorkingDirectory: runtimePath,
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return systemsvc.NewService(mgr), nil
 }
