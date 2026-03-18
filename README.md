@@ -50,7 +50,7 @@ tusk install
 **Running TuskBot**
 
 ```bash
-tusk start
+tusk run
 ```
 
 ## Using Docker
@@ -63,7 +63,7 @@ services:
     image: ghcr.io/sandevgo/tuskbot:latest
     volumes:
       - tuskbot-data:/root/.tuskbot
-    command: start
+    command: run
 
 volumes:
   tuskbot-data:
