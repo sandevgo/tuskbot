@@ -22,6 +22,17 @@ var startCmd = &cobra.Command{
 	},
 }
 
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run TuskBot in foreground",
+	Long:  `Runs TuskBot in the foreground process (PID 1 friendly for containers).`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
+		defer stop()
+		return runApp(ctx)
+	},
+}
+
 func runApp(ctx context.Context) error {
 	// logger setup
 	var flushLog func()
@@ -46,4 +57,5 @@ func runApp(ctx context.Context) error {
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(runCmd)
 }
