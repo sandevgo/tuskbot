@@ -18,7 +18,7 @@ build:
 
 run: build
 	@echo "Running $(PROJECT_NAME)..."
-	@./bin/tusk start
+	@./bin/tusk run -d
 
 # Release targets
 release-linux:
