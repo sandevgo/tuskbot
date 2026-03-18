@@ -2,19 +2,21 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	kservice "github.com/kardianos/service"
 	"github.com/sandevgo/tuskbot/internal/core"
 )
 
-type kardianosManager struct {
+type KardianosManager struct {
 	svc kservice.Service
 }
 
-var _ core.SystemService = (*kardianosManager)(nil)
+var _ core.SystemService = (*KardianosManager)(nil)
 
-func NewKardianosManager(cfg Config) (*kardianosManager, error) {
+func NewKardianosManager(cfg Config) (*KardianosManager, error) {
 	svcCfg := &kservice.Config{
 		Name:        cfg.Name,
 		DisplayName: cfg.DisplayName,
@@ -34,44 +36,95 @@ func NewKardianosManager(cfg Config) (*kardianosManager, error) {
 		return nil, fmt.Errorf("create service: %w", err)
 	}
 
-	return &kardianosManager{svc: svc}, nil
+	return &KardianosManager{svc: svc}, nil
 }
 
-func (m *kardianosManager) Install(ctx context.Context) error {
+func (m *KardianosManager) Install(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return m.svc.Install()
+
+	status, err := m.Status(ctx)
+	if err == nil && status != core.SystemServiceStatusUnknown {
+		return nil
+	}
+
+	if err := m.svc.Install(); err != nil {
+		if isAlreadyExistsErr(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
-func (m *kardianosManager) Uninstall(ctx context.Context) error {
+func (m *KardianosManager) Uninstall(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return m.svc.Uninstall()
+
+	status, err := m.Status(ctx)
+	if err == nil && status == core.SystemServiceStatusUnknown {
+		return nil
+	}
+
+	if err := m.svc.Uninstall(); err != nil {
+		if isNotInstalledErr(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
-func (m *kardianosManager) Start(ctx context.Context) error {
+func (m *KardianosManager) Start(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return m.svc.Start()
+
+	status, err := m.Status(ctx)
+	if err == nil && status == core.SystemServiceStatusRunning {
+		return nil
+	}
+
+	if err := m.svc.Start(); err != nil {
+		if isAlreadyRunningErr(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
-func (m *kardianosManager) Stop(ctx context.Context) error {
+func (m *KardianosManager) Stop(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	return m.svc.Stop()
+
+	status, err := m.Status(ctx)
+	if err == nil && status != core.SystemServiceStatusRunning {
+		return nil
+	}
+
+	if err := m.svc.Stop(); err != nil {
+		if isNotRunningErr(err) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
-func (m *kardianosManager) Status(ctx context.Context) (core.SystemServiceStatus, error) {
+func (m *KardianosManager) Status(ctx context.Context) (core.SystemServiceStatus, error) {
 	if err := ctx.Err(); err != nil {
 		return core.SystemServiceStatusUnknown, err
 	}
 
 	st, err := m.svc.Status()
 	if err != nil {
+		if isNotInstalledErr(err) {
+			return core.SystemServiceStatusUnknown, nil
+		}
 		return core.SystemServiceStatusUnknown, err
 	}
 
@@ -83,4 +136,39 @@ func (m *kardianosManager) Status(ctx context.Context) (core.SystemServiceStatus
 	default:
 		return core.SystemServiceStatusUnknown, nil
 	}
+}
+
+func isAlreadyExistsErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	e := strings.ToLower(err.Error())
+	return strings.Contains(e, "already exists") || strings.Contains(e, "already installed") || strings.Contains(e, "service exists")
+}
+
+func isNotInstalledErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, kservice.ErrNotInstalled) {
+		return true
+	}
+	e := strings.ToLower(err.Error())
+	return strings.Contains(e, "not installed") || strings.Contains(e, "does not exist") || strings.Contains(e, "could not find")
+}
+
+func isAlreadyRunningErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	e := strings.ToLower(err.Error())
+	return strings.Contains(e, "already started") || strings.Contains(e, "already running") || strings.Contains(e, "service is running")
+}
+
+func isNotRunningErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	e := strings.ToLower(err.Error())
+	return strings.Contains(e, "not loaded") || strings.Contains(e, "not running") || strings.Contains(e, "not started") || strings.Contains(e, "input/output error")
 }
