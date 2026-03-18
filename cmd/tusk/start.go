@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/signal"
 
@@ -17,27 +18,30 @@ var startCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer stop()
-
-		// logger setup
-		var flushLog func()
-		ctx, flushLog = setupLogger(ctx)
-		defer flushLog()
-
-		logger := log.FromCtx(ctx)
-		logger.Info().Msgf("starting tuskbot %s", core.TaskVersion)
-
-		// Define services using the setup.go logic
-		services := NewServices(ctx)
-
-		// Start services
-		srv.StartServices(ctx, services)
-
-		// Wait for shutdown signal
-		srv.ShutdownServices(ctx, services)
-		logger.Info().Msg("tuskbot has been shut down gracefully")
-
-		return nil
+		return runApp(ctx)
 	},
+}
+
+func runApp(ctx context.Context) error {
+	// logger setup
+	var flushLog func()
+	ctx, flushLog = setupLogger(ctx)
+	defer flushLog()
+
+	logger := log.FromCtx(ctx)
+	logger.Info().Msgf("starting tuskbot %s", core.TaskVersion)
+
+	// Define services using the setup.go logic
+	services := NewServices(ctx)
+
+	// Start services
+	srv.StartServices(ctx, services)
+
+	// Wait for shutdown signal
+	srv.ShutdownServices(ctx, services)
+	logger.Info().Msg("tuskbot has been shut down gracefully")
+
+	return nil
 }
 
 func init() {
