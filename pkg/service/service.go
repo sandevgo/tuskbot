@@ -9,4 +9,5 @@ type Config struct {
 	WorkingDirectory string
 	UserService      bool
 	SandboxMode      bool
+	LogDirectory     string
 }

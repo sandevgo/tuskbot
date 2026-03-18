@@ -118,6 +118,7 @@ TuskBot uses environment variables for configuration.
 
 *   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
 *   `TUSK_SERVICE_SANDBOX_MODE`: Enable OS-native service hardening profile for installed services (systemd/launchd) (default: `true`).
+*   `TUSK_SERVICE_LOG_DIRECTORY`: Directory for generated service stdout/stderr log files (default: `TUSK_RUNTIME_PATH`).
 
 ## 🗺 Roadmap
 

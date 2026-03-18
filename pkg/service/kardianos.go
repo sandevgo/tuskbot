@@ -21,6 +21,9 @@ func NewKardianosManager(cfg Config) (*KardianosManager, error) {
 		"WorkingDirectory": cfg.WorkingDirectory,
 		"UserService":      cfg.UserService,
 	}
+	if cfg.LogDirectory != "" {
+		options["LogDirectory"] = cfg.LogDirectory
+	}
 	if cfg.SandboxMode {
 		options["SystemdScript"] = systemdSandboxScript
 		options["LaunchdConfig"] = launchdSandboxConfig

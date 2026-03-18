@@ -231,5 +231,6 @@ func NewSystemService(ctx context.Context) (core.SystemService, error) {
 		WorkingDirectory: runtimePath,
 		UserService:      svcCfg.UserService,
 		SandboxMode:      svcCfg.SandboxMode,
+		LogDirectory:     svcCfg.GetLogDirectory(),
 	})
 }
