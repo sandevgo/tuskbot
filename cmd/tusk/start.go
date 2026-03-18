@@ -13,19 +13,26 @@ import (
 
 var startCmd = &cobra.Command{
 	Use:   "start",
-	Short: "Start the TuskBot services",
-	Long:  `Initializes and starts all configured services (Telegram, CLI, etc.) and background workers.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
-		defer stop()
-		return runApp(ctx)
-	},
+	Short: "Start TuskBot system service",
+	Long:  `Starts installed TuskBot system service (alias for 'tusk service start'). Use 'tusk run' for foreground mode.`,
+	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
+		return svc.Start(ctx)
+	}),
+}
+
+var stopCmd = &cobra.Command{
+	Use:   "stop",
+	Short: "Stop TuskBot system service",
+	Long:  `Stops installed TuskBot system service (alias for 'tusk service stop').`,
+	RunE: runWithSystemService(func(_ *cobra.Command, ctx context.Context, svc core.SystemService) error {
+		return svc.Stop(ctx)
+	}),
 }
 
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run TuskBot in foreground",
-	Long:  `Runs TuskBot in the foreground process (PID 1 friendly for containers).`,
+	Long:  `Runs TuskBot in the foreground process (PID 1 friendly for Docker/Kubernetes).`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, stop := signal.NotifyContext(cmd.Context(), os.Interrupt)
 		defer stop()
@@ -57,5 +64,6 @@ func runApp(ctx context.Context) error {
 
 func init() {
 	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(runCmd)
 }
