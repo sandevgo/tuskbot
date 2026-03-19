@@ -20,6 +20,8 @@ type SystemServiceConfig struct {
 	Path         string `env:"TUSK_SERVICE_PATH"`
 }
 
+const maxServicePathLength = 4096
+
 func NewSystemServiceConfig(ctx context.Context) *SystemServiceConfig {
 	c := &SystemServiceConfig{}
 	if err := env.Parse(c); err != nil {
@@ -36,29 +38,67 @@ func (c *SystemServiceConfig) GetLogDirectory() string {
 }
 
 func (c *SystemServiceConfig) GetPATH() string {
-	if strings.TrimSpace(c.Path) != "" {
-		return c.Path
+	pathParts := make([]string, 0, 24)
+
+	if customPath := strings.TrimSpace(c.Path); customPath != "" {
+		pathParts = append(pathParts, filepath.SplitList(customPath)...)
+	} else {
+		home := strings.TrimSpace(os.Getenv("HOME"))
+		if userHome, err := os.UserHomeDir(); err == nil && strings.TrimSpace(userHome) != "" {
+			home = strings.TrimSpace(userHome)
+		}
+
+		if home != "" {
+			pathParts = append(pathParts,
+				filepath.Join(home, ".local", "bin"),
+				filepath.Join(home, ".npm-global", "bin"),
+				filepath.Join(home, ".bun", "bin"),
+				filepath.Join(home, ".nvm", "current", "bin"),
+				filepath.Join(home, ".fnm", "current", "bin"),
+				filepath.Join(home, ".local", "share", "pnpm"),
+			)
+		}
+
+		pathParts = append(pathParts,
+			"/usr/local/sbin",
+			"/usr/local/bin",
+			"/usr/sbin",
+			"/usr/bin",
+			"/sbin",
+			"/bin",
+		)
+
+		if currentPath := strings.TrimSpace(os.Getenv("PATH")); currentPath != "" {
+			pathParts = append(pathParts, filepath.SplitList(currentPath)...)
+		}
 	}
 
-	home, _ := os.UserHomeDir()
-	pathParts := []string{
-		filepath.Join(home, ".local", "bin"),
-		filepath.Join(home, ".npm-global", "bin"),
-		filepath.Join(home, ".bun", "bin"),
-		filepath.Join(home, ".nvm", "current", "bin"),
-		filepath.Join(home, ".fnm", "current", "bin"),
-		filepath.Join(home, ".local", "share", "pnpm"),
-		"/usr/local/sbin",
-		"/usr/local/bin",
-		"/usr/sbin",
-		"/usr/bin",
-		"/sbin",
-		"/bin",
+	pathSep := string(os.PathListSeparator)
+	seen := make(map[string]struct{}, len(pathParts))
+	result := make([]string, 0, len(pathParts))
+	currentLength := 0
+
+	for _, p := range pathParts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+
+		nextLength := currentLength + len(p)
+		if len(result) > 0 {
+			nextLength += len(pathSep)
+		}
+		if nextLength > maxServicePathLength {
+			continue
+		}
+
+		seen[p] = struct{}{}
+		result = append(result, p)
+		currentLength = nextLength
 	}
 
-	if currentPath := strings.TrimSpace(os.Getenv("PATH")); currentPath != "" {
-		pathParts = append(pathParts, currentPath)
-	}
-
-	return strings.Join(pathParts, ":")
+	return strings.Join(result, pathSep)
 }
