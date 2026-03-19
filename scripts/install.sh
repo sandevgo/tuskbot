@@ -164,6 +164,14 @@ if [ "$os" = "linux" ] && [ "${TUSK_SERVICE_USER_MODE:-true}" = "true" ]; then
       say "Enabling systemd linger for user ${user_name}..."
       if loginctl enable-linger "$user_name" >/dev/null 2>&1; then
         say "Systemd linger enabled for ${user_name}."
+      elif command -v sudo >/dev/null 2>&1; then
+        say "Retrying linger enable with sudo..."
+        if sudo loginctl enable-linger "$user_name"; then
+          say "Systemd linger enabled for ${user_name}."
+        else
+          say "Warning: Failed to enable linger automatically."
+          say "Run manually if needed: sudo loginctl enable-linger ${user_name}"
+        fi
       else
         say "Warning: Failed to enable linger automatically."
         say "Run manually if needed: sudo loginctl enable-linger ${user_name}"
