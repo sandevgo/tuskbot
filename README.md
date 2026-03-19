@@ -52,6 +52,7 @@ Supported release artifacts:
 The installer downloads the latest stable release binary, installs it into a user-local bin directory, then runs:
 - `tusk install` (interactive setup)
 - `tusk service install`
+- On Linux user-mode installs (`TUSK_SERVICE_USER_MODE=true`), attempts `loginctl enable-linger <user>`
 - `tusk service start`
 
 **Manual install fallback:**

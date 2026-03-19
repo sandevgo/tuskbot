@@ -151,6 +151,32 @@ fi
 say "Installing service: tusk service install"
 "$install_path" service install
 
+if [ "$os" = "linux" ] && [ "${TUSK_SERVICE_USER_MODE:-true}" = "true" ]; then
+  user_name=""
+  if [ -n "${USER:-}" ]; then
+    user_name="$USER"
+  elif command -v id >/dev/null 2>&1; then
+    user_name="$(id -un 2>/dev/null || true)"
+  fi
+
+  if [ -n "$user_name" ]; then
+    if command -v loginctl >/dev/null 2>&1; then
+      say "Enabling systemd linger for user ${user_name}..."
+      if loginctl enable-linger "$user_name" >/dev/null 2>&1; then
+        say "Systemd linger enabled for ${user_name}."
+      else
+        say "Warning: Failed to enable linger automatically."
+        say "Run manually if needed: sudo loginctl enable-linger ${user_name}"
+      fi
+    else
+      say "Warning: loginctl not found; skipping linger enable."
+      say "If using systemd user services, run: sudo loginctl enable-linger ${user_name}"
+    fi
+  else
+    say "Warning: Unable to determine current user; skipping linger enable."
+  fi
+fi
+
 say "Starting service: tusk service start"
 "$install_path" service start
 
