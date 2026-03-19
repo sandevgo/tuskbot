@@ -24,6 +24,7 @@ import (
 	"github.com/sandevgo/tuskbot/internal/transport/scheduler"
 	"github.com/sandevgo/tuskbot/internal/transport/telegram"
 	"github.com/sandevgo/tuskbot/pkg/log"
+	pkgservice "github.com/sandevgo/tuskbot/pkg/service"
 	"github.com/sandevgo/tuskbot/pkg/srv"
 )
 
@@ -207,4 +208,29 @@ func initEnv(ctx context.Context, runtimePath string) error {
 
 	logger.Debug().Str("path", envFile).Msg("loaded .env file")
 	return nil
+}
+
+func NewSystemService(ctx context.Context) (core.SystemService, error) {
+	runtimePath := config.GetRuntimePath()
+	if err := initEnv(ctx, runtimePath); err != nil {
+		return nil, err
+	}
+
+	svcCfg := config.NewSystemServiceConfig(ctx)
+	execPath, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+
+	return pkgservice.NewKardianosManager(pkgservice.Config{
+		Name:             svcCfg.Name,
+		DisplayName:      svcCfg.DisplayName,
+		Description:      svcCfg.Description,
+		Executable:       execPath,
+		Arguments:        []string{"run"},
+		WorkingDirectory: runtimePath,
+		UserService:      svcCfg.UserService,
+		SandboxMode:      svcCfg.SandboxMode,
+		LogDirectory:     svcCfg.GetLogDirectory(),
+	})
 }

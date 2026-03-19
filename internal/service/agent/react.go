@@ -3,9 +3,11 @@ package agent
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/sandevgo/tuskbot/internal/core"
+	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
 // ReActRunner executes the ReAct (Reasoning + Acting) loop
@@ -55,6 +57,10 @@ func (r *ReActRunner) Run(
 
 		// If no tools are called, we are done
 		if len(response.ToolCalls) == 0 {
+			if strings.TrimSpace(response.Content) == "" {
+				log.FromCtx(ctx).Warn().Msg("model returned empty final response")
+				return "", core.ErrEmptyModelResponse
+			}
 			break
 		}
 

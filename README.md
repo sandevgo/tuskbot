@@ -50,7 +50,7 @@ tusk install
 **Running TuskBot**
 
 ```bash
-tusk start
+tusk run
 ```
 
 ## Using Docker
@@ -63,7 +63,7 @@ services:
     image: ghcr.io/sandevgo/tuskbot:latest
     volumes:
       - tuskbot-data:/root/.tuskbot
-    command: start
+    command: run
 
 volumes:
   tuskbot-data:
@@ -113,6 +113,12 @@ TuskBot uses environment variables for configuration.
 *   `TUSK_OLLAMA_API_KEY`: API Key for Ollama (optional).
 *   `TUSK_CUSTOM_OPENAI_BASE_URL`: Base URL for Custom OpenAI provider.
 *   `TUSK_CUSTOM_OPENAI_API_KEY`: API Key for Custom OpenAI provider.
+
+### System Service
+
+*   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
+*   `TUSK_SERVICE_SANDBOX_MODE`: Enable OS-native service hardening profile for installed services (systemd/launchd) (default: `true`).
+*   `TUSK_SERVICE_LOG_DIRECTORY`: Directory for generated service stdout/stderr log files (default: `TUSK_RUNTIME_PATH`).
 
 ## 🗺 Roadmap
 

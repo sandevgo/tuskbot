@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -153,6 +154,10 @@ func (b *Bot) handleMessage(c tele.Context) error {
 
 	if err != nil {
 		logger.Error().Err(err).Msg("agent failed to response")
+		if errors.Is(err, core.ErrEmptyModelResponse) {
+			_, _ = b.bot.Send(c.Chat(), "Provider returned an empty response. Try again later or change the /model")
+			return nil
+		}
 		_, _ = b.bot.Send(c.Chat(), fmt.Sprintf("Agent failed to response: %v", err))
 		return err
 	}
