@@ -10,4 +10,5 @@ type Config struct {
 	UserService      bool
 	SandboxMode      bool
 	LogDirectory     string
+	EnvVars          map[string]string
 }

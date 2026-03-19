@@ -35,6 +35,7 @@ func NewKardianosManager(cfg Config) (*KardianosManager, error) {
 		Description: cfg.Description,
 		Arguments:   cfg.Arguments,
 		Option:      options,
+		EnvVars:     cfg.EnvVars,
 	}
 	if cfg.Executable != "" {
 		svcCfg.Executable = cfg.Executable
