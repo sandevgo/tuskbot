@@ -41,10 +41,27 @@ Download the pre-compiled binary for your platform from the [Releases](https://g
 **Quick Install (Linux/macOS):**
 
 ```bash
-tar -xzvf tusk-*.tar.gz
-chmod +x tusk-*
-sudo mv tusk-* /usr/local/bin/tusk
-tusk install
+curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
+```
+
+Supported release artifacts:
+- Linux amd64
+- Linux arm64
+- macOS arm64
+
+The installer downloads the latest stable release binary, installs it into a user-local bin directory, then runs:
+- `tusk install` (interactive setup)
+- `tusk service install`
+- `tusk service start`
+
+**Manual install fallback:**
+
+```bash
+# Example for Linux amd64 (replace filename for your platform)
+tar -xzvf tusk-linux-amd64.tar.gz
+chmod +x bin/tusk-linux-amd64
+mkdir -p ~/.local/bin
+mv bin/tusk-linux-amd64 ~/.local/bin/tusk
 ```
 
 **Running TuskBot**

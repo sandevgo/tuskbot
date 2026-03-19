@@ -12,17 +12,35 @@ This document specifies the requirements and procedures for deploying TuskBot as
 
 ## Installation Procedure
 
-### 1. Binary Acquisition
-Download the architecture-specific archive from the official repository.
+### 1. Quick Install (Linux/macOS)
+Run the installer script:
 
 ```bash
-# Example for Linux x86_64
-tar -xzvf tusk-linux-amd64.tar.gz
-chmod +x tusk
-sudo mv tusk /usr/local/bin/
+curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
 ```
 
-### 2. Environment Initialization
+Supported release artifacts:
+- Linux amd64
+- Linux arm64
+- macOS arm64
+
+The installer downloads the latest stable release binary, installs it to a user-local bin directory, then runs:
+1. `tusk install` (interactive setup)
+2. `tusk service install`
+3. `tusk service start`
+
+### 2. Manual Binary Acquisition (fallback)
+Download the architecture-specific archive from the official repository and install manually.
+
+```bash
+# Example for Linux amd64
+tar -xzvf tusk-linux-amd64.tar.gz
+chmod +x bin/tusk-linux-amd64
+mkdir -p ~/.local/bin
+mv bin/tusk-linux-amd64 ~/.local/bin/tusk
+```
+
+### 3. Environment Initialization (if manually installed)
 Execute the interactive configuration utility to generate the required directory structure and `.env` specification.
 
 ```bash
@@ -38,5 +56,5 @@ The utility automates the following:
 Initiate the process and monitor STDOUT for the initialization sequence.
 
 ```bash
-tusk start
+tusk service status
 ```
