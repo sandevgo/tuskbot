@@ -68,6 +68,6 @@ The schedule interface lets the agent create, list, and cancel background tasks.
 
 ## Security & Governance
 
-- **Containment Model**: Native tools are not path-scoped to `TUSK_RUNTIME_PATH`; when installed as a service, containment is enforced by OS service manager policy (`TUSK_SERVICE_SANDBOX_MODE`).
+- **Containment Model**: Native tools are not path-scoped to `TUSK_RUNTIME_PATH`; if you need strict isolation, run TuskBot inside Docker/Kubernetes and enforce policy at the container/runtime layer.
 - **Resource Protection**: Strict timeouts are enforced at the provider level to prevent resource exhaustion.
 - **Binary Safety**: `search_files` implements a null-byte heuristic to skip binary file processing.
