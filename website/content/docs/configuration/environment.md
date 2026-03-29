@@ -45,7 +45,6 @@ TuskBot utilizes environment variables for runtime configuration. These variable
 | `TUSK_SERVICE_DISPLAY_NAME` | `string` | No | `TuskBot` | Human-readable service name. |
 | `TUSK_SERVICE_DESCRIPTION` | `string` | No | `TuskBot background agent service` | Service description shown by the init system. |
 | `TUSK_SERVICE_USER_MODE` | `bool` | No | `true` | Install service as current-user service by default. |
-| `TUSK_SERVICE_SANDBOX_MODE` | `bool` | No | `true` | Enables service-manager hardening profile (`SystemdScript`/`LaunchdConfig`) for installed services. |
 | `TUSK_SERVICE_LOG_DIRECTORY` | `string` | No | `TUSK_RUNTIME_PATH` | Directory for generated service stdout/stderr logs in service definitions. |
 
-Service containment is enforced at the OS service manager layer (systemd/launchd), not by tool-level filesystem path scoping.
+If you need process isolation, run TuskBot in a container (Docker/Kubernetes) and apply isolation at the container/runtime layer.

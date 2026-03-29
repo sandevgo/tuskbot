@@ -41,10 +41,28 @@ Download the pre-compiled binary for your platform from the [Releases](https://g
 **Quick Install (Linux/macOS):**
 
 ```bash
-tar -xzvf tusk-*.tar.gz
-chmod +x tusk-*
-sudo mv tusk-* /usr/local/bin/tusk
-tusk install
+curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
+```
+
+Supported release artifacts:
+- Linux amd64
+- Linux arm64
+- macOS arm64
+
+The installer downloads the latest stable release binary, installs it into a user-local bin directory, then runs:
+- `tusk install` (interactive setup)
+- `tusk service install`
+- On Linux user-mode installs (`TUSK_SERVICE_USER_MODE=true`), attempts `loginctl enable-linger <user>` (may require `sudo`)
+- `tusk service start`
+
+**Manual install fallback:**
+
+```bash
+# Example for Linux amd64 (replace filename for your platform)
+tar -xzvf tusk-linux-amd64.tar.gz
+chmod +x bin/tusk-linux-amd64
+mkdir -p ~/.local/bin
+mv bin/tusk-linux-amd64 ~/.local/bin/tusk
 ```
 
 **Running TuskBot**
@@ -117,7 +135,6 @@ TuskBot uses environment variables for configuration.
 ### System Service
 
 *   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
-*   `TUSK_SERVICE_SANDBOX_MODE`: Enable OS-native service hardening profile for installed services (systemd/launchd) (default: `true`).
 *   `TUSK_SERVICE_LOG_DIRECTORY`: Directory for generated service stdout/stderr log files (default: `TUSK_RUNTIME_PATH`).
 
 ## 🗺 Roadmap

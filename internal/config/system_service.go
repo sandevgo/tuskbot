@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/caarlos0/env/v9"
+	envPkg "github.com/sandevgo/tuskbot/pkg/env"
 	"github.com/sandevgo/tuskbot/pkg/log"
 )
 
@@ -13,8 +14,8 @@ type SystemServiceConfig struct {
 	DisplayName  string `env:"TUSK_SERVICE_DISPLAY_NAME" envDefault:"TuskBot"`
 	Description  string `env:"TUSK_SERVICE_DESCRIPTION" envDefault:"TuskBot background agent service"`
 	UserService  bool   `env:"TUSK_SERVICE_USER_MODE" envDefault:"true"`
-	SandboxMode  bool   `env:"TUSK_SERVICE_SANDBOX_MODE" envDefault:"true"`
 	LogDirectory string `env:"TUSK_SERVICE_LOG_DIRECTORY"`
+	Path         string `env:"TUSK_SERVICE_PATH"`
 }
 
 func NewSystemServiceConfig(ctx context.Context) *SystemServiceConfig {
@@ -30,4 +31,8 @@ func (c *SystemServiceConfig) GetLogDirectory() string {
 		return c.LogDirectory
 	}
 	return filepath.Join(GetRuntimePath(), "logs")
+}
+
+func (c *SystemServiceConfig) GetPATH() string {
+	return envPkg.BuildServicePATH(c.Path)
 }

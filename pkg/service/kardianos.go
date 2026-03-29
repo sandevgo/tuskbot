@@ -24,10 +24,6 @@ func NewKardianosManager(cfg Config) (*KardianosManager, error) {
 	if cfg.LogDirectory != "" {
 		options["LogDirectory"] = cfg.LogDirectory
 	}
-	if cfg.SandboxMode {
-		options["SystemdScript"] = systemdSandboxScript
-		options["LaunchdConfig"] = launchdSandboxConfig
-	}
 
 	svcCfg := &kservice.Config{
 		Name:        cfg.Name,
@@ -35,6 +31,7 @@ func NewKardianosManager(cfg Config) (*KardianosManager, error) {
 		Description: cfg.Description,
 		Arguments:   cfg.Arguments,
 		Option:      options,
+		EnvVars:     cfg.EnvVars,
 	}
 	if cfg.Executable != "" {
 		svcCfg.Executable = cfg.Executable
