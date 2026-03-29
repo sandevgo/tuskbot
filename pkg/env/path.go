@@ -54,7 +54,9 @@ func BuildServicePATH(customPath string) string {
 		if p == "" {
 			continue
 		}
-		if _, ok := seen[p]; ok {
+
+		normalized := filepath.Clean(p)
+		if _, ok := seen[normalized]; ok {
 			continue
 		}
 
@@ -66,7 +68,7 @@ func BuildServicePATH(customPath string) string {
 			continue
 		}
 
-		seen[p] = struct{}{}
+		seen[normalized] = struct{}{}
 		result = append(result, p)
 		currentLength = nextLength
 	}

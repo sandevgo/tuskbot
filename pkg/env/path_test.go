@@ -43,13 +43,30 @@ func TestBuildServicePATH(t *testing.T) {
 			},
 		},
 		{
+			name: "custom path deduplicates normalized equivalents",
+			setup: func(t *testing.T) (string, expectation) {
+				base := t.TempDir()
+				p := filepath.Join(base, "bin")
+				pWithTrailingSep := p + string(filepath.Separator)
+				pWithDot := p + string(filepath.Separator) + "."
+
+				customPath := strings.Join([]string{p, pWithTrailingSep, pWithDot}, sep)
+				return customPath, expectation{
+					nonEmpty:   true,
+					exactParts: []string{p},
+				}
+			},
+		},
+		{
 			name: "default path includes home and deduplicates env PATH",
 			setup: func(t *testing.T) (string, expectation) {
 				home := t.TempDir()
 				t.Setenv("HOME", home)
 
 				customBin := filepath.Join(t.TempDir(), "custom-bin")
-				t.Setenv("PATH", strings.Join([]string{"/usr/bin", customBin, "/bin", customBin}, sep))
+				customBinTrailingSep := customBin + string(filepath.Separator)
+				customBinWithDot := customBin + string(filepath.Separator) + "."
+				t.Setenv("PATH", strings.Join([]string{"/usr/bin", customBin, "/bin", customBinTrailingSep, customBinWithDot}, sep))
 
 				return "", expectation{
 					nonEmpty: true,
