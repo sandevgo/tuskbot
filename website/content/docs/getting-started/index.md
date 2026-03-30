@@ -1,17 +1,32 @@
-# System Introduction
+# Getting Started
 
-TuskBot is a high-concurrency autonomous agent engine implemented in Go. It facilitates secure, tool-augmented interactions via the Telegram Bot API, utilizing the Model Context Protocol (MCP) for extensible capability management.
+TuskBot is a self-hosted AI agent for Telegram.
 
-## Core Architecture Components
+## Prerequisites
 
-| Component | Implementation | Function |
-| :--- | :--- | :--- |
-| **Runtime** | Go (Golang) | Core logic and service orchestration. |
-| **Persistence** | SQLite-vec | Vectorized message history and knowledge storage. |
-| **Embeddings** | llama.cpp (GGUF) | Local inference for RAG pipeline operations. |
-| **Extensibility** | MCP | Standardized interface for external tool integration. |
+Before setup, have these ready:
 
-## Deployment Workflow
+- Telegram Bot Token
+- Telegram Owner ID
+- One LLM provider (OpenAI, Anthropic, OpenRouter, Ollama, or OpenAI-compatible)
 
-1. **Provisioning**: Execute `tusk install` to initialize the environment.
-2. **Execution**: Invoke `tusk start` to instantiate the service lifecycle.
+## Choose Your Deployment
+
+- [Binary Installation](/docs/getting-started/installation)
+- [Docker Setup](/docs/getting-started/docker)
+
+## Typical Setup Flow
+
+1. Install TuskBot using binary or Docker setup.
+2. Run `tusk install` (automatic when using the quick installer).
+3. Start the bot:
+   - Binary service mode: verify with `tusk service status`
+   - Foreground mode: `tusk run`
+   - Docker mode: `docker compose up -d`
+4. Open Telegram and run `/help`.
+
+## Next Steps
+
+- [CLI Reference](/docs/getting-started/cli)
+- [First Steps](/docs/getting-started/first-steps)
+- [Configuration Basics](/docs/getting-started/configuration)
