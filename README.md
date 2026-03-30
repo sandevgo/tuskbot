@@ -18,17 +18,44 @@
 curl -fsSL https://tuskbot.ai/install.sh | sh
 ```
 
+The installer will:
+- Install the `tusk` binary
+- Run `tusk install` (interactive setup)
+- Install and start the system service
+- Verify that the service is running
+
 Docker guide → https://tuskbot.ai/docs/getting-started/docker
+
+## Prerequisites
+
+Before running the installer, have these ready:
+- Telegram Bot Token
+- Telegram Owner ID
+- One LLM provider configured (API key or local Ollama endpoint)
+
+## Supported Platforms
+
+- Linux amd64
+- Linux arm64
+- macOS arm64
 
 ## What it does
 
 - Runs as a self-hosted AI agent in Telegram
-- Supports slash-commands for quick actions
+- Supports slash commands for quick actions
 - Connects tools via MCP servers
 - Handles background tasks using sub-agents
-- Llama.cpp backed-in, for local embeddings
+- Llama.cpp built-in for local embeddings
 - Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
 - Can be deployed as a binary, service, or Docker container
+
+## Slash Commands
+
+- `/help` — List available commands
+- `/model` — Show or switch active model
+- `/mcp` — List connected MCP tools
+- `/tasks` — List active scheduled tasks
+- `/stats` — Show session statistics
 
 ## Documentation
 

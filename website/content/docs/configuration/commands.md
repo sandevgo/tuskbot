@@ -8,7 +8,7 @@ TuskBot provides a set of administrative commands to manage the agent's state an
 | :--- | :--- | :--- |
 | `/model` | View or update the active LLM provider and model. | `/model [provider]/[model]` |
 | `/mcp` | List MCP tools currently available to the agent. | `/mcp` |
-| `/task` | List active scheduled background tasks and their next run time. | `/task` |
+| `/tasks` | List active scheduled background tasks and their next run time. | `/tasks` |
 | `/stats` | Show session statistics (context tokens and message count). | `/stats` |
 | `/help` | Display all available commands and basic usage instructions. | `/help` |
 
@@ -24,9 +24,9 @@ TuskBot provides a set of administrative commands to manage the agent's state an
 
 - Run `/mcp` to list MCP tools currently available to the agent.
 
-### `/task`
+### `/tasks`
 
-- Run `/task` to list active scheduled tasks.
+- Run `/tasks` to list active scheduled tasks.
 - Read `next run` values as formatted strings (`YYYY-MM-DD HH:MM`).
 
 ### `/stats`
