@@ -2,7 +2,7 @@
 
 TuskBot stores local state under `TUSK_RUNTIME_PATH` (default: `~/.tuskbot`).
 
-## Runtime Layout
+## Layout
 
 ```text
 <TUSK_RUNTIME_PATH>/
@@ -12,44 +12,35 @@ TuskBot stores local state under `TUSK_RUNTIME_PATH` (default: `~/.tuskbot`).
 │   └── mcp_config.json
 ├── models/
 │   └── <TUSK_EMBEDDING_MODEL>
-└── prompt/
-    ├── SYSTEM.md
-    ├── IDENTITY.md
-    ├── USER.md
-    ├── MEMORY.md
-    └── SUBAGENT.md
+├── prompt/
+│   ├── SYSTEM.md
+│   ├── IDENTITY.md
+│   ├── USER.md
+│   ├── MEMORY.md
+│   └── SUBAGENT.md
+└── logs/                    # default service logs directory
 ```
 
-## Bootstrap Behavior
-
-Runtime bootstrap is handled by `internal/service/migration/migrations.go`.
+## Bootstrap and Migration
 
 On startup, TuskBot:
 
-- Ensures `config/` and `prompt/` directories exist.
-- Creates these files from embedded defaults **if they are missing**:
-  - `config/mcp_config.json`
-  - `prompt/SYSTEM.md`
-  - `prompt/IDENTITY.md`
-  - `prompt/USER.md`
-  - `prompt/MEMORY.md`
-  - `prompt/SUBAGENT.md`
-- Verifies the embedding model exists at `models/<TUSK_EMBEDDING_MODEL>`.
-  - If it is missing, startup fails and asks you to run `tusk install`.
+- Ensures required directories exist.
+- Creates default prompt/config files if missing.
+- Verifies embedding model exists at `models/<TUSK_EMBEDDING_MODEL>`.
 
-## Database (`tuskbot.db`)
+If the embedding model is missing, startup fails and asks you to run `tusk install`.
 
-`internal/config/app.go` resolves the database path as `<TUSK_RUNTIME_PATH>/tuskbot.db`.
+## Database
 
-Schema is managed by SQL migrations in `internal/storage/sqlite/migrations/` and currently includes:
+`<TUSK_RUNTIME_PATH>/tuskbot.db` stores:
 
-- `messages`
-- `messages_vec` (vector storage)
-- `knowledge`
-- `knowledge_vec` (vector storage)
-- `task` (scheduled/background jobs)
+- messages and message vectors
+- knowledge and knowledge vectors
+- scheduled task records
 
-## Environment File (`.env`)
+## `.env`
 
-`.env` is stored in the runtime root and loaded at startup when present.
-Configuration updates that call `SetModel(...)` persist values back to this file.
+- Loaded from runtime path at startup if present.
+- Typically created by `tusk install`.
+- Updated when model is changed via `/model`.
