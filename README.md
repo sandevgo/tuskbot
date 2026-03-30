@@ -12,6 +12,13 @@
 
 </div>
 
+## Quick Start
+
+```shell
+curl -fsSL https://tuskbot.ai/install.sh | sh
+```
+
+
 ## What it does
 
 - Runs as a self-hosted AI agent in Telegram
