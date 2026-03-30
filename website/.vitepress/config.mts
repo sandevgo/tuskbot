@@ -21,7 +21,9 @@ export default defineConfig({
                         { text: 'Introduction', link: '/docs/getting-started/' },
                         { text: 'Binary Installation', link: '/docs/getting-started/installation' },
                         { text: 'Docker Setup', link: '/docs/getting-started/docker' },
-                        { text: 'CLI Reference', link: '/docs/getting-started/cli' }
+                        { text: 'CLI Reference', link: '/docs/getting-started/cli' },
+                        { text: 'First Steps', link: '/docs/getting-started/first-steps' },
+                        { text: 'Configuration Basics', link: '/docs/getting-started/configuration' }
                     ]
                 },
                 {

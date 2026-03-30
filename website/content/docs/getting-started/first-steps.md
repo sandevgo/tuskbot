@@ -1,20 +1,63 @@
-# Operational Guide
+# First Steps
 
-This document outlines the procedures for interacting with and verifying the TuskBot service.
+After installation, use these checks in Telegram to confirm your setup.
 
-## Functional Verification
+## 1) Verify Command Routing
 
-Execute the following test cases to validate system integrity:
+Send:
 
-### 1. Native Tool Execution
-**Prompt**: `List files in the current directory.`
-**Expected Result**: Output from the `list_directory` tool.
+```text
+/help
+```
 
-### 2. RAG Pipeline Verification
-**Prompt**: `Store the fact that my server port is 8080.`
-**Follow-up**: `What is my server port?`
-**Expected Result**: Retrieval of the stored fact from the vector database.
+You should get a list of available slash commands.
 
-### 3. MCP Connectivity
-**Prompt**: Invoke a tool specific to a configured external MCP server.
-**Expected Result**: Successful tool execution and response formatting.
+## 2) Verify Model Configuration
+
+Send:
+
+```text
+/model
+```
+
+You should see current provider and model.
+
+## 3) Verify MCP Tool Registration
+
+Send:
+
+```text
+/mcp
+```
+
+You should see connected MCP tools (or a clear message if none are configured).
+
+## 4) Verify General Agent Execution
+
+Send a basic prompt, for example:
+
+```text
+List files in the current directory.
+```
+
+You should get a normal tool-backed response.
+
+## 5) Verify Session Metrics
+
+Send:
+
+```text
+/stats
+```
+
+You should see session message count and context token usage.
+
+## 6) Verify Scheduled Tasks View
+
+Send:
+
+```text
+/tasks
+```
+
+You should see active scheduled tasks (or an empty-state message).
