@@ -8,9 +8,7 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot?style=flat-square&color=00ADD8)](https://github.com/sandevgo/tuskbot/blob/main/go.mod)
 [![License](https://img.shields.io/github/license/sandevgo/TuskBot?style=flat-square)](https://github.com/sandevgo/tuskbot/LICENSE)
 
-### Self-hosted Personal AI agent
-
-MCP-First, Local RAG, Easy to Run.
+### Personal AI agent. MCP-First, Local RAG, Easy to Run.
 
 **[Website](https://tuskbot.ai)** | **[Documentation](https://tuskbot.ai/docs/getting-started/)** | **[Releases](https://github.com/sandevgo/tuskbot/releases)**
 
