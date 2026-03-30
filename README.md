@@ -29,10 +29,14 @@ Docker guide → https://tuskbot.ai/docs/getting-started/docker
 - Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
 - Can be deployed as a binary, service, or Docker container
 
-*   **High-Performance Engine:** Built with **Go** for native concurrency and high-speed execution, no interpreted overheads.
-*   **Modular Stability:** Powered by **Model Context Protocol (MCP)**. Tool isolation prevents cascading failures and ensures system resilience.
-*   **Persistent Context:** Full **Local RAG pipeline** (SQLite-vec + llama.cpp). No need to send all your chats to OpenAI for embedding.
-*   **Privacy-First Design:** Native support for **Ollama** and local embedding models.
+## Documentation
+- Getting started → https://tuskbot.ai/docs/getting-started/
+- Configuration → https://tuskbot.ai/docs/configuration/
+- MCP tools → https://tuskbot.ai/docs/mcp/
+
+## License
+
+MIT
 
 ## ⌨️ Slash Commands
 
