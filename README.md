@@ -25,7 +25,7 @@ Docker guide → https://tuskbot.ai/docs/getting-started/docker
 - Runs as a self-hosted AI agent in Telegram
 - Connects tools via MCP servers
 - Handles background tasks using sub-agents
-- Supports local memory and semantic search
+- Llama.cpp backed-in, for local embeddings
 - Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
 - Can be deployed as a binary, service, or Docker container
 
