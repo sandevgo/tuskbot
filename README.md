@@ -18,6 +18,7 @@
 curl -fsSL https://tuskbot.ai/install.sh | sh
 ```
 
+Docker guide → https://tuskbot.ai/docs/getting-started/docker
 
 ## What it does
 
