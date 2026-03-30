@@ -1,22 +1,37 @@
-# Configuration Schema
+# Configuration Basics
 
-TuskBot utilizes environment variables for runtime configuration. These variables are typically persisted in a `.env` file within the `TUSK_RUNTIME_PATH`.
+`tusk install` creates and manages your initial runtime configuration.
 
-## Core Configuration Variables
+## Runtime Path
 
-| Variable | Type | Description |
-| :--- | :--- | :--- |
-| `TUSK_TELEGRAM_TOKEN` | `string` | API token issued by @BotFather. |
-| `TUSK_TELEGRAM_OWNER_ID` | `int64` | Telegram User ID for access control. |
-| `TUSK_MAIN_MODEL` | `string` | Model identifier (e.g., `anthropic/claude-3-5-sonnet`). |
-| `TUSK_EMBEDDING_MODEL` | `string` | Filename of the GGUF model in `/models` directory. |
-| `TUSK_RUNTIME_PATH` | `string` | Absolute path for data persistence (Default: `~/.tuskbot`). |
+By default, TuskBot stores runtime data in `~/.tuskbot`.
 
-## Filesystem Hierarchy
+You can override this with:
 
-Upon initialization, the system generates the following structure in the `TUSK_RUNTIME_PATH`:
+- `TUSK_RUNTIME_PATH`
 
-- `tuskbot.db`: SQLite database containing message history and vector embeddings.
-- `mcp_config.json`: JSON-encoded configuration for external MCP servers.
-- `models/`: Directory for local GGUF model storage.
-- `.env`: Local environment variable overrides.
+## What Is Stored There
+
+- `.env` (runtime configuration)
+- `tuskbot.db` (SQLite database)
+- `config/mcp_config.json` (MCP server config)
+- `models/` (local embedding models)
+- `prompt/` (system and profile prompt files)
+
+## Common Variables
+
+| Variable | Purpose |
+| :--- | :--- |
+| `TUSK_TELEGRAM_TOKEN` | Telegram bot token |
+| `TUSK_TELEGRAM_OWNER_ID` | Allowed Telegram user ID |
+| `TUSK_CHAT_CHANNEL` | Active chat transport (`telegram`) |
+| `TUSK_MAIN_MODEL` | Primary LLM model (`provider/model`) |
+| `TUSK_EMBEDDING_MODEL` | Embedding model filename |
+| `TUSK_RUNTIME_PATH` | Runtime data directory |
+
+## Full Configuration Reference
+
+- [Environment Variables](/docs/configuration/environment)
+- [LLM Providers](/docs/configuration/providers)
+- [Chat Commands](/docs/configuration/commands)
+- [Runtime Data](/docs/configuration/runtime-data)
