@@ -1,3 +1,5 @@
+<div align="center">
+
 # TuskBot 🦣
 
 [![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=flat-square)](https://github.com/sandevgo/tuskbot/actions)
@@ -12,9 +14,15 @@ TuskBot is a self-hosted Telegram AI agent with MCP tools, local memory, and str
 - [Documentation](https://tuskbot.ai/docs/getting-started/)
 - [Releases](https://github.com/sandevgo/tuskbot/releases)
 
-## 🎯 Motivation
+</div>
 
-TuskBot originated as an evolution of the **OpenClaw** concept, addressing its core architectural limitations:
+## What it does
+
+- Runs as a self-hosted AI agent in Telegram
+- Connects tools via MCP servers
+- Supports local memory and semantic search
+- Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
+- Can be deployed as a binary, service, or Docker container
 
 *   **High-Performance Engine:** Built with **Go** for native concurrency and high-speed execution, no interpreted overheads.
 *   **Modular Stability:** Powered by **Model Context Protocol (MCP)**. Tool isolation prevents cascading failures and ensures system resilience.
