@@ -38,4 +38,4 @@ Docker guide → https://tuskbot.ai/docs/getting-started/docker
 
 ## License
 
-[MIT License](https://github.com/sandevgo/tuskbot/blob/update-docs/LICENSE)
+[MIT License](https://github.com/sandevgo/tuskbot/blob/main/LICENSE)
