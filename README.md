@@ -5,7 +5,6 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=for-the-badge)](https://github.com/sandevgo/tuskbot/actions)
 [![Go Report](https://goreportcard.com/badge/github.com/sandevgo/tuskbot?style=for-the-badge)](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)
 [![Release](https://img.shields.io/github/v/release/sandevgo/tuskbot?include_prereleases&style=for-the-badge)](https://github.com/sandevgo/tuskbot/releases)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot?style=style=for-the-badge&color=00ADD8)](https://github.com/sandevgo/tuskbot/blob/main/go.mod)
 [![License](https://img.shields.io/github/license/sandevgo/TuskBot?style=style=for-the-badge)](https://github.com/sandevgo/tuskbot/LICENSE)
 
 ### Personal AI Agent. MCP-First, Local RAG, Easy to Run.
