@@ -24,6 +24,7 @@ Docker guide → https://tuskbot.ai/docs/getting-started/docker
 
 - Runs as a self-hosted AI agent in Telegram
 - Connects tools via MCP servers
+- Handles background tasks using sub-agents
 - Supports local memory and semantic search
 - Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
 - Can be deployed as a binary, service, or Docker container
@@ -32,84 +33,6 @@ Docker guide → https://tuskbot.ai/docs/getting-started/docker
 *   **Modular Stability:** Powered by **Model Context Protocol (MCP)**. Tool isolation prevents cascading failures and ensures system resilience.
 *   **Persistent Context:** Full **Local RAG pipeline** (SQLite-vec + llama.cpp). No need to send all your chats to OpenAI for embedding.
 *   **Privacy-First Design:** Native support for **Ollama** and local embedding models.
-
-## 🚀 Capabilities
-
-### 🔌 Extensible via MCP
-TuskBot uses a **Model Context Protocol (MCP)-first** approach. This allows you to plug in any MCP-compliant server (databases, APIs, or local tools) without modifying the core logic. If a tool exists as an MCP server, TuskBot can use it.
-
-### 🧠 Private RAG & Persistent Memory
-The bot maintains a long-term memory of your interactions using a local Retrieval-Augmented Generation (RAG) pipeline:
-*   **Zero-API Embeddings:** Uses **embedded llama.cpp** (via GGUF models) to process text locally. Your data for semantic search never leaves your hardware.
-*   **Vector Storage:** Powered by **SQLite-vec** for fast, local retrieval of conversation history and technical context.
-
-### 🛠️ System Access
-TuskBot comes with a set of pre-configured tools for immediate use:
-*   **Filesystem:** Manage, read, and write files in the bot's workspace.
-*   **Shell Execution:** Run system commands and scripts directly through the chat.
-*   **MCP Manager:** Allows agent to connect and restart MCP servers.
-
-## 💾 Installation
-Download the pre-compiled binary for your platform from the [Releases](https://github.com/sandevgo/tuskbot/releases) page.
-
-**Quick Install (Linux/macOS):**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
-```
-
-Supported release artifacts:
-- Linux amd64
-- Linux arm64
-- macOS arm64
-
-The installer downloads the latest stable release binary, installs it into a user-local bin directory, then runs:
-- `tusk install` (interactive setup)
-- `tusk service install`
-- On Linux user-mode installs (`TUSK_SERVICE_USER_MODE=true`), attempts `loginctl enable-linger <user>` (may require `sudo`)
-- `tusk service start`
-
-**Manual install fallback:**
-
-```bash
-# Example for Linux amd64 (replace filename for your platform)
-tar -xzvf tusk-linux-amd64.tar.gz
-chmod +x bin/tusk-linux-amd64
-mkdir -p ~/.local/bin
-mv bin/tusk-linux-amd64 ~/.local/bin/tusk
-```
-
-**Running TuskBot**
-
-```bash
-tusk run
-```
-
-## Using Docker
-
-Docker compose example:
-
-```yaml
-services:
-  tuskbot:
-    image: ghcr.io/sandevgo/tuskbot:latest
-    volumes:
-      - tuskbot-data:/root/.tuskbot
-    command: run
-
-volumes:
-  tuskbot-data:
-```
-
-**Running installation with Docker Compose:**
-
-```bash
-# Configure
-docker compose run tuskbot install
-
-# Run
-docker compose up -d
-```
 
 ## ⌨️ Slash Commands
 
@@ -150,10 +73,3 @@ TuskBot uses environment variables for configuration.
 
 *   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
 *   `TUSK_SERVICE_LOG_DIRECTORY`: Directory for generated service stdout/stderr log files (default: `TUSK_RUNTIME_PATH`).
-
-## 🗺 Roadmap
-
-*   **[X] Unified Command Interface:** Support of slash-commands (`/`).
-*   **[X] Cron/heartbeat:** Scheduled tasks and periodic checks.
-*   **[X] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
-*   **[ ] Skills:** Skills for agents to perform specific actions.
