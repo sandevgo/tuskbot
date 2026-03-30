@@ -1,10 +1,8 @@
-# Containerized Deployment
+# Docker Setup
 
-TuskBot is distributed as a Docker image for containerized environments.
+Run TuskBot with Docker Compose.
 
-## Orchestration Specification
-
-Utilize the following `docker-compose.yml` definition for persistent deployment.
+## Compose File
 
 ```yaml
 services:
@@ -13,18 +11,40 @@ services:
     restart: unless-stopped
     volumes:
       - tuskbot_data:/root/.tuskbot
-    command: start
+    command: run
 
 volumes:
   tuskbot_data:
 ```
 
-## Configuration Management
+Use `command: run` in containers (foreground process).
 
-TuskBot generates a `.env` configuration file within the `/root/.tuskbot` directory upon successful execution of the `tusk install` command. 
+## First-Time Setup
 
-### Environment Overrides
-While the system prioritizes the internal `.env` file, variables defined in the Docker `environment` block or via an `env_file` in `docker-compose.yml` will override the internal file specifications.
+Run the interactive installer once to create configuration in the mounted runtime path:
 
-## Volume Persistence
-The `/root/.tuskbot` mount point contains the SQLite database (`tuskbot.db`), the MCP configuration (`mcp_config.json`), and the local model cache. Ensure the host volume has sufficient write permissions.
+```bash
+docker compose run --rm -it tuskbot install
+```
+
+## Start and Observe
+
+```bash
+docker compose up -d
+docker compose logs -f tuskbot
+```
+
+## Runtime Data and Persistence
+
+The `/root/.tuskbot` volume stores:
+
+- `.env`
+- `tuskbot.db`
+- `config/mcp_config.json`
+- `models/` (local embedding model files)
+
+Keep this volume persistent between restarts.
+
+## Environment Overrides
+
+Variables passed through Docker Compose (`environment` or `env_file`) override values from the internal `.env` file.
