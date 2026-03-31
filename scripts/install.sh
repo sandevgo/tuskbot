@@ -188,5 +188,17 @@ fi
 say "Starting service: tusk service start"
 "$install_path" service start
 
+say "Verifying service status: tusk service status"
+service_status="$($install_path service status)"
+say "$service_status"
+
+case "$service_status" in
+  *"Service status: running"*)
+    ;;
+  *)
+    fail "Service is not running after installation. Check status with: ${install_path} service status"
+    ;;
+esac
+
 say ""
-say "Done. Check status with: ${install_path} service status"
+say "Done."

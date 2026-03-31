@@ -1,42 +1,37 @@
 # Chat Commands
 
-TuskBot provides a set of administrative commands to manage the agent's state and inspect connected services directly from the chat interface.
+These commands are available in Telegram chat.
 
 ## Command Reference
 
 | Command | Description | Usage |
 | :--- | :--- | :--- |
-| `/model` | View or update the active LLM provider and model. | `/model [provider]/[model]` |
-| `/mcp` | List MCP tools currently available to the agent. | `/mcp` |
-| `/task` | List active scheduled background tasks and their next run time. | `/task` |
-| `/stats` | Show session statistics (context tokens and message count). | `/stats` |
-| `/help` | Display all available commands and basic usage instructions. | `/help` |
+| `/help` | List available commands. | `/help` |
+| `/model` | Show or change active model. | `/model [provider]/[model]` |
+| `/mcp` | List connected MCP tools. | `/mcp` |
+| `/tasks` | List active scheduled tasks. | `/tasks` |
+| `/stats` | Show session statistics. | `/stats` |
 
-## Command Behavior
-
-### `/model`
-
-- Run `/model` with no arguments to display current provider and model.
-- Run `/model <provider>/<model>` to switch the active model.
-- Expect persistent configuration updates after successful model change.
-
-### `/mcp`
-
-- Run `/mcp` to list MCP tools currently available to the agent.
-
-### `/task`
-
-- Run `/task` to list active scheduled tasks.
-- Read `next run` values as formatted strings (`YYYY-MM-DD HH:MM`).
-
-### `/stats`
-
-- Run `/stats` to inspect session statistics.
-- Read the output fields:
-    - `Session ID: string`
-    - `Context Size: string` (token count)
-    - `Messages: string` (count)
+## Details
 
 ### `/help`
 
-- Run `/help` to list all registered commands with descriptions.
+Lists all registered commands with short descriptions.
+
+### `/model`
+
+- `/model` shows current provider/model.
+- `/model <provider>/<model>` switches runtime model.
+- Successful updates are persisted to `.env`.
+
+### `/mcp`
+
+Shows currently connected tool names from native + MCP tool sources.
+
+### `/tasks`
+
+Lists active scheduled background tasks and next run times.
+
+### `/stats`
+
+Shows session ID, context token size, and message count.

@@ -21,7 +21,9 @@ export default defineConfig({
                         { text: 'Introduction', link: '/docs/getting-started/' },
                         { text: 'Binary Installation', link: '/docs/getting-started/installation' },
                         { text: 'Docker Setup', link: '/docs/getting-started/docker' },
-                        { text: 'CLI Reference', link: '/docs/getting-started/cli' }
+                        { text: 'CLI Reference', link: '/docs/getting-started/cli' },
+                        { text: 'First Steps', link: '/docs/getting-started/first-steps' },
+                        { text: 'Configuration Basics', link: '/docs/getting-started/configuration' }
                     ]
                 },
                 {
@@ -29,16 +31,12 @@ export default defineConfig({
                     collapsed: true,
                     items: [
                         { text: 'Environment Variables', link: '/docs/configuration/environment' },
-                        { text: 'Chat Commands', link: '/docs/configuration/commands' },
-                        { text: 'Runtime Data', link: '/docs/configuration/runtime-data' },
                         { text: 'LLM Providers', link: '/docs/configuration/providers' },
-                    ]
-                },
-                {
-                    text: 'Chat Channels',
-                    collapsed: true,
-                    items: [
-                        { text: 'Telegram', link: '/docs/chat-channels/telegram' }
+                        { text: 'Telegram', link: '/docs/configuration/telegram' },
+                        { text: 'MCP Servers', link: '/docs/configuration/mcp-servers' },
+                        { text: 'Memory & Embeddings', link: '/docs/configuration/memory' },
+                        { text: 'Chat Commands', link: '/docs/configuration/commands' },
+                        { text: 'Runtime Data', link: '/docs/configuration/runtime-data' }
                     ]
                 },
                 {

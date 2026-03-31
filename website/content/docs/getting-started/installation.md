@@ -1,37 +1,46 @@
-# Binary Deployment
+# Binary Installation
 
-This document specifies the requirements and procedures for deploying TuskBot as a standalone binary.
+Install TuskBot as a native binary on Linux or macOS.
 
-## Hardware Specifications
-
-| Resource | Minimum Requirement | Recommended |
-| :--- | :--- | :--- |
-| **CPU** | 1 Core (x86_64/ARM64) | 2+ Cores |
-| **RAM** | 1 GB | 2 GB |
-| **Storage** | 500 MB | 2 GB+ (for vector growth) |
-
-## Installation Procedure
-
-### 1. Quick Install (Linux/macOS)
-Run the installer script:
+## Quick Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
+curl -fsSL https://tuskbot.ai/install.sh | sh
 ```
 
+The installer performs the full bootstrap flow:
+
+1. Downloads the latest stable release binary.
+2. Installs `tusk` into a user-local bin directory.
+3. Runs `tusk install` (interactive setup).
+4. Runs `tusk service install`.
+5. Runs `tusk service start`.
+6. Verifies service status is running.
+
 Supported release artifacts:
+
 - Linux amd64
 - Linux arm64
 - macOS arm64
 
-The installer downloads the latest stable release binary, installs it to a user-local bin directory, then runs:
-1. `tusk install` (interactive setup)
-2. `tusk service install`
-3. On Linux user-mode installs (`TUSK_SERVICE_USER_MODE=true`), attempts `loginctl enable-linger <user>` (may require `sudo`)
-4. `tusk service start`
+## Verify Installation
 
-### 2. Manual Binary Acquisition (fallback)
-Download the architecture-specific archive from the official repository and install manually.
+```bash
+tusk service status
+```
+
+Expected output includes `Service status: running`.
+
+If you prefer foreground execution:
+
+```bash
+tusk run
+```
+
+## Manual Install (Fallback)
+
+1. Download the correct archive from [GitHub Releases](https://github.com/sandevgo/tuskbot/releases).
+2. Extract and install the binary.
 
 ```bash
 # Example for Linux amd64
@@ -41,21 +50,11 @@ mkdir -p ~/.local/bin
 mv bin/tusk-linux-amd64 ~/.local/bin/tusk
 ```
 
-### 3. Environment Initialization (if manually installed)
-Execute the interactive configuration utility to generate the required directory structure and `.env` specification.
+Then run:
 
 ```bash
 tusk install
-```
-
-The utility automates the following:
-- Provider authentication configuration.
-- GGUF embedding model acquisition.
-- Telegram Bot API credential validation.
-
-## Service Verification
-Initiate the process and monitor STDOUT for the initialization sequence.
-
-```bash
+tusk service install
+tusk service start
 tusk service status
 ```

@@ -1,50 +1,60 @@
 # Environment Variables
 
-TuskBot utilizes environment variables for runtime configuration. These variables are typically persisted in a `.env` file within the `TUSK_RUNTIME_PATH`.
+TuskBot reads configuration from environment variables.
 
-## Core System Configuration
+In normal usage, these values are stored in `<TUSK_RUNTIME_PATH>/.env` and loaded on startup.
 
-| Variable | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `TUSK_RUNTIME_PATH` | `string` | No | `~/.tuskbot` | Absolute path for data persistence and configuration. |
-| `TUSK_CHAT_CHANNEL` | `string` | Yes | - | Communication interface (e.g., `telegram`). |
-| `TUSK_CONTEXT_WINDOW_SIZE` | `int` | No | `30` | Number of recent messages to include in LLM context. |
-| `TUSK_DEBUG` | `bool` | No | `0` | Set to `1` to enable verbose debug logging. |
+## Core Runtime
 
-## AI Provider Configuration
-
-| Variable | Type | Required | Description |
+| Variable | Required | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `TUSK_MAIN_MODEL` | `string` | Yes | Primary LLM identifier (format: `provider/model`). |
-| `TUSK_EMBEDDING_MODEL` | `string` | Yes | Filename of the GGUF model in `/models` directory. |
+| `TUSK_RUNTIME_PATH` | No | `~/.tuskbot` | Runtime data directory. |
+| `TUSK_CHAT_CHANNEL` | Yes | - | Active transport (currently `telegram`). |
+| `TUSK_CONTEXT_WINDOW_SIZE` | No | `30` | Number of recent messages in short-term context. |
+| `TUSK_DEBUG` | No | `0` | Set `1` to enable debug logging. |
 
-### Provider Credentials
+## Model and Embeddings
 
-| Variable | Type | Description |
+| Variable | Required | Description |
 | :--- | :--- | :--- |
-| `TUSK_ANTHROPIC_API_KEY` | `string` | API key for Anthropic Claude models. |
-| `TUSK_OPENAI_API_KEY` | `string` | API key for OpenAI GPT models. |
-| `TUSK_OPENROUTER_API_KEY` | `string` | API key for OpenRouter.ai. |
-| `TUSK_OLLAMA_API_KEY` | `string` | API key for Ollama (if required by proxy). |
-| `TUSK_OLLAMA_BASE_URL` | `string` | Endpoint for Ollama (Default: `http://127.0.0.1:11434`). |
-| `TUSK_CUSTOM_OPENAI_BASE_URL` | `string` | Base URL for OpenAI-compatible providers. |
-| `TUSK_CUSTOM_OPENAI_API_KEY` | `string` | API key for OpenAI-compatible providers. |
+| `TUSK_MAIN_MODEL` | Yes | Main model in `provider/model` format. |
+| `TUSK_EMBEDDING_MODEL` | Yes | Embedding model filename inside `models/`. |
 
-## Telegram Transport Configuration
+## Provider Credentials
 
-| Variable | Type | Required | Description |
+Set credentials for the provider used by `TUSK_MAIN_MODEL`.
+
+| Variable | Description |
+| :--- | :--- |
+| `TUSK_ANTHROPIC_API_KEY` | Anthropic API key |
+| `TUSK_OPENAI_API_KEY` | OpenAI API key |
+| `TUSK_OPENROUTER_API_KEY` | OpenRouter API key |
+| `TUSK_OLLAMA_BASE_URL` | Ollama base URL (default `http://127.0.0.1:11434`) |
+| `TUSK_OLLAMA_API_KEY` | Optional Ollama API key |
+| `TUSK_CUSTOM_OPENAI_BASE_URL` | OpenAI-compatible base URL |
+| `TUSK_CUSTOM_OPENAI_API_KEY` | OpenAI-compatible API key |
+
+## Telegram
+
+| Variable | Required | Description |
+| :--- | :--- | :--- |
+| `TUSK_TELEGRAM_TOKEN` | Yes | Telegram bot token from `@BotFather` |
+| `TUSK_TELEGRAM_OWNER_ID` | Yes | Telegram user ID allowed to use the bot |
+
+## Service Mode
+
+These variables affect `tusk service ...` commands.
+
+| Variable | Required | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `TUSK_TELEGRAM_TOKEN` | `string` | Yes | Bot API token issued by @BotFather. |
-| `TUSK_TELEGRAM_OWNER_ID` | `int64` | Yes | Numeric Telegram User ID for exclusive access control. |
+| `TUSK_SERVICE_NAME` | No | `tuskbot` | Service name/unit label |
+| `TUSK_SERVICE_DISPLAY_NAME` | No | `TuskBot` | Human-readable service name |
+| `TUSK_SERVICE_DESCRIPTION` | No | `TuskBot background agent service` | Service description |
+| `TUSK_SERVICE_USER_MODE` | No | `true` | Install service for current user by default |
+| `TUSK_SERVICE_LOG_DIRECTORY` | No | `<TUSK_RUNTIME_PATH>/logs` | Service stdout/stderr log directory |
+| `TUSK_SERVICE_PATH` | No | auto-built | PATH used by service processes |
 
-## System Service Configuration
+## Notes
 
-| Variable | Type | Required | Default | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| `TUSK_SERVICE_NAME` | `string` | No | `tuskbot` | Service unit/label name. |
-| `TUSK_SERVICE_DISPLAY_NAME` | `string` | No | `TuskBot` | Human-readable service name. |
-| `TUSK_SERVICE_DESCRIPTION` | `string` | No | `TuskBot background agent service` | Service description shown by the init system. |
-| `TUSK_SERVICE_USER_MODE` | `bool` | No | `true` | Install service as current-user service by default. |
-| `TUSK_SERVICE_LOG_DIRECTORY` | `string` | No | `TUSK_RUNTIME_PATH` | Directory for generated service stdout/stderr logs in service definitions. |
-
-If you need process isolation, run TuskBot in a container (Docker/Kubernetes) and apply isolation at the container/runtime layer.
+- `tusk install` writes `.env` with file mode `0600`.
+- Changing model via `/model` persists `TUSK_MAIN_MODEL` back to `.env`.

@@ -1,145 +1,68 @@
+<div align="center">
+
 # TuskBot 🦣
 
-[![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=flat-square)](https://github.com/sandevgo/tuskbot/actions)
-[![Go Report](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)
-[![Release](https://img.shields.io/github/v/release/sandevgo/tuskbot?include_prereleases&style=flat-square)](https://github.com/sandevgo/tuskbot/releases)
-[![Go Version](https://img.shields.io/github/go-mod/go-version/sandevgo/TuskBot?style=flat-square&color=00ADD8)](https://github.com/sandevgo/tuskbot/blob/main/go.mod)
-[![License](https://img.shields.io/github/license/sandevgo/TuskBot?style=flat-square)](https://github.com/sandevgo/tuskbot/LICENSE)
+[![Build](https://img.shields.io/github/actions/workflow/status/sandevgo/tuskbot/release.yml?label=build&style=for-the-badge)](https://github.com/sandevgo/tuskbot/actions)
+[![Go Report](https://goreportcard.com/badge/github.com/sandevgo/tuskbot?style=for-the-badge)](https://goreportcard.com/badge/github.com/sandevgo/tuskbot)
+[![Release](https://img.shields.io/github/v/release/sandevgo/tuskbot?include_prereleases&style=for-the-badge)](https://github.com/sandevgo/tuskbot/releases)
 
-**Autonomous AI Agent**
+### Personal AI Agent. MCP-First, Local RAG, Easy to Run.
 
-TuskBot is a Go-based autonomous agent designed to handle tasks directly in your Telegram. It evolves the ideas of OpenClaw into a more scalable, secure, tool-oriented assistant.
+**[Website](https://tuskbot.ai)** | **[Documentation](https://tuskbot.ai/docs/getting-started/)** | **[Releases](https://github.com/sandevgo/tuskbot/releases)**
 
-## 🎯 Motivation
+</div>
 
-TuskBot originated as an evolution of the **OpenClaw** concept, addressing its core architectural limitations:
+## Quick Start
 
-*   **High-Performance Engine:** Built with **Go** for native concurrency and high-speed execution, no interpreted overheads.
-*   **Modular Stability:** Powered by **Model Context Protocol (MCP)**. Tool isolation prevents cascading failures and ensures system resilience.
-*   **Persistent Context:** Full **Local RAG pipeline** (SQLite-vec + llama.cpp). No need to send all your chats to OpenAI for embedding.
-*   **Privacy-First Design:** Native support for **Ollama** and local embedding models.
-
-## 🚀 Capabilities
-
-### 🔌 Extensible via MCP
-TuskBot uses a **Model Context Protocol (MCP)-first** approach. This allows you to plug in any MCP-compliant server (databases, APIs, or local tools) without modifying the core logic. If a tool exists as an MCP server, TuskBot can use it.
-
-### 🧠 Private RAG & Persistent Memory
-The bot maintains a long-term memory of your interactions using a local Retrieval-Augmented Generation (RAG) pipeline:
-*   **Zero-API Embeddings:** Uses **embedded llama.cpp** (via GGUF models) to process text locally. Your data for semantic search never leaves your hardware.
-*   **Vector Storage:** Powered by **SQLite-vec** for fast, local retrieval of conversation history and technical context.
-
-### 🛠️ System Access
-TuskBot comes with a set of pre-configured tools for immediate use:
-*   **Filesystem:** Manage, read, and write files in the bot's workspace.
-*   **Shell Execution:** Run system commands and scripts directly through the chat.
-*   **MCP Manager:** Allows agent to connect and restart MCP servers.
-
-## 💾 Installation
-Download the pre-compiled binary for your platform from the [Releases](https://github.com/sandevgo/tuskbot/releases) page.
-
-**Quick Install (Linux/macOS):**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/sandevgo/tuskbot/main/scripts/install.sh | sh
+```shell
+curl -fsSL https://tuskbot.ai/install.sh | sh
 ```
 
-Supported release artifacts:
+The installer will:
+- Install the `tusk` binary
+- Run `tusk install` (interactive setup)
+- Install and start the system service
+- Verify that the service is running
+
+Docker guide → https://tuskbot.ai/docs/getting-started/docker
+
+## Prerequisites
+
+Before running the installer, have these ready:
+- Telegram Bot Token
+- Telegram Owner ID
+- One LLM provider configured (API key or local Ollama endpoint)
+
+## Supported Platforms
+
 - Linux amd64
 - Linux arm64
 - macOS arm64
 
-The installer downloads the latest stable release binary, installs it into a user-local bin directory, then runs:
-- `tusk install` (interactive setup)
-- `tusk service install`
-- On Linux user-mode installs (`TUSK_SERVICE_USER_MODE=true`), attempts `loginctl enable-linger <user>` (may require `sudo`)
-- `tusk service start`
+## What it does
 
-**Manual install fallback:**
+- Runs as a self-hosted AI agent in Telegram
+- Supports slash commands for quick actions
+- Connects tools via MCP servers
+- Handles background tasks using sub-agents
+- Llama.cpp built-in for local embeddings
+- Works with OpenAI, Anthropic, OpenRouter, Ollama, and compatible APIs
+- Can be deployed as a binary, service, or Docker container
 
-```bash
-# Example for Linux amd64 (replace filename for your platform)
-tar -xzvf tusk-linux-amd64.tar.gz
-chmod +x bin/tusk-linux-amd64
-mkdir -p ~/.local/bin
-mv bin/tusk-linux-amd64 ~/.local/bin/tusk
-```
+## Slash Commands
 
-**Running TuskBot**
+- `/help` — List available commands
+- `/model` — Show or switch active model
+- `/mcp` — List connected MCP tools
+- `/tasks` — List active scheduled tasks
+- `/stats` — Show session statistics
 
-```bash
-tusk run
-```
+## Documentation
 
-## Using Docker
+- Getting started → https://tuskbot.ai/docs/getting-started/
+- Configuration → https://tuskbot.ai/docs/configuration/
+- MCP tools → https://tuskbot.ai/docs/mcp/
 
-Docker compose example:
+## License
 
-```yaml
-services:
-  tuskbot:
-    image: ghcr.io/sandevgo/tuskbot:latest
-    volumes:
-      - tuskbot-data:/root/.tuskbot
-    command: run
-
-volumes:
-  tuskbot-data:
-```
-
-**Running installation with Docker Compose:**
-
-```bash
-# Configure
-docker compose run tuskbot install
-
-# Run
-docker compose up -d
-```
-
-## ⌨️ Slash Commands
-
-TuskBot supports the following slash commands for direct interaction:
-
-- **/model** Display/Switch the currently active LLM provider and model.
-- **/mcp** List all currently connected MCP servers and their available tools.
-
-## 🔧 Configuration
-
-TuskBot uses environment variables for configuration.
-
-### Core Settings
-
-*   `TUSK_TELEGRAM_TOKEN`: Your Telegram Bot Token.
-*   `TUSK_TELEGRAM_OWNER_ID`: Your Telegram User ID (for security).
-*   `TUSK_CHAT_CHANNEL`: Primary chat interface (e.g., `telegram`).
-*   `TUSK_RUNTIME_PATH`: Path for logs, database, and workspace (default: `~/.tuskbot`).
-*   `TUSK_DEBUG`: Enable debug logging (set to `1`).
-
-### AI & Memory
-
-*   `TUSK_MAIN_MODEL`: Main LLM model (format: `provider/model`).
-*   `TUSK_EMBEDDING_MODEL`: Embedding model file name (gguf).
-*   `TUSK_CONTEXT_WINDOW_SIZE`: Number of messages in active context (default: `30`).
-
-### Providers
-
-*   `TUSK_OPENROUTER_API_KEY`: API Key for OpenRouter.
-*   `TUSK_OPENAI_API_KEY`: API Key for OpenAI.
-*   `TUSK_ANTHROPIC_API_KEY`: API Key for Anthropic.
-*   `TUSK_OLLAMA_BASE_URL`: Base URL for Ollama (default: `http://127.0.0.1:11434`).
-*   `TUSK_OLLAMA_API_KEY`: API Key for Ollama (optional).
-*   `TUSK_CUSTOM_OPENAI_BASE_URL`: Base URL for Custom OpenAI provider.
-*   `TUSK_CUSTOM_OPENAI_API_KEY`: API Key for Custom OpenAI provider.
-
-### System Service
-
-*   `TUSK_SERVICE_USER_MODE`: Install service in user mode by default (default: `true`).
-*   `TUSK_SERVICE_LOG_DIRECTORY`: Directory for generated service stdout/stderr log files (default: `TUSK_RUNTIME_PATH`).
-
-## 🗺 Roadmap
-
-*   **[X] Unified Command Interface:** Support of slash-commands (`/`).
-*   **[X] Cron/heartbeat:** Scheduled tasks and periodic checks.
-*   **[X] Multi-Agent Orchestration:** Sub-agents to delegate specialized tasks
-*   **[ ] Skills:** Skills for agents to perform specific actions.
+[MIT License](https://github.com/sandevgo/tuskbot/blob/main/LICENSE)

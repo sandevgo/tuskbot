@@ -1,14 +1,27 @@
 # Memory & Embeddings
 
-TuskBot features a local RAG (Retrieval-Augmented Generation) pipeline for persistent memory.
+TuskBot uses a local RAG pipeline for persistent memory.
 
-## Local Embeddings
-TuskBot uses `llama.cpp` to run embedding models locally.
-- `TUSK_EMBEDDING_MODEL`: The filename of the GGUF model (e.g., `nomic-embed-text-v1.5.Q8_0.gguf`).
-- Models must be placed in the `models/` directory within your runtime path.
+## Embedding Model
 
-## Context Management
-- `TUSK_CONTEXT_WINDOW_SIZE`: Defines how many recent messages are included in the short-term conversation history (default: `30`).
+Key variable:
 
-## Vector Storage
-The system uses `sqlite-vec` for high-performance local vector search. This is stored in `tuskbot.db` and requires no manual configuration.
+- `TUSK_EMBEDDING_MODEL`
+
+This file is expected at:
+
+- `<TUSK_RUNTIME_PATH>/models/<TUSK_EMBEDDING_MODEL>`
+
+During `tusk install`, TuskBot downloads the default embedding model (`multilingual-e5-base-q8.gguf`) if missing.
+
+## Context Window
+
+`TUSK_CONTEXT_WINDOW_SIZE` controls how many recent messages are included in short-term context (default: `30`).
+
+## Storage
+
+Vector and memory data are persisted in:
+
+- `<TUSK_RUNTIME_PATH>/tuskbot.db`
+
+No external vector DB is required.

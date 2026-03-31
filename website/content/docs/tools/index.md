@@ -1,73 +1,105 @@
-# Native Tools Specification
+# Built-in Tools
 
-TuskBot provides a suite of built-in "Native Tools" for local environment interaction and web data retrieval. These tools are implemented as internal functions and do not require external MCP server processes.
+TuskBot includes native tools that are available without adding external MCP servers.
 
-## Filesystem Interface
+## Available Native Tools
 
-The filesystem toolset facilitates CRUD operations and metadata retrieval within the host environment.
+| Tool | Purpose |
+| :--- | :--- |
+| `read_file` | Read file contents |
+| `write_file` | Write file contents (creates parent dirs) |
+| `edit_file` | Replace exact string occurrences in a file |
+| `list_directory` | List directory entries with size info |
+| `search_files` | Recursive text search in files |
+| `get_file_info` | Show file metadata |
+| `execute_command` | Run a shell command |
+| `fetch_url` | Fetch URL content and convert HTML to Markdown |
+| `schedule_once` | Schedule one-time background task |
+| `schedule_cron` | Schedule recurring background task |
+| `schedule_list` | List scheduled tasks |
+| `schedule_cancel` | Cancel a scheduled task |
 
-### Methods
+## Filesystem Tool Details
 
-| Method | Description | Parameters |
-| :--- | :--- | :--- |
-| `read_file` | Retrieves raw content of a specified file. | `path: string` |
-| `write_file` | Persists content to a specified path. Creates parent directories if absent. | `path: string`, `content: string` |
-| `edit_file` | Performs an exact string replacement within a file. | `path: string`, `find: string`, `replace: string` |
-| `list_directory` | Enumerates entries within a directory including size metadata. | `path: string` |
-| `search_files` | Recursively scans for a query string. Excludes `node_modules`, `vendor`, and hidden directories. | `path: string`, `query: string` |
-| `get_file_info` | Returns POSIX-compliant metadata (size, mode, modification time). | `path: string` |
+### `read_file`
 
-## Shell Interface
+- Input: `path`
+- Returns file content as text.
 
-The shell interface enables arbitrary command execution via the host operating system's command processor (`sh` on Unix-like systems, `cmd` on Windows).
+### `write_file`
 
-### Methods
+- Input: `path`, `content`
+- Creates parent directories when needed.
 
-| Method | Description | Parameters |
-| :--- | :--- | :--- |
-| `execute_command` | Executes a shell command and returns `STDOUT` and `STDERR`. | `command: string` |
+### `edit_file`
 
-### Execution Constraints
-- **Timeout**: Execution is forcibly terminated after 300 seconds (5 minutes).
-- **Output Truncation**: Returns only the final 200 lines of output if the buffer exceeds this limit.
-- **Working Directory**: Operations are scoped to the configured `WorkDir`.
+- Input: `path`, `find`, `replace`
+- Replaces all exact matches of `find`.
+- Returns an error if `find` is not present.
 
-## Fetch Interface
+### `list_directory`
 
-The fetch interface provides idempotent HTTP GET capabilities with automated content transformation.
+- Input: `path`
+- Returns each entry with type marker (`[DIR]` or `[FILE]`) and byte size.
 
-### Methods
+### `search_files`
 
-| Method | Description | Parameters |
-| :--- | :--- | :--- |
-| `fetch_url` | Retrieves remote resources and converts HTML to Markdown-formatted text. | `url: string` |
+- Input: `path`, `query`
+- Recursive search with practical limits:
+  - skips hidden directories
+  - skips `vendor` and `node_modules`
+  - skips likely binary files (null-byte heuristic)
+  - stops after 100 matches
 
-### Technical Specifications
-- **User-Agent**: Identifies as `TuskBot-Agent/0.1`.
-- **Payload Limit**: Maximum response size is 1MB.
-- **Resiliency**: Implements an exponential backoff retry strategy for 5xx status codes and network-level errors.
-- **Timeout**: Request lifecycle is limited to 15 seconds.
+### `get_file_info`
 
-## Schedule Interface
+- Input: `path`
+- Returns path, size, mode, directory flag, and modification time.
 
-The schedule interface lets the agent create, list, and cancel background tasks.
+## Shell Tool (`execute_command`)
 
-### Methods
+- Input: `command`
+- Executes via:
+  - `sh -c` on Unix-like systems
+  - `cmd /C` on Windows
+- Constraints:
+  - timeout: 5 minutes
+  - output truncation: last 200 lines
+- Returns both `STDOUT` and `STDERR` in one response payload.
 
-| Method | Description | Parameters |
-| :--- | :--- | :--- |
-| `schedule_once` | Schedules a task to run once at a specific RFC3339 time. | `name: string`, `prompt: string`, `at: string` |
-| `schedule_cron` | Schedules a recurring task using a cron expression. | `name: string`, `prompt: string`, `at: string` |
-| `schedule_list` | Lists all currently scheduled tasks. | None |
-| `schedule_cancel` | Cancels a scheduled task by ID. | `task_id: string` |
+## Fetch Tool (`fetch_url`)
 
-### Scheduling Notes
-- `schedule_once` expects `at` in RFC3339 format (for example, `2026-03-16T14:30:00Z`).
-- `schedule_cron` expects a 5-field cron expression.
-- Task names must use alphanumeric characters and hyphens.
+- Input: `url`
+- Behavior:
+  - HTTP GET with User-Agent `TuskBot-Agent/0.1`
+  - request timeout: 15s
+  - response size limit: 1MB
+  - converts HTML to Markdown-like text
+  - retries failed requests via backoff policy
 
-## Security & Governance
+## Scheduling Tools
 
-- **Containment Model**: Native tools are not path-scoped to `TUSK_RUNTIME_PATH`; if you need strict isolation, run TuskBot inside Docker/Kubernetes and enforce policy at the container/runtime layer.
-- **Resource Protection**: Strict timeouts are enforced at the provider level to prevent resource exhaustion.
-- **Binary Safety**: `search_files` implements a null-byte heuristic to skip binary file processing.
+### `schedule_once`
+
+- Inputs: `name`, `prompt`, `at`
+- `at` must be RFC3339 timestamp.
+- `name` must be slug-like (`[a-zA-Z0-9-]+`).
+
+### `schedule_cron`
+
+- Inputs: `name`, `prompt`, `at`
+- `at` must be a 5-field cron expression.
+
+### `schedule_list`
+
+- Lists active scheduled tasks.
+
+### `schedule_cancel`
+
+- Input: `task_id`
+- Cancels and removes an existing task.
+
+## Notes
+
+- Native tools are not sandboxed by default to `TUSK_RUNTIME_PATH`.
+- For stricter isolation, run TuskBot in a containerized environment with host-level policy controls.
