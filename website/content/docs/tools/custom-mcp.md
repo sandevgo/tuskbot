@@ -1,63 +1,106 @@
 # Custom MCP Servers
 
-TuskBot is built with an **MCP-First** philosophy. While it includes powerful native tools, its true strength lies in its ability to connect to any server implementing the Model Context Protocol (MCP).
+TuskBot can connect to external MCP servers for additional capabilities.
 
-## Creating Your Own Tools
+## Where Configuration Lives
 
-Modern LLMs are not only trained to use MCP tools but are also exceptionally good at writing the code to create them. Using frameworks like **FastMCP** (Python) or the TypeScript MCP SDK, you can define new tools in minutes. If TuskBot lacks a specific capability, you can often ask the agent itself to write a new MCP server for you.
+External MCP servers are configured in:
 
-## Configuration Specification
+- `<TUSK_RUNTIME_PATH>/config/mcp_config.json`
 
-TuskBot implements the Model Context Protocol (MCP) host specification. External server configurations are defined in `mcp_config.json` using the following schema:
+(Usually under `~/.tuskbot/config/mcp_config.json`.)
 
-### Schema Definition
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `mcpServers` | `object` | Map of server identifiers to `ServerConfig` objects. |
-| `ServerConfig.command` | `string` | Executable name for `stdio` transport. |
-| `ServerConfig.args` | `string[]` | CLI arguments for the executable. |
-| `ServerConfig.env` | `object` | Key-value pairs for process environment variables. |
-| `ServerConfig.url` | `string` | Endpoint for `http` or `sse` transports. |
-| `ServerConfig.type` | `string` | Transport protocol: `stdio`, `http`, or `sse`. |
-| `ServerConfig.headers` | `object` | HTTP headers for remote transports. |
-
-### Implementation Example
+## Minimal Schema
 
 ```json
 {
   "mcpServers": {
-    "local-sqlite": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["mcp-server-sqlite", "--db-path", "/path/to/data.db"]
-    },
-    "remote-api": {
-      "type": "http",
-      "url": "https://api.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer <token>"
-      }
-    },
-    "legacy-service": {
-      "type": "sse",
-      "url": "http://localhost:8080/sse"
+    "server-name": {
+      "command": "...",
+      "args": [],
+      "env": {},
+      "url": "...",
+      "type": "http|sse",
+      "headers": {}
     }
   }
 }
 ```
 
-> [!IMPORTANT]
-> The `sse` transport is maintained for backward compatibility. New implementations should utilize the `http` transport for remote tool execution.
+## Common Examples
 
-## Configuration & Auto-Reload
+### Local `stdio` server
 
-TuskBot manages external connections via a configuration file located at `~/.tuskbot/mcp_config.json`. 
+```json
+{
+  "mcpServers": {
+    "local-sqlite": {
+      "command": "uvx",
+      "args": ["mcp-server-sqlite", "--db-path", "/path/to/data.db"]
+    }
+  }
+}
+```
 
-One of the most convenient features is the **System Watcher**: TuskBot monitors this file for changes. As soon as you save a new server configuration or modify an existing one, the internal connection pool automatically reloads, making the new tools available to the agent instantly without a restart.
+### Remote `http` server
 
-## Autonomous Setup
+```json
+{
+  "mcpServers": {
+    "remote-api": {
+      "url": "https://api.example.com/mcp",
+      "type": "http",
+      "headers": {
+        "Authorization": "Bearer <token>"
+      }
+    }
+  }
+}
+```
 
-You don't always need to edit the configuration manually. You can:
-1. **Ask the Agent**: Tell TuskBot to "Connect to the Google Maps MCP server at this URL" or "Add a new stdio server using npx".
-2. **Provide Documentation**: Give the agent a link to an MCP server's description or GitHub repository. TuskBot can use its `fetch_url` tool to read the requirements and then use its management tools to set up the connection for you.
+### Remote `sse` server
+
+```json
+{
+  "mcpServers": {
+    "legacy-service": {
+      "url": "http://localhost:8080/sse",
+      "type": "sse"
+    }
+  }
+}
+```
+
+## Transport Rules
+
+- If `command` is set, transport is `stdio`.
+- If `url` is set, `type` must be either `http` or `sse`.
+- `headers` apply to remote transports.
+- `env` applies to `stdio` process environments.
+
+## Auto Reload Behavior
+
+TuskBot watches `mcp_config.json` and applies changes live:
+
+- new server config → connect
+- changed server config → reconnect
+- removed server config → disconnect
+
+No full TuskBot restart is required.
+
+## Verify in Chat
+
+Use:
+
+```text
+/mcp
+```
+
+to see currently available MCP tools.
+
+## Practical Workflow
+
+1. Add/update server entry in `mcp_config.json`.
+2. Save file.
+3. Run `/mcp` in Telegram.
+4. Test a tool call from chat.
