@@ -2,6 +2,7 @@ package conv
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gomarkdown/markdown"
@@ -74,8 +75,13 @@ func rewriteMarkdownTablesAsCodeFences(md string) string {
 				end++
 			}
 
-			tableBlock := strings.Join(lines[i:end], "\n")
-			out = append(out, "```", tableBlock, "```")
+			headers := parseMarkdownTableRow(line)
+			rows := make([][]string, 0, end-(i+2))
+			for rowIndex := i + 2; rowIndex < end; rowIndex++ {
+				rows = append(rows, parseMarkdownTableRow(lines[rowIndex]))
+			}
+
+			out = append(out, "```", formatTableAsCards(headers, rows), "```")
 			i = end
 			continue
 		}
@@ -85,6 +91,87 @@ func rewriteMarkdownTablesAsCodeFences(md string) string {
 	}
 
 	return strings.Join(out, "\n")
+}
+
+func parseMarkdownTableRow(line string) []string {
+	trimmed := strings.TrimSpace(line)
+
+	if strings.HasPrefix(trimmed, "|") {
+		trimmed = strings.TrimPrefix(trimmed, "|")
+	}
+	if strings.HasSuffix(trimmed, "|") {
+		trimmed = strings.TrimSuffix(trimmed, "|")
+	}
+
+	parts := strings.Split(trimmed, "|")
+	cells := make([]string, len(parts))
+	for i, part := range parts {
+		cells[i] = strings.TrimSpace(part)
+	}
+
+	return cells
+}
+
+func formatTableAsCards(headers []string, rows [][]string) string {
+	for i := range headers {
+		headers[i] = strings.TrimSpace(headers[i])
+	}
+
+	var b strings.Builder
+	for rowIndex, row := range rows {
+		if rowIndex > 0 {
+			b.WriteByte('\n')
+		}
+
+		values := mapTableRowToHeaders(headers, row)
+
+		b.WriteString(strconv.Itoa(rowIndex + 1))
+		b.WriteString(")\n")
+		for i, header := range headers {
+			b.WriteString(header)
+			b.WriteString(": ")
+			b.WriteString(values[i])
+			if i < len(headers)-1 {
+				b.WriteByte('\n')
+			}
+		}
+	}
+
+	return b.String()
+}
+
+func mapTableRowToHeaders(headers, row []string) []string {
+	values := make([]string, len(headers))
+	for i := range headers {
+		if i < len(row) {
+			values[i] = strings.TrimSpace(row[i])
+		}
+	}
+
+	if len(headers) == 0 || len(row) <= len(headers) {
+		return values
+	}
+
+	extras := make([]string, 0, len(row)-len(headers))
+	for _, extra := range row[len(headers):] {
+		extra = strings.TrimSpace(extra)
+		if extra != "" {
+			extras = append(extras, extra)
+		}
+	}
+	if len(extras) == 0 {
+		return values
+	}
+
+	extraValue := strings.Join(extras, " | ")
+	last := len(values) - 1
+	if values[last] == "" {
+		values[last] = extraValue
+	} else {
+		values[last] = values[last] + " | " + extraValue
+	}
+
+	return values
 }
 
 func isFenceStartOrEnd(line string) bool {

@@ -74,56 +74,57 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 			expected: "First paragraph.\n\nSecond paragraph.\n",
 		},
 		{
-			name:     "markdown table renders as pre code block",
+			name:     "2-column table renders as card code block",
 			input:    "| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |",
-			expected: "<pre><code>| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |\n</code></pre>\n",
+			expected: "<pre><code>1)\nName: A\nValue: 1\n\n2)\nName: B\nValue: 2\n</code></pre>\n",
 			assertFunc: func(t *testing.T, got string) {
 				t.Helper()
-				if strings.Count(got, "\n\n") > 0 {
-					t.Fatalf("expected no double newlines in table output, got %q", got)
+				if strings.Contains(got, "\n\n\n") {
+					t.Fatalf("expected no double blank lines in table output, got %q", got)
 				}
 			},
 		},
 		{
-			name:     "table with empty cells renders as pre code block",
-			input:    "| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |",
-			expected: "<pre><code>| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |\n</code></pre>\n",
+			name:     "3-column table renders as card code block",
+			input:    "| Name | Value | Note |\n|---|---|---|\n| A | 1 | ok |\n| B | 2 | done |",
+			expected: "<pre><code>1)\nName: A\nValue: 1\nNote: ok\n\n2)\nName: B\nValue: 2\nNote: done\n</code></pre>\n",
 			assertFunc: func(t *testing.T, got string) {
 				t.Helper()
-				if strings.Count(got, "\n\n") > 0 {
-					t.Fatalf("expected no double newlines in table output, got %q", got)
+				if strings.Contains(got, "\n\n\n") {
+					t.Fatalf("expected no double blank lines in table output, got %q", got)
 				}
 			},
 		},
 		{
-			name:     "pipe text without delimiter is not table",
-			input:    "Use a|b notation, not a table.",
-			expected: "Use a|b notation, not a table.\n",
+			name:     "table rows with missing and extra cells map robustly",
+			input:    "| Name | Value | Note |\n|---|---|---|\n| A | 1 |\n| B | 2 | done | extra |",
+			expected: "<pre><code>1)\nName: A\nValue: 1\nNote:\n\n2)\nName: B\nValue: 2\nNote: done | extra\n</code></pre>\n",
 		},
 		{
-			name:     "table alignment delimiter renders as pre code block",
-			input:    "| A | B |\n| :--- | ---: |\n| x | y |",
-			expected: "<pre><code>| A | B |\n| :--- | ---: |\n| x | y |\n</code></pre>\n",
-		},
-		{
-			name:     "unicode dash delimiter renders as pre code block",
+			name:     "unicode dash delimiter table renders as card code block",
 			input:    "| Сейчас | После |\n|——–|——-|\n| Bash | bash |\n| Read | read |",
-			expected: "<pre><code>| Сейчас | После |\n|——–|——-|\n| Bash | bash |\n| Read | read |\n</code></pre>\n",
+			expected: "<pre><code>1)\nСейчас: Bash\nПосле: bash\n\n2)\nСейчас: Read\nПосле: read\n</code></pre>\n",
 		},
 		{
-			name:     "table without outer pipes renders as pre code block",
+			name:     "table without outer pipes renders as card code block",
 			input:    "Name | Value\n--- | ---\nA | 1",
-			expected: "<pre><code>Name | Value\n--- | ---\nA | 1\n</code></pre>\n",
-		},
-		{
-			name:     "unicode dash table without outer pipes renders as pre code block",
-			input:    "Сейчас | После\n——– | ——-\nBash | bash",
-			expected: "<pre><code>Сейчас | После\n——– | ——-\nBash | bash\n</code></pre>\n",
+			expected: "<pre><code>1)\nName: A\nValue: 1\n</code></pre>\n",
+			assertFunc: func(t *testing.T, got string) {
+				t.Helper()
+				if strings.Count(got, "\n\n") > 0 {
+					t.Fatalf("expected no double newlines in single-row table output, got %q", got)
+				}
+			},
 		},
 		{
 			name:     "table-looking text inside fenced block stays regular code block",
 			input:    "```\n| A | B |\n|---|---|\n| x | y |\n```",
 			expected: "<pre><code>| A | B |\n|---|---|\n| x | y |\n</code></pre>\n",
+		},
+		{
+			name:     "pipe text without delimiter is not table",
+			input:    "Use a|b notation, not a table.",
+			expected: "Use a|b notation, not a table.\n",
 		},
 		{
 			name:     "code block with language",
