@@ -39,13 +39,24 @@ func MarkdownToTelegramHTML(md []byte) string {
 	return normalizeTelegramHTML(string(sanitized))
 }
 
+func normalizeLineEndings(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	return strings.ReplaceAll(s, "\r", "\n")
+}
+
+func trimOuterPipes(line string) string {
+	trimmed := strings.TrimSpace(line)
+	trimmed = strings.TrimPrefix(trimmed, "|")
+	trimmed = strings.TrimSuffix(trimmed, "|")
+	return trimmed
+}
+
 func rewriteMarkdownTablesAsCodeFences(md string) string {
 	if md == "" {
 		return md
 	}
 
-	md = strings.ReplaceAll(md, "\r\n", "\n")
-	md = strings.ReplaceAll(md, "\r", "\n")
+	md = normalizeLineEndings(md)
 
 	lines := strings.Split(md, "\n")
 	var out []string
@@ -94,16 +105,7 @@ func rewriteMarkdownTablesAsCodeFences(md string) string {
 }
 
 func parseMarkdownTableRow(line string) []string {
-	trimmed := strings.TrimSpace(line)
-
-	if strings.HasPrefix(trimmed, "|") {
-		trimmed = strings.TrimPrefix(trimmed, "|")
-	}
-	if strings.HasSuffix(trimmed, "|") {
-		trimmed = strings.TrimSuffix(trimmed, "|")
-	}
-
-	parts := strings.Split(trimmed, "|")
+	parts := strings.Split(trimOuterPipes(line), "|")
 	cells := make([]string, len(parts))
 	for i, part := range parts {
 		cells[i] = strings.TrimSpace(part)
@@ -120,17 +122,38 @@ func formatTableAsCards(headers []string, rows [][]string) string {
 	var b strings.Builder
 	for rowIndex, row := range rows {
 		if rowIndex > 0 {
-			b.WriteByte('\n')
+			b.WriteString("\n\n")
 		}
-
-		values := mapTableRowToHeaders(headers, row)
 
 		b.WriteString(strconv.Itoa(rowIndex + 1))
 		b.WriteString(")\n")
 		for i, header := range headers {
+			value := ""
+			if i < len(row) {
+				value = strings.TrimSpace(row[i])
+			}
+
+			if i == len(headers)-1 && len(row) > len(headers) {
+				extras := make([]string, 0, len(row)-len(headers))
+				for _, extra := range row[len(headers):] {
+					extra = strings.TrimSpace(extra)
+					if extra != "" {
+						extras = append(extras, extra)
+					}
+				}
+				if len(extras) > 0 {
+					extraValue := strings.Join(extras, " | ")
+					if value == "" {
+						value = extraValue
+					} else {
+						value += " | " + extraValue
+					}
+				}
+			}
+
 			b.WriteString(header)
 			b.WriteString(": ")
-			b.WriteString(values[i])
+			b.WriteString(value)
 			if i < len(headers)-1 {
 				b.WriteByte('\n')
 			}
@@ -140,66 +163,19 @@ func formatTableAsCards(headers []string, rows [][]string) string {
 	return b.String()
 }
 
-func mapTableRowToHeaders(headers, row []string) []string {
-	values := make([]string, len(headers))
-	for i := range headers {
-		if i < len(row) {
-			values[i] = strings.TrimSpace(row[i])
-		}
-	}
-
-	if len(headers) == 0 || len(row) <= len(headers) {
-		return values
-	}
-
-	extras := make([]string, 0, len(row)-len(headers))
-	for _, extra := range row[len(headers):] {
-		extra = strings.TrimSpace(extra)
-		if extra != "" {
-			extras = append(extras, extra)
-		}
-	}
-	if len(extras) == 0 {
-		return values
-	}
-
-	extraValue := strings.Join(extras, " | ")
-	last := len(values) - 1
-	if values[last] == "" {
-		values[last] = extraValue
-	} else {
-		values[last] = values[last] + " | " + extraValue
-	}
-
-	return values
-}
-
 func isFenceStartOrEnd(line string) bool {
 	return strings.HasPrefix(line, "```") || strings.HasPrefix(line, "~~~")
 }
 
 func isPotentialTableRow(line string) bool {
 	trimmed := strings.TrimSpace(line)
-	if trimmed == "" {
-		return false
-	}
-	if !strings.Contains(trimmed, "|") {
-		return false
-	}
-	return strings.Count(trimmed, "|") >= 1
+	return trimmed != "" && strings.Contains(trimmed, "|")
 }
 
 func isTableDelimiterRow(line string) bool {
-	trimmed := strings.TrimSpace(line)
+	trimmed := trimOuterPipes(line)
 	if trimmed == "" {
 		return false
-	}
-
-	if strings.HasPrefix(trimmed, "|") {
-		trimmed = strings.TrimPrefix(trimmed, "|")
-	}
-	if strings.HasSuffix(trimmed, "|") {
-		trimmed = strings.TrimSuffix(trimmed, "|")
 	}
 
 	parts := strings.Split(trimmed, "|")
