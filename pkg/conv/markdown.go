@@ -1,6 +1,8 @@
 package conv
 
 import (
+	"strings"
+
 	"github.com/gomarkdown/markdown"
 	"github.com/gomarkdown/markdown/html"
 	"github.com/gomarkdown/markdown/parser"
@@ -8,7 +10,7 @@ import (
 )
 
 var (
-	extensions = parser.CommonExtensions | parser.NoEmptyLineBeforeBlock
+	extensions = (parser.CommonExtensions &^ parser.Tables) | parser.NoEmptyLineBeforeBlock
 	htmlFlags  = html.CommonFlags | html.HrefTargetBlank
 	tgPolicy   = bluemonday.NewPolicy()
 )
@@ -29,5 +31,40 @@ func MarkdownToTelegramHTML(md []byte) string {
 	// Sanitize tags
 	sanitized := tgPolicy.SanitizeBytes(unsafeHTML)
 
-	return string(sanitized)
+	return normalizeTelegramHTML(string(sanitized))
+}
+
+func normalizeTelegramHTML(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+
+	if strings.TrimSpace(s) == "" {
+		if strings.Contains(s, "\n") {
+			return "\n"
+		}
+		return ""
+	}
+
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimRight(line, " \t")
+	}
+
+	var b strings.Builder
+	b.Grow(len(s))
+
+	prevBlank := false
+	for i, line := range lines {
+		blank := line == ""
+		if blank && prevBlank {
+			continue
+		}
+		if i > 0 {
+			b.WriteByte('\n')
+		}
+		b.WriteString(line)
+		prevBlank = blank
+	}
+
+	return b.String()
 }
