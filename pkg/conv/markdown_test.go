@@ -1,14 +1,17 @@
 package conv
 
 import (
+	"strings"
 	"testing"
 )
 
 func TestMarkdownToTelegramHTML(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name       string
+		input      string
+		expected   string
+		skipExact  bool
+		assertFunc func(t *testing.T, got string)
 	}{
 		{
 			name:     "empty input",
@@ -61,6 +64,48 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 			expected: "<pre><code>code block\n</code></pre>\n",
 		},
 		{
+			name:     "single blank line between paragraphs",
+			input:    "First paragraph.\n\nSecond paragraph.",
+			expected: "First paragraph.\n\nSecond paragraph.\n",
+		},
+		{
+			name:     "multiple blank lines collapse to single paragraph break",
+			input:    "First paragraph.\n\n\n\nSecond paragraph.",
+			expected: "First paragraph.\n\nSecond paragraph.\n",
+		},
+		{
+			name:      "markdown table keeps rows on separate lines",
+			input:     "| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |",
+			skipExact: true,
+			assertFunc: func(t *testing.T, got string) {
+				t.Helper()
+				if strings.Count(got, "\n\n") > 0 {
+					t.Fatalf("expected no double newlines in table output, got %q", got)
+				}
+				for _, mustContain := range []string{"Name", "Value", "A", "1", "B", "2"} {
+					if !strings.Contains(got, mustContain) {
+						t.Fatalf("expected table output to contain %q, got %q", mustContain, got)
+					}
+				}
+			},
+		},
+		{
+			name:      "table with empty cells does not create blank lines",
+			input:     "| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |",
+			skipExact: true,
+			assertFunc: func(t *testing.T, got string) {
+				t.Helper()
+				if strings.Count(got, "\n\n") > 0 {
+					t.Fatalf("expected no double newlines in table output, got %q", got)
+				}
+				for _, mustContain := range []string{"Name", "Value", "A", "2"} {
+					if !strings.Contains(got, mustContain) {
+						t.Fatalf("expected table output to contain %q, got %q", mustContain, got)
+					}
+				}
+			},
+		},
+		{
 			name:     "code block with language",
 			input:    "```go\nfunc main() {}\n```",
 			expected: "<pre><code class=\"language-go\">func main() {}\n</code></pre>\n",
@@ -100,8 +145,11 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := MarkdownToTelegramHTML([]byte(tt.input))
-			if got != tt.expected {
+			if !tt.skipExact && got != tt.expected {
 				t.Errorf("MarkdownToTelegramHTML(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+			if tt.assertFunc != nil {
+				tt.assertFunc(t, got)
 			}
 		})
 	}
