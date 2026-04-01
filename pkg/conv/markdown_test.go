@@ -106,6 +106,21 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 			expected: "<pre><code>| A | B |\n| :--- | ---: |\n| x | y |\n</code></pre>\n",
 		},
 		{
+			name:     "unicode dash delimiter renders as pre code block",
+			input:    "| Сейчас | После |\n|——–|——-|\n| Bash | bash |\n| Read | read |",
+			expected: "<pre><code>| Сейчас | После |\n|——–|——-|\n| Bash | bash |\n| Read | read |\n</code></pre>\n",
+		},
+		{
+			name:     "table without outer pipes renders as pre code block",
+			input:    "Name | Value\n--- | ---\nA | 1",
+			expected: "<pre><code>Name | Value\n--- | ---\nA | 1\n</code></pre>\n",
+		},
+		{
+			name:     "unicode dash table without outer pipes renders as pre code block",
+			input:    "Сейчас | После\n——– | ——-\nBash | bash",
+			expected: "<pre><code>Сейчас | После\n——– | ——-\nBash | bash\n</code></pre>\n",
+		},
+		{
 			name:     "table-looking text inside fenced block stays regular code block",
 			input:    "```\n| A | B |\n|---|---|\n| x | y |\n```",
 			expected: "<pre><code>| A | B |\n|---|---|\n| x | y |\n</code></pre>\n",

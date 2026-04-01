@@ -14,7 +14,7 @@ var (
 	extensions           = (parser.CommonExtensions &^ parser.Tables) | parser.NoEmptyLineBeforeBlock
 	htmlFlags            = html.CommonFlags | html.HrefTargetBlank
 	tgPolicy             = bluemonday.NewPolicy()
-	tableDelimiterCellRe = regexp.MustCompile(`^:?-{3,}:?$`)
+	tableDelimiterCellRe = regexp.MustCompile(`^:?(?:-|\p{Pd}){3,}:?$`)
 )
 
 func init() {
@@ -99,7 +99,7 @@ func isPotentialTableRow(line string) bool {
 	if !strings.Contains(trimmed, "|") {
 		return false
 	}
-	return strings.Count(trimmed, "|") >= 2
+	return strings.Count(trimmed, "|") >= 1
 }
 
 func isTableDelimiterRow(line string) bool {
