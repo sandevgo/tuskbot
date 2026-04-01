@@ -74,36 +74,41 @@ func TestMarkdownToTelegramHTML(t *testing.T) {
 			expected: "First paragraph.\n\nSecond paragraph.\n",
 		},
 		{
-			name:      "markdown table keeps rows on separate lines",
-			input:     "| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |",
-			skipExact: true,
+			name:     "markdown table renders as pre code block",
+			input:    "| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |",
+			expected: "<pre><code>| Name | Value |\n|---|---|\n| A | 1 |\n| B | 2 |\n</code></pre>\n",
 			assertFunc: func(t *testing.T, got string) {
 				t.Helper()
 				if strings.Count(got, "\n\n") > 0 {
 					t.Fatalf("expected no double newlines in table output, got %q", got)
-				}
-				for _, mustContain := range []string{"Name", "Value", "A", "1", "B", "2"} {
-					if !strings.Contains(got, mustContain) {
-						t.Fatalf("expected table output to contain %q, got %q", mustContain, got)
-					}
 				}
 			},
 		},
 		{
-			name:      "table with empty cells does not create blank lines",
-			input:     "| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |",
-			skipExact: true,
+			name:     "table with empty cells renders as pre code block",
+			input:    "| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |",
+			expected: "<pre><code>| Name | Value |\n|---|---|\n| A |  |\n|  | 2 |\n</code></pre>\n",
 			assertFunc: func(t *testing.T, got string) {
 				t.Helper()
 				if strings.Count(got, "\n\n") > 0 {
 					t.Fatalf("expected no double newlines in table output, got %q", got)
 				}
-				for _, mustContain := range []string{"Name", "Value", "A", "2"} {
-					if !strings.Contains(got, mustContain) {
-						t.Fatalf("expected table output to contain %q, got %q", mustContain, got)
-					}
-				}
 			},
+		},
+		{
+			name:     "pipe text without delimiter is not table",
+			input:    "Use a|b notation, not a table.",
+			expected: "Use a|b notation, not a table.\n",
+		},
+		{
+			name:     "table alignment delimiter renders as pre code block",
+			input:    "| A | B |\n| :--- | ---: |\n| x | y |",
+			expected: "<pre><code>| A | B |\n| :--- | ---: |\n| x | y |\n</code></pre>\n",
+		},
+		{
+			name:     "table-looking text inside fenced block stays regular code block",
+			input:    "```\n| A | B |\n|---|---|\n| x | y |\n```",
+			expected: "<pre><code>| A | B |\n|---|---|\n| x | y |\n</code></pre>\n",
 		},
 		{
 			name:     "code block with language",
