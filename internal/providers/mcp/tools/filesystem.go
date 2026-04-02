@@ -78,6 +78,17 @@ const getFileInfoSchema = `
 }
 `
 
+const globSchema = `
+{
+  "type": "object",
+  "properties": {
+    "pattern": { "type": "string", "description": "The glob pattern to match files (e.g., *.go, **/*.ts)" },
+    "path": { "type": "string", "description": "The directory to search in (defaults to current directory)" }
+  },
+  "required": ["pattern"]
+}
+`
+
 type Filesystem struct {
 	BasePath string
 }
@@ -318,6 +329,116 @@ func (fs *Filesystem) GetFileInfo(ctx context.Context, args json.RawMessage) (st
 	), nil
 }
 
+// Glob finds files matching a pattern. It supports standard glob patterns
+// and ** for recursive matching.
+func (fs *Filesystem) Glob(ctx context.Context, args json.RawMessage) (string, error) {
+	var input struct {
+		Pattern string `json:"pattern"`
+		Path    string `json:"path"`
+	}
+	if err := json.Unmarshal(args, &input); err != nil {
+		return "", fmt.Errorf("invalid arguments: %w", err)
+	}
+
+	searchPath := fs.BasePath
+	if input.Path != "" {
+		searchPath = fs.resolvePath(input.Path)
+	}
+
+	var matches []string
+
+	// Check if pattern contains ** for recursive search
+	if strings.Contains(input.Pattern, "**") {
+		err := filepath.WalkDir(searchPath, func(path string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+
+			// Get relative path for matching
+			relPath, err := filepath.Rel(searchPath, path)
+			if err != nil {
+				return nil
+			}
+
+			if matchGlobRecursive(relPath, input.Pattern) {
+				matches = append(matches, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return "", fmt.Errorf("glob walk failed: %w", err)
+		}
+	} else {
+		// Standard non-recursive glob
+		pattern := filepath.Join(searchPath, input.Pattern)
+		m, err := filepath.Glob(pattern)
+		if err != nil {
+			return "", fmt.Errorf("invalid glob pattern: %w", err)
+		}
+		matches = m
+	}
+
+	if len(matches) == 0 {
+		return "No files matched the pattern.", nil
+	}
+
+	var result strings.Builder
+	for _, match := range matches {
+		rel, err := filepath.Rel(fs.BasePath, match)
+		if err != nil {
+			rel = match
+		}
+		result.WriteString(rel + "\n")
+	}
+
+	return result.String(), nil
+}
+
+// matchGlobRecursive handles simple ** patterns
+func matchGlobRecursive(path, pattern string) bool {
+	// Normalize paths
+	path = filepath.ToSlash(path)
+	pattern = filepath.ToSlash(pattern)
+
+	// Split pattern by **
+	parts := strings.Split(pattern, "**")
+
+	// If no **, use standard match (handled by caller usually, but good fallback)
+	if len(parts) == 1 {
+		matched, _ := filepath.Match(pattern, path)
+		return matched
+	}
+
+	currentPath := path
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+
+		if i == 0 {
+			// First part must be prefix
+			if !strings.HasPrefix(currentPath, part) {
+				return false
+			}
+			currentPath = strings.TrimPrefix(currentPath, part)
+		} else if i == len(parts)-1 {
+			// Last part must be suffix
+			if !strings.HasSuffix(currentPath, part) {
+				return false
+			}
+			currentPath = strings.TrimSuffix(currentPath, part)
+		} else {
+			// Middle part must be found
+			idx := strings.Index(currentPath, part)
+			if idx == -1 {
+				return false
+			}
+			currentPath = currentPath[idx+len(part):]
+		}
+	}
+	return true
+}
+
 func (fs *Filesystem) GetDefinitions() map[string]struct {
 	Description string
 	Schema      string
@@ -357,6 +478,11 @@ func (fs *Filesystem) GetDefinitions() map[string]struct {
 			Description: "Get metadata about a file (size, mode, modtime)",
 			Schema:      getFileInfoSchema,
 			Handler:     fs.GetFileInfo,
+		},
+		"glob": {
+			Description: "Find files matching a pattern (supports ** for recursive search)",
+			Schema:      globSchema,
+			Handler:     fs.Glob,
 		},
 	}
 }
