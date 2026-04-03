@@ -2,7 +2,9 @@ package updater
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -33,10 +35,17 @@ func (s *Service) Check(ctx context.Context) (*core.ReleaseInfo, error) {
 		return nil, nil
 	}
 
+	if isDevVersion(s.version) {
+		return nil, nil
+	}
+
 	currentVersion := normalizeVersion(s.version)
 	latestVersion := normalizeVersion(release.Version)
-	if currentVersion != "" && currentVersion == latestVersion {
-		return nil, nil
+	if currentVersion != "" && latestVersion != "" {
+		cmp, err := compareVersions(currentVersion, latestVersion)
+		if err == nil && cmp >= 0 {
+			return nil, nil
+		}
 	}
 	return release, nil
 }
@@ -111,4 +120,65 @@ func normalizeVersion(version string) string {
 		return ""
 	}
 	return version
+}
+
+func isDevVersion(version string) bool {
+	return strings.TrimSpace(strings.TrimPrefix(version, "v")) == "dev"
+}
+
+func compareVersions(currentVersion, latestVersion string) (int, error) {
+	currentParts, err := parseVersion(currentVersion)
+	if err != nil {
+		return 0, err
+	}
+
+	latestParts, err := parseVersion(latestVersion)
+	if err != nil {
+		return 0, err
+	}
+
+	maxLen := len(currentParts)
+	if len(latestParts) > maxLen {
+		maxLen = len(latestParts)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		currentPart := versionPart(currentParts, i)
+		latestPart := versionPart(latestParts, i)
+
+		switch {
+		case currentPart < latestPart:
+			return -1, nil
+		case currentPart > latestPart:
+			return 1, nil
+		}
+	}
+
+	return 0, nil
+}
+
+func parseVersion(version string) ([]int, error) {
+	parts := strings.Split(version, ".")
+	parsed := make([]int, 0, len(parts))
+
+	for _, part := range parts {
+		if part == "" {
+			return nil, fmt.Errorf("invalid version: %q", version)
+		}
+
+		n, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, fmt.Errorf("invalid version: %q", version)
+		}
+		parsed = append(parsed, n)
+	}
+
+	return parsed, nil
+}
+
+func versionPart(parts []int, idx int) int {
+	if idx >= len(parts) {
+		return 0
+	}
+	return parts[idx]
 }

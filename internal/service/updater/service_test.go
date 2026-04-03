@@ -24,14 +24,32 @@ func TestServiceCheck(t *testing.T) {
 			wantNil:        true,
 		},
 		{
-			name:           "dev version always allows update",
+			name:           "dev version does not update to released version",
 			currentVersion: "dev",
 			release:        &core.ReleaseInfo{Version: "v1.2.3"},
+			wantNil:        true,
 		},
 		{
 			name:           "different version returns release",
 			currentVersion: "1.2.2",
 			release:        &core.ReleaseInfo{Version: "v1.2.3"},
+		},
+		{
+			name:           "older release does not downgrade current binary",
+			currentVersion: "0.9.0",
+			release:        &core.ReleaseInfo{Version: "v0.8.0"},
+			wantNil:        true,
+		},
+		{
+			name:           "same version with missing patch is treated as equal",
+			currentVersion: "1.2",
+			release:        &core.ReleaseInfo{Version: "v1.2.0"},
+			wantNil:        true,
+		},
+		{
+			name:           "invalid release version falls back to update available",
+			currentVersion: "1.2.3",
+			release:        &core.ReleaseInfo{Version: "latest"},
 		},
 		{
 			name:           "missing release returns nil",
@@ -184,6 +202,64 @@ func TestNormalizeVersion(t *testing.T) {
 			t.Parallel()
 			if got := normalizeVersion(tt.input); got != tt.want {
 				t.Fatalf("normalizeVersion(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCompareVersions(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		current string
+		latest  string
+		want    int
+		wantErr bool
+	}{
+		{
+			name:    "latest is newer",
+			current: "1.2.3",
+			latest:  "1.2.4",
+			want:    -1,
+		},
+		{
+			name:    "current is newer",
+			current: "0.9.0",
+			latest:  "0.8.0",
+			want:    1,
+		},
+		{
+			name:    "missing patch compares equal",
+			current: "1.2",
+			latest:  "1.2.0",
+			want:    0,
+		},
+		{
+			name:    "invalid version returns error",
+			current: "1.2.3",
+			latest:  "latest",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := compareVersions(tt.current, tt.latest)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("compareVersions() error = %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("compareVersions() = %d, want %d", got, tt.want)
 			}
 		})
 	}
