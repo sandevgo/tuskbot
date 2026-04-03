@@ -3,6 +3,8 @@ package updater
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/sandevgo/tuskbot/internal/core"
@@ -88,28 +90,28 @@ func TestServiceUpdate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name             string
-		status           core.SystemServiceStatus
-		statusErr        error
-		stopErr          error
-		downloadErr      error
-		replaceErr       error
-		wantErr          bool
-		wantStopCalls    int
-		wantStartCalls   int
-		wantReplaceCalls int
+		name           string
+		status         core.SystemServiceStatus
+		statusErr      error
+		stopErr        error
+		downloadErr    error
+		wantErr        bool
+		wantStopCalls  int
+		wantStartCalls int
 	}{
 		{
-			name:             "running service stops and restarts",
-			status:           core.SystemServiceStatusRunning,
-			wantStopCalls:    1,
-			wantStartCalls:   1,
-			wantReplaceCalls: 1,
+			name:           "running service restarts when download fails",
+			status:         core.SystemServiceStatusRunning,
+			downloadErr:    errors.New("download failed"),
+			wantErr:        true,
+			wantStopCalls:  1,
+			wantStartCalls: 1,
 		},
 		{
-			name:             "stopped service does not restart",
-			status:           core.SystemServiceStatusStopped,
-			wantReplaceCalls: 1,
+			name:        "stopped service does not restart on download failure",
+			status:      core.SystemServiceStatusStopped,
+			downloadErr: errors.New("download failed"),
+			wantErr:     true,
 		},
 		{
 			name:      "status error aborts update",
@@ -122,21 +124,6 @@ func TestServiceUpdate(t *testing.T) {
 			stopErr:       errors.New("stop failed"),
 			wantErr:       true,
 			wantStopCalls: 1,
-		},
-		{
-			name:        "download error does not restart stopped service",
-			status:      core.SystemServiceStatusStopped,
-			downloadErr: errors.New("download failed"),
-			wantErr:     true,
-		},
-		{
-			name:             "replace error still restarts previously running service",
-			status:           core.SystemServiceStatusRunning,
-			replaceErr:       errors.New("replace failed"),
-			wantErr:          true,
-			wantStopCalls:    1,
-			wantStartCalls:   1,
-			wantReplaceCalls: 1,
 		},
 	}
 
@@ -154,13 +141,6 @@ func TestServiceUpdate(t *testing.T) {
 				err:        tt.downloadErr,
 			}
 			svc := NewService(provider, sys, "1.0.0")
-			svc.replaceFn = func(path string) error {
-				if path == "" {
-					t.Fatal("replace called with empty path")
-				}
-				sys.replaceCalls++
-				return tt.replaceErr
-			}
 
 			err := svc.Update(context.Background(), &core.ReleaseInfo{Version: "v1.1.0"})
 			if tt.wantErr {
@@ -177,11 +157,67 @@ func TestServiceUpdate(t *testing.T) {
 			if sys.startCalls != tt.wantStartCalls {
 				t.Fatalf("startCalls = %d, want %d", sys.startCalls, tt.wantStartCalls)
 			}
-			if sys.replaceCalls != tt.wantReplaceCalls {
-				t.Fatalf("replaceCalls = %d, want %d", sys.replaceCalls, tt.wantReplaceCalls)
-			}
 		})
 	}
+}
+
+func TestReplaceExecutable(t *testing.T) {
+	t.Parallel()
+
+	t.Run("replaces binary and removes old backup", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		execPath := filepath.Join(dir, "tusk")
+		tmpPath := filepath.Join(dir, "tusk.new")
+
+		if err := os.WriteFile(execPath, []byte("old-binary"), 0o755); err != nil {
+			t.Fatalf("WriteFile(execPath) error = %v", err)
+		}
+		if err := os.WriteFile(tmpPath, []byte("new-binary"), 0o755); err != nil {
+			t.Fatalf("WriteFile(tmpPath) error = %v", err)
+		}
+
+		if err := replaceExecutable(execPath, tmpPath); err != nil {
+			t.Fatalf("replaceExecutable() error = %v", err)
+		}
+
+		data, err := os.ReadFile(execPath)
+		if err != nil {
+			t.Fatalf("ReadFile(execPath) error = %v", err)
+		}
+		if string(data) != "new-binary" {
+			t.Fatalf("exec content = %q, want %q", string(data), "new-binary")
+		}
+		if _, err := os.Stat(execPath + ".old"); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("expected old backup to be removed, stat err = %v", err)
+		}
+	})
+
+	t.Run("rolls back when new binary rename fails", func(t *testing.T) {
+		t.Parallel()
+
+		dir := t.TempDir()
+		execPath := filepath.Join(dir, "tusk")
+		tmpPath := filepath.Join(dir, "missing", "tusk.new")
+
+		if err := os.WriteFile(execPath, []byte("old-binary"), 0o755); err != nil {
+			t.Fatalf("WriteFile(execPath) error = %v", err)
+		}
+
+		err := replaceExecutable(execPath, tmpPath)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+
+		data, readErr := os.ReadFile(execPath)
+		if readErr != nil {
+			t.Fatalf("ReadFile(execPath) error = %v", readErr)
+		}
+		if string(data) != "old-binary" {
+			t.Fatalf("exec content after rollback = %q, want %q", string(data), "old-binary")
+		}
+	})
 }
 
 func TestNormalizeVersion(t *testing.T) {
@@ -283,13 +319,12 @@ func (s stubReleaseProvider) GetReleaseBinary(context.Context, *core.ReleaseInfo
 }
 
 type stubSystemService struct {
-	status       core.SystemServiceStatus
-	statusErr    error
-	stopErr      error
-	startErr     error
-	stopCalls    int
-	startCalls   int
-	replaceCalls int
+	status     core.SystemServiceStatus
+	statusErr  error
+	stopErr    error
+	startErr   error
+	stopCalls  int
+	startCalls int
 }
 
 func (s *stubSystemService) Install(context.Context) error {

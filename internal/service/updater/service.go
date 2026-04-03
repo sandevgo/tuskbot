@@ -14,7 +14,6 @@ type Service struct {
 	provider  core.ReleaseProvider
 	systemSvc core.SystemService
 	version   string
-	replaceFn func(string) error
 }
 
 func NewService(provider core.ReleaseProvider, systemSvc core.SystemService, version string) *Service {
@@ -22,7 +21,6 @@ func NewService(provider core.ReleaseProvider, systemSvc core.SystemService, ver
 		provider:  provider,
 		systemSvc: systemSvc,
 		version:   version,
-		replaceFn: nil,
 	}
 }
 
@@ -88,15 +86,15 @@ func (s *Service) stopSystemService(ctx context.Context) (bool, error) {
 }
 
 func (s *Service) replace(tmpPath string) error {
-	if s.replaceFn != nil {
-		return s.replaceFn(tmpPath)
-	}
-
 	execPath, err := os.Executable()
 	if err != nil {
 		return err
 	}
 
+	return replaceExecutable(execPath, tmpPath)
+}
+
+func replaceExecutable(execPath, tmpPath string) error {
 	oldPath := execPath + ".old"
 	_ = os.Remove(oldPath)
 
