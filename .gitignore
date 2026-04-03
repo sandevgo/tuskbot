@@ -1,4 +1,5 @@
 .env
+.cache
 .claude
 .tuskbot
 .idea
