@@ -8,9 +8,10 @@ const (
 )
 
 const (
-	TuskName          = "TuskBot"
-	TuskUserAgent     = "TuskBot-Agent/0.1"
-	TuskRepositoryURL = "https://github.com/sandevgo/tuskbot"
+	TuskName           = "TuskBot"
+	TuskUserAgent      = "TuskBot-Agent/0.1"
+	TuskRepositorySlug = "sandevgo/tuskbot"
+	TuskRepositoryURL  = "https://github.com/" + TuskRepositorySlug
 )
 
 var TaskVersion = "dev"
