@@ -37,6 +37,30 @@ type ChatRequest struct {
 	Cache    CachePolicy
 }
 
+func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
+	req := ChatRequest{
+		Messages: promptCtx.Messages,
+		Tools:    tools,
+	}
+
+	if promptCtx.StaticPrefixCount <= 0 {
+		return req
+	}
+
+	breakpoints := make([]int, promptCtx.StaticPrefixCount)
+	for i := range promptCtx.StaticPrefixCount {
+		breakpoints[i] = i
+	}
+
+	req.Cache.Prompt = &PromptCachePolicy{
+		Mode:               PromptCacheModePrefer,
+		MessageBreakpoints: breakpoints,
+		IncludeTools:       len(tools) > 0,
+	}
+
+	return req
+}
+
 type CachePolicy struct {
 	Prompt     *PromptCachePolicy
 	ModelReuse *ModelReusePolicy

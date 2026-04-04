@@ -67,7 +67,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 	}
 
 	promptCtx.Messages = sanitizeToolCalls(ctx, promptCtx.Messages)
-	req := buildChatRequest(promptCtx, tools)
+	req := core.NewChatRequest(promptCtx, tools)
 
 	finalContent, err := a.runner.Run(ctx, req, func(msg core.Message) error {
 		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
@@ -122,7 +122,7 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 	}
 
 	promptCtx.Messages = sanitizeToolCalls(ctx, promptCtx.Messages)
-	req := buildChatRequest(promptCtx, tools)
+	req := core.NewChatRequest(promptCtx, tools)
 
 	final, err := a.runner.Run(ctx, req, func(m core.Message) error {
 		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
@@ -159,28 +159,4 @@ func sanitizeToolCalls(ctx context.Context, messages []core.Message) []core.Mess
 		}
 	}
 	return sanitized
-}
-
-func buildChatRequest(promptCtx core.PromptContext, tools []core.Tool) core.ChatRequest {
-	req := core.ChatRequest{
-		Messages: promptCtx.Messages,
-		Tools:    tools,
-	}
-
-	if promptCtx.StaticPrefixCount <= 0 {
-		return req
-	}
-
-	breakpoints := make([]int, promptCtx.StaticPrefixCount)
-	for i := range promptCtx.StaticPrefixCount {
-		breakpoints[i] = i
-	}
-
-	req.Cache.Prompt = &core.PromptCachePolicy{
-		Mode:               core.PromptCacheModePrefer,
-		MessageBreakpoints: breakpoints,
-		IncludeTools:       len(tools) > 0,
-	}
-
-	return req
 }

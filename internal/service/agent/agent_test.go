@@ -159,7 +159,7 @@ func TestBuildChatRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildChatRequest(tt.ctx, tt.tools)
+			got := core.NewChatRequest(tt.ctx, tt.tools)
 
 			if !reflect.DeepEqual(got.Messages, tt.ctx.Messages) {
 				t.Fatalf("Messages = %#v, want %#v", got.Messages, tt.ctx.Messages)

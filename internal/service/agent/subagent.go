@@ -42,7 +42,7 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		Str("task_name", task.Name).
 		Msg("subagent starting task execution")
 
-	messages, err := s.memory.GetTaskContext(ctx, task.SessionID, task.Prompt)
+	promptCtx, err := s.memory.GetTaskContext(ctx, task.SessionID, task.Prompt)
 	if err != nil {
 		return "", fmt.Errorf("get context: %w", err)
 	}
@@ -52,7 +52,9 @@ func (s *SubAgent) Run(ctx context.Context, task *core.Task, onComplete core.Upd
 		return "", fmt.Errorf("get tools: %w", err)
 	}
 
-	result, err := s.runner.Run(ctx, messages, tools, func(msg core.Message) error {
+	req := core.NewChatRequest(promptCtx, tools)
+
+	result, err := s.runner.Run(ctx, req, func(msg core.Message) error {
 		if msg.Role == core.RoleAssistant && msg.Content != "" {
 			onComplete(msg)
 		}
