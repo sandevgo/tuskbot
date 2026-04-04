@@ -191,10 +191,15 @@ func (e *Extractor) extractFacts(ctx context.Context, conversation string) ([]ex
 	const systemPrompt = "You are a knowledge extraction system. Output only valid JSON."
 	userPrompt := buildExtractionPrompt(conversation)
 
-	resp, err := e.ai.Chat(ctx, []core.Message{
-		{Role: core.RoleSystem, Content: systemPrompt},
-		{Role: core.RoleUser, Content: userPrompt},
+	req := core.NewChatRequest(core.PromptContext{
+		Messages: []core.Message{
+			{Role: core.RoleSystem, Content: systemPrompt},
+			{Role: core.RoleUser, Content: userPrompt},
+		},
+		StaticPrefixCount: 1,
 	}, nil)
+
+	resp, err := e.ai.Chat(ctx, req)
 	if err != nil {
 		return nil, fmt.Errorf("llm chat: %w", err)
 	}

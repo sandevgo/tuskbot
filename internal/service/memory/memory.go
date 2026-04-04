@@ -36,8 +36,9 @@ func NewMemory(
 	}
 }
 
-func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string) ([]core.Message, error) {
+func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string) (core.PromptContext, error) {
 	messages := s.prompter.BuildForAgent()
+	staticPrefixCount := len(messages)
 
 	if rag := s.getContext(ctx, sessionID, userQuery); rag != "" {
 		messages = append(messages, core.Message{
@@ -48,11 +49,14 @@ func (s *Memory) GetFullContext(ctx context.Context, sessionID, userQuery string
 
 	history, err := s.msgRepo.GetMessages(ctx, sessionID, s.cfg.GetContextWindowSize())
 	if err != nil {
-		return nil, fmt.Errorf("failed to get history: %w", err)
+		return core.PromptContext{}, fmt.Errorf("failed to get history: %w", err)
 	}
 	messages = append(messages, history...)
 
-	return messages, nil
+	return core.PromptContext{
+		Messages:          messages,
+		StaticPrefixCount: staticPrefixCount,
+	}, nil
 }
 
 // GetContext retrieves relevant knowledge and messages.
@@ -110,13 +114,17 @@ func (s *Memory) SaveMessage(ctx context.Context, sessionID string, msg core.Mes
 	return s.msgRepo.AddMessage(ctx, sessionID, msg)
 }
 
-func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction string) ([]core.Message, error) {
+func (s *Memory) GetTaskContext(ctx context.Context, sessionID, instruction string) (core.PromptContext, error) {
 	messages := s.prompter.BuildForSubAgent()
+	staticPrefixCount := len(messages)
 	messages = append(messages, core.Message{
 		Role:    core.RoleUser,
 		Content: instruction,
 	})
-	return messages, nil
+	return core.PromptContext{
+		Messages:          messages,
+		StaticPrefixCount: staticPrefixCount,
+	}, nil
 }
 
 func (s *Memory) CountTokens(messages []core.Message) int {
