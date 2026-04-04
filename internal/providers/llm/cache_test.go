@@ -1,11 +1,22 @@
 package llm
 
 import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
 
 func TestAnthropicPayloadAddsCacheMarkersAndTools(t *testing.T) {
 	req := core.ChatRequest{
@@ -76,6 +87,100 @@ func TestAnthropicPayloadBypassSkipsCacheMarkers(t *testing.T) {
 	content := messages[0]["content"].([]map[string]any)
 	if _, ok := content[0]["cache_control"]; ok {
 		t.Fatal("did not expect message cache marker when bypass is set")
+	}
+}
+
+func TestAnthropicPayloadIncludesToolsWithoutPromptCache(t *testing.T) {
+	req := core.ChatRequest{
+		Messages: []core.Message{
+			{Role: core.RoleUser, Content: "hello"},
+		},
+		Tools: []core.Tool{
+			{
+				Type: "function",
+				Function: core.Function{
+					Name:        "search",
+					Description: "Search things",
+					Parameters:  []byte(`{"type":"object"}`),
+				},
+			},
+		},
+	}
+
+	payload := anthropicPayload("claude-test", req)
+
+	tools, ok := payload["tools"]
+	if !ok {
+		t.Fatal("expected tools payload even when prompt cache is disabled")
+	}
+
+	gotTools := tools.([]map[string]any)
+	if len(gotTools) != 1 || gotTools[0]["name"] != "search" {
+		t.Fatalf("unexpected tools payload: %#v", gotTools)
+	}
+}
+
+func TestAnthropicChatParsesToolUseBlocks(t *testing.T) {
+	provider := NewAnthropic("test-key", "claude-test")
+	provider.client = &http.Client{
+		Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     make(http.Header),
+				Body: io.NopCloser(strings.NewReader(`{
+			"content": [
+				{
+					"type": "tool_use",
+					"id": "toolu_123",
+					"name": "search",
+					"input": {"query": "golang"}
+				}
+			]
+		}`)),
+				Request: r,
+			}, nil
+		}),
+	}
+
+	resp, err := provider.Chat(context.Background(), core.ChatRequest{
+		Messages: []core.Message{
+			{Role: core.RoleUser, Content: "find docs"},
+		},
+		Tools: []core.Tool{
+			{
+				Type: "function",
+				Function: core.Function{
+					Name:        "search",
+					Description: "Search things",
+					Parameters:  []byte(`{"type":"object"}`),
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Chat() error = %v", err)
+	}
+
+	if len(resp.ToolCalls) != 1 {
+		t.Fatalf("ToolCalls len = %d, want 1", len(resp.ToolCalls))
+	}
+
+	got := resp.ToolCalls[0]
+	if got.ID != "toolu_123" {
+		t.Fatalf("ToolCall ID = %q, want %q", got.ID, "toolu_123")
+	}
+	if got.Type != "function" {
+		t.Fatalf("ToolCall Type = %q, want %q", got.Type, "function")
+	}
+	if got.Function.Name != "search" {
+		t.Fatalf("ToolCall Function.Name = %q, want %q", got.Function.Name, "search")
+	}
+	var args map[string]string
+	if err := json.Unmarshal([]byte(got.Function.Arguments), &args); err != nil {
+		t.Fatalf("ToolCall Function.Arguments is not valid JSON: %v", err)
+	}
+	if !reflect.DeepEqual(args, map[string]string{"query": "golang"}) {
+		t.Fatalf("ToolCall Function.Arguments = %#v, want %#v", args, map[string]string{"query": "golang"})
 	}
 }
 

@@ -47,8 +47,11 @@ func (a *Anthropic) Chat(ctx context.Context, req core.ChatRequest) (core.Messag
 
 	var result struct {
 		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
+			Type  string          `json:"type"`
+			Text  string          `json:"text"`
+			ID    string          `json:"id"`
+			Name  string          `json:"name"`
+			Input json.RawMessage `json:"input"`
 		} `json:"content"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil {
@@ -56,12 +59,27 @@ func (a *Anthropic) Chat(ctx context.Context, req core.ChatRequest) (core.Messag
 	}
 
 	var text string
+	var toolCalls []core.ToolCall
 	for _, c := range result.Content {
-		if c.Type == "text" {
+		switch c.Type {
+		case "text":
 			text += c.Text
+		case "tool_use":
+			toolCalls = append(toolCalls, core.ToolCall{
+				ID:   c.ID,
+				Type: "function",
+				Function: core.FunctionCall{
+					Name:      c.Name,
+					Arguments: string(c.Input),
+				},
+			})
 		}
 	}
-	return core.Message{Role: core.RoleAssistant, Content: text}, nil
+	return core.Message{
+		Role:      core.RoleAssistant,
+		Content:   text,
+		ToolCalls: toolCalls,
+	}, nil
 }
 
 func (a *Anthropic) Capabilities() core.ProviderCapabilities {
@@ -119,7 +137,7 @@ func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 	if len(systemBlocks) > 0 {
 		payload["system"] = systemBlocks
 	}
-	if req.PromptCache != nil && req.PromptCache.IncludeTools && len(req.Tools) > 0 {
+	if len(req.Tools) > 0 {
 		payload["tools"] = anthropicTools(req.Tools)
 	}
 
