@@ -5,7 +5,6 @@ import "context"
 type AIProvider interface {
 	Chat(ctx context.Context, req ChatRequest) (Message, error)
 	Models(ctx context.Context) ([]Model, error)
-	Capabilities() ProviderCapabilities
 }
 
 type Embedder interface {
@@ -73,17 +72,4 @@ type PromptCachePolicy struct {
 	Mode               PromptCacheMode
 	MessageBreakpoints []int
 	IncludeTools       bool
-}
-
-type PromptCacheSupport string
-
-const (
-	PromptCacheSupportNone      PromptCacheSupport = "none"
-	PromptCacheSupportAutomatic PromptCacheSupport = "automatic"
-	PromptCacheSupportExplicit  PromptCacheSupport = "explicit"
-)
-
-type ProviderCapabilities struct {
-	PromptCache PromptCacheSupport
-	ModelReuse  bool
 }

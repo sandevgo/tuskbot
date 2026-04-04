@@ -16,7 +16,6 @@ type OpenAICompatible struct {
 	authPrefix   string
 	extraHeaders map[string]string
 	extraBody    func(core.ChatRequest) map[string]any
-	capabilities core.ProviderCapabilities
 }
 
 type OpenAICompatibleConfig struct {
@@ -27,7 +26,6 @@ type OpenAICompatibleConfig struct {
 	AuthPrefix   string // e.g., "Bearer "
 	ExtraHeaders map[string]string
 	ExtraBody    func(core.ChatRequest) map[string]any
-	Capabilities core.ProviderCapabilities
 }
 
 func NewOpenAICompatible(cfg OpenAICompatibleConfig) *OpenAICompatible {
@@ -37,7 +35,6 @@ func NewOpenAICompatible(cfg OpenAICompatibleConfig) *OpenAICompatible {
 		authPrefix:   cfg.AuthPrefix,
 		extraHeaders: cfg.ExtraHeaders,
 		extraBody:    cfg.ExtraBody,
-		capabilities: cfg.Capabilities,
 	}
 }
 
@@ -71,11 +68,6 @@ func (o *OpenAICompatible) Chat(ctx context.Context, req core.ChatRequest) (core
 
 	return parseOpenAIResponse(resp)
 }
-
-func (o *OpenAICompatible) Capabilities() core.ProviderCapabilities {
-	return o.capabilities
-}
-
 func parseOpenAIResponse(resp *http.Response) (core.Message, error) {
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {

@@ -22,9 +22,6 @@ func NewCustomOpenAI(baseURL, apiKey, model string) *CustomOpenAI {
 			Model:      model,
 			AuthHeader: "Authorization",
 			AuthPrefix: "Bearer ",
-			Capabilities: core.ProviderCapabilities{
-				PromptCache: core.PromptCacheSupportNone,
-			},
 		}),
 	}
 }

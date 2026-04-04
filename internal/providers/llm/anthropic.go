@@ -82,12 +82,6 @@ func (a *Anthropic) Chat(ctx context.Context, req core.ChatRequest) (core.Messag
 	}, nil
 }
 
-func (a *Anthropic) Capabilities() core.ProviderCapabilities {
-	return core.ProviderCapabilities{
-		PromptCache: core.PromptCacheSupportExplicit,
-	}
-}
-
 func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 	systemCount := 0
 	for _, msg := range req.Messages {

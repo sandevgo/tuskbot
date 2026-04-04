@@ -27,10 +27,6 @@ func NewOllama(baseURL, apiKey, model string) *Ollama {
 					"keep_alive": "1h",
 				}
 			},
-			Capabilities: core.ProviderCapabilities{
-				PromptCache: core.PromptCacheSupportNone,
-				ModelReuse:  true,
-			},
 		}),
 	}
 }

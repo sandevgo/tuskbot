@@ -46,11 +46,6 @@ func (d *DynamicProvider) Models(ctx context.Context) ([]core.Model, error) {
 	return provider.Models(ctx)
 }
 
-func (d *DynamicProvider) Capabilities() core.ProviderCapabilities {
-	provider := d.currentProvider()
-	return provider.Capabilities()
-}
-
 // GetModel (thread-safe)
 func (d *DynamicProvider) GetModel() string {
 	d.mu.RLock()

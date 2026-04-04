@@ -41,9 +41,6 @@ func NewOpenRouter(apiKey, model string) *OpenRouter {
 					},
 				}
 			},
-			Capabilities: core.ProviderCapabilities{
-				PromptCache: core.PromptCacheSupportAutomatic,
-			},
 		}),
 	}
 }
