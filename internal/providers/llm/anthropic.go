@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -21,25 +22,8 @@ func NewAnthropic(apiKey, model string) *Anthropic {
 	}
 }
 
-func (a *Anthropic) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
-	type msg struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-
-	var messages []msg
-	for _, m := range history {
-		if m.Role == core.RoleSystem {
-			continue
-		}
-		messages = append(messages, msg{Role: m.Role, Content: m.Content})
-	}
-
-	payload := map[string]any{
-		"model":      a.model,
-		"max_tokens": 4096,
-		"messages":   messages,
-	}
+func (a *Anthropic) Chat(ctx context.Context, req core.ChatRequest) (core.Message, error) {
+	payload := anthropicPayload(a.model, req)
 
 	headers := map[string]string{
 		"x-api-key":         a.apiKey,
@@ -63,8 +47,11 @@ func (a *Anthropic) Chat(ctx context.Context, history []core.Message, tools []co
 
 	var result struct {
 		Content []struct {
-			Type string `json:"type"`
-			Text string `json:"text"`
+			Type  string          `json:"type"`
+			Text  string          `json:"text"`
+			ID    string          `json:"id"`
+			Name  string          `json:"name"`
+			Input json.RawMessage `json:"input"`
 		} `json:"content"`
 	}
 	if err := json.Unmarshal(data, &result); err != nil {
@@ -72,12 +59,162 @@ func (a *Anthropic) Chat(ctx context.Context, history []core.Message, tools []co
 	}
 
 	var text string
+	var toolCalls []core.ToolCall
 	for _, c := range result.Content {
-		if c.Type == "text" {
+		switch c.Type {
+		case "text":
 			text += c.Text
+		case "tool_use":
+			toolCalls = append(toolCalls, core.ToolCall{
+				ID:   c.ID,
+				Type: "function",
+				Function: core.FunctionCall{
+					Name:      c.Name,
+					Arguments: string(c.Input),
+				},
+			})
 		}
 	}
-	return core.Message{Role: core.RoleAssistant, Content: text}, nil
+	return core.Message{
+		Role:      core.RoleAssistant,
+		Content:   text,
+		ToolCalls: toolCalls,
+	}, nil
+}
+
+func anthropicPayload(model string, req core.ChatRequest) map[string]any {
+	systemCount := 0
+	for _, msg := range req.Messages {
+		if msg.Role != core.RoleSystem {
+			break
+		}
+		systemCount++
+	}
+
+	systemBlocks := make([]map[string]any, 0, systemCount)
+	for i := 0; i < systemCount; i++ {
+		block := textBlock(req.Messages[i].Content)
+		if i < req.CachePrefixCount {
+			block["cache_control"] = map[string]any{"type": "ephemeral"}
+		}
+		systemBlocks = append(systemBlocks, block)
+	}
+
+	messages := make([]map[string]any, 0, len(req.Messages)-systemCount)
+	for i, m := range req.Messages[systemCount:] {
+		absoluteIdx := systemCount + i
+		msg := anthropicMessage(m)
+		if absoluteIdx < req.CachePrefixCount {
+			addAnthropicCacheControl(msg)
+		}
+		messages = append(messages, msg)
+	}
+
+	payload := map[string]any{
+		"model":      model,
+		"max_tokens": 4096,
+		"messages":   messages,
+	}
+	if len(systemBlocks) > 0 {
+		payload["system"] = systemBlocks
+	}
+	if len(req.Tools) > 0 {
+		payload["tools"] = anthropicTools(req.Tools)
+	}
+
+	return payload
+}
+
+func anthropicTools(tools []core.Tool) []map[string]any {
+	result := make([]map[string]any, 0, len(tools))
+	for _, tool := range tools {
+		result = append(result, map[string]any{
+			"name":         tool.Function.Name,
+			"description":  tool.Function.Description,
+			"input_schema": tool.Function.Parameters,
+		})
+	}
+	return result
+}
+
+func anthropicMessage(msg core.Message) map[string]any {
+	switch msg.Role {
+	case core.RoleAssistant:
+		content := make([]map[string]any, 0, 1+len(msg.ToolCalls))
+		if strings.TrimSpace(msg.Content) != "" {
+			content = append(content, textBlock(msg.Content))
+		}
+		for _, tc := range msg.ToolCalls {
+			content = append(content, map[string]any{
+				"type":  "tool_use",
+				"id":    tc.ID,
+				"name":  tc.Function.Name,
+				"input": anthropicToolInput(tc.Function.Arguments),
+			})
+		}
+		if len(content) == 0 {
+			content = append(content, textBlock(msg.Content))
+		}
+		return map[string]any{
+			"role":    "assistant",
+			"content": content,
+		}
+	case core.RoleTool:
+		return map[string]any{
+			"role": "user",
+			"content": []map[string]any{
+				{
+					"type":        "tool_result",
+					"tool_use_id": msg.ToolCallID,
+					"content":     msg.Content,
+				},
+			},
+		}
+	default:
+		return map[string]any{
+			"role":    normalizeAnthropicRole(msg.Role),
+			"content": []map[string]any{textBlock(msg.Content)},
+		}
+	}
+}
+
+func addAnthropicCacheControl(msg map[string]any) {
+	content, ok := msg["content"].([]map[string]any)
+	if !ok || len(content) == 0 {
+		return
+	}
+	content[0]["cache_control"] = map[string]any{"type": "ephemeral"}
+}
+
+func anthropicToolInput(arguments string) any {
+	if strings.TrimSpace(arguments) == "" {
+		return map[string]any{}
+	}
+
+	var input any
+	if err := json.Unmarshal([]byte(arguments), &input); err != nil {
+		return map[string]any{"raw": arguments}
+	}
+
+	return input
+}
+
+func normalizeAnthropicRole(role string) string {
+	switch role {
+	case core.RoleAssistant:
+		return "assistant"
+	case core.RoleUser:
+		return "user"
+	default:
+		return "user"
+	}
+}
+
+func textBlock(content string) map[string]any {
+	return map[string]any{
+		"type": "text",
+		"text": strings.TrimSpace(content),
+	}
 }
 
 func (a *Anthropic) Models(ctx context.Context) ([]core.Model, error) {

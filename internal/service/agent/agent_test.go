@@ -112,3 +112,56 @@ func TestSanitizeToolCalls(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildChatRequest(t *testing.T) {
+	tests := []struct {
+		name       string
+		ctx        core.PromptContext
+		tools      []core.Tool
+		wantPrefix int
+	}{
+		{
+			name: "no static prefix",
+			ctx: core.PromptContext{
+				Messages: []core.Message{{Role: core.RoleUser, Content: "hi"}},
+			},
+		},
+		{
+			name: "static prefix without tools",
+			ctx: core.PromptContext{
+				Messages:          []core.Message{{Role: core.RoleSystem, Content: "sys"}, {Role: core.RoleUser, Content: "hi"}},
+				StaticPrefixCount: 1,
+			},
+			wantPrefix: 1,
+		},
+		{
+			name: "static prefix with tools",
+			ctx: core.PromptContext{
+				Messages: []core.Message{
+					{Role: core.RoleSystem, Content: "sys"},
+					{Role: core.RoleSystem, Content: "identity"},
+					{Role: core.RoleUser, Content: "hi"},
+				},
+				StaticPrefixCount: 2,
+			},
+			tools:      []core.Tool{{Type: "function"}},
+			wantPrefix: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := core.NewChatRequest(tt.ctx, tt.tools)
+
+			if !reflect.DeepEqual(got.Messages, tt.ctx.Messages) {
+				t.Fatalf("Messages = %#v, want %#v", got.Messages, tt.ctx.Messages)
+			}
+			if !reflect.DeepEqual(got.Tools, tt.tools) {
+				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
+			}
+			if got.CachePrefixCount != tt.wantPrefix {
+				t.Fatalf("CachePrefixCount = %d, want %d", got.CachePrefixCount, tt.wantPrefix)
+			}
+		})
+	}
+}

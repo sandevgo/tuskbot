@@ -30,15 +30,14 @@ func NewReActRunner(ai core.AIProvider, executor core.ToolExecutor, timeout time
 // onTurn is called for every message (assistant and tool) to allow persistence and callbacks.
 func (r *ReActRunner) Run(
 	ctx context.Context,
-	messages []core.Message,
-	tools []core.Tool,
+	req core.ChatRequest,
 	onTurn func(core.Message) error,
 ) (string, error) {
 	var finalContent string
 
 	for {
 		chatCtx, cancel := context.WithTimeout(ctx, r.timeout)
-		response, err := r.ai.Chat(chatCtx, messages, tools)
+		response, err := r.ai.Chat(chatCtx, req)
 		cancel()
 
 		if err != nil {
@@ -46,7 +45,7 @@ func (r *ReActRunner) Run(
 		}
 
 		// Append assistant message and notify
-		messages = append(messages, response)
+		req.Messages = append(req.Messages, response)
 		if err := onTurn(response); err != nil {
 			return "", err
 		}
@@ -67,7 +66,7 @@ func (r *ReActRunner) Run(
 		// Execute tools and append results
 		toolResults := r.executor.Execute(ctx, response.ToolCalls)
 		for _, msg := range toolResults {
-			messages = append(messages, msg)
+			req.Messages = append(req.Messages, msg)
 			if err := onTurn(msg); err != nil {
 				return "", err
 			}

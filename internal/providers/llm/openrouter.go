@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -26,8 +27,26 @@ func NewOpenRouter(apiKey, model string) *OpenRouter {
 				"HTTP-Referer": core.TuskRepositoryURL,
 				"X-Title":      core.TuskName,
 			},
+			ExtraBody: func(req core.ChatRequest) map[string]any {
+				if req.CachePrefixCount <= 0 {
+					return nil
+				}
+				if !supportsOpenRouterAutomaticCaching(model) {
+					return nil
+				}
+
+				return map[string]any{
+					"cache_control": map[string]any{
+						"type": "ephemeral",
+					},
+				}
+			},
 		}),
 	}
+}
+
+func supportsOpenRouterAutomaticCaching(model string) bool {
+	return strings.Contains(strings.ToLower(model), "claude")
 }
 
 func (o *OpenRouter) Models(ctx context.Context) ([]core.Model, error) {

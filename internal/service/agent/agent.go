@@ -56,7 +56,7 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to save user message: %w", err)
 	}
 
-	messages, err := a.memory.GetFullContext(ctx, sessionID, input)
+	promptCtx, err := a.memory.GetFullContext(ctx, sessionID, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to get context: %w", err)
 	}
@@ -66,7 +66,10 @@ func (a *Agent) Run(ctx context.Context, sessionID string, input string, onUpdat
 		return "", fmt.Errorf("failed to get tools: %w", err)
 	}
 
-	finalContent, err := a.runner.Run(ctx, sanitizeToolCalls(ctx, messages), tools, func(msg core.Message) error {
+	promptCtx.Messages = sanitizeToolCalls(ctx, promptCtx.Messages)
+	req := core.NewChatRequest(promptCtx, tools)
+
+	finalContent, err := a.runner.Run(ctx, req, func(msg core.Message) error {
 		if err := a.memory.SaveMessage(ctx, sessionID, msg); err != nil {
 			return fmt.Errorf("failed to save message: %w", err)
 		}
@@ -103,12 +106,12 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		defer func() { a.lock <- struct{}{} }()
 	}
 
-	messages, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
+	promptCtx, err := a.memory.GetFullContext(ctx, task.OwnerSessionID, "")
 	if err != nil {
 		return err
 	}
 
-	messages = append(messages, core.Message{
+	promptCtx.Messages = append(promptCtx.Messages, core.Message{
 		Role:    core.RoleUser,
 		Content: "Please inform me about the completed background task and take any necessary follow-up actions.",
 	})
@@ -118,8 +121,10 @@ func (a *Agent) Notify(ctx context.Context, task *core.Task, result string) erro
 		return err
 	}
 
-	sanitizedMsgs := sanitizeToolCalls(ctx, messages)
-	final, err := a.runner.Run(ctx, sanitizedMsgs, tools, func(m core.Message) error {
+	promptCtx.Messages = sanitizeToolCalls(ctx, promptCtx.Messages)
+	req := core.NewChatRequest(promptCtx, tools)
+
+	final, err := a.runner.Run(ctx, req, func(m core.Message) error {
 		return a.memory.SaveMessage(ctx, task.OwnerSessionID, m)
 	})
 

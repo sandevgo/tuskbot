@@ -22,6 +22,11 @@ func NewOllama(baseURL, apiKey, model string) *Ollama {
 			Model:      model,
 			AuthHeader: "Authorization",
 			AuthPrefix: "Bearer ",
+			ExtraBody: func(req core.ChatRequest) map[string]any {
+				return map[string]any{
+					"keep_alive": "1h",
+				}
+			},
 		}),
 	}
 }

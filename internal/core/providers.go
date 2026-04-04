@@ -3,7 +3,7 @@ package core
 import "context"
 
 type AIProvider interface {
-	Chat(ctx context.Context, history []Message, tools []Tool) (Message, error)
+	Chat(ctx context.Context, req ChatRequest) (Message, error)
 	Models(ctx context.Context) ([]Model, error)
 }
 
@@ -28,4 +28,25 @@ type Model struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	ContextLength int    `json:"context_length"`
+}
+
+type ChatRequest struct {
+	Messages         []Message
+	Tools            []Tool
+	CachePrefixCount int
+}
+
+func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
+	req := ChatRequest{
+		Messages: promptCtx.Messages,
+		Tools:    tools,
+	}
+
+	if promptCtx.StaticPrefixCount <= 0 {
+		return req
+	}
+
+	req.CachePrefixCount = promptCtx.StaticPrefixCount
+
+	return req
 }

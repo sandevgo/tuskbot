@@ -9,9 +9,14 @@ type TokenCounter interface {
 	CountTokens(text string) int
 }
 
+type PromptContext struct {
+	Messages          []Message
+	StaticPrefixCount int
+}
+
 type Memory interface {
-	GetFullContext(ctx context.Context, sessionID, userQuery string) ([]Message, error)
-	GetTaskContext(ctx context.Context, sessionID, instruction string) ([]Message, error)
+	GetFullContext(ctx context.Context, sessionID, userQuery string) (PromptContext, error)
+	GetTaskContext(ctx context.Context, sessionID, instruction string) (PromptContext, error)
 	SaveMessage(ctx context.Context, sessionID string, msg Message) error
 	CountTokens(messages []Message) int
 }

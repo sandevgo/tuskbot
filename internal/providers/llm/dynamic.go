@@ -15,6 +15,10 @@ type DynamicProvider struct {
 	mu      sync.RWMutex
 }
 
+type providerSlot struct {
+	provider core.AIProvider
+}
+
 func NewDynamicProvider(
 	ctx context.Context,
 	config core.ProviderConfig,
@@ -28,17 +32,17 @@ func NewDynamicProvider(
 		return nil, fmt.Errorf("failed to create initial provider: %w", err)
 	}
 
-	d.current.Store(provider)
+	d.current.Store(providerSlot{provider: provider})
 	return d, nil
 }
 
-func (d *DynamicProvider) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
-	provider := d.current.Load().(core.AIProvider)
-	return provider.Chat(ctx, history, tools)
+func (d *DynamicProvider) Chat(ctx context.Context, req core.ChatRequest) (core.Message, error) {
+	provider := d.currentProvider()
+	return provider.Chat(ctx, req)
 }
 
 func (d *DynamicProvider) Models(ctx context.Context) ([]core.Model, error) {
-	provider := d.current.Load().(core.AIProvider)
+	provider := d.currentProvider()
 	return provider.Models(ctx)
 }
 
@@ -65,6 +69,10 @@ func (d *DynamicProvider) SetModel(ctx context.Context, model string) error {
 	}
 
 	// Atomic swap
-	d.current.Store(newProvider)
+	d.current.Store(providerSlot{provider: newProvider})
 	return nil
+}
+
+func (d *DynamicProvider) currentProvider() core.AIProvider {
+	return d.current.Load().(providerSlot).provider
 }
