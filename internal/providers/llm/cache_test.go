@@ -35,10 +35,7 @@ func TestAnthropicPayloadAddsCacheMarkersAndTools(t *testing.T) {
 				},
 			},
 		},
-		PromptCache: &core.PromptCachePolicy{
-			Mode:               core.PromptCacheModePrefer,
-			MessageBreakpoints: []int{1, 2},
-		},
+		CacheBreakpoints: []int{1, 2},
 	}
 
 	payload := anthropicPayload("claude-test", req)
@@ -63,15 +60,11 @@ func TestAnthropicPayloadAddsCacheMarkersAndTools(t *testing.T) {
 	}
 }
 
-func TestAnthropicPayloadBypassSkipsCacheMarkers(t *testing.T) {
+func TestAnthropicPayloadWithoutBreakpointsSkipsCacheMarkers(t *testing.T) {
 	req := core.ChatRequest{
 		Messages: []core.Message{
 			{Role: core.RoleSystem, Content: "system"},
 			{Role: core.RoleUser, Content: "hello"},
-		},
-		PromptCache: &core.PromptCachePolicy{
-			Mode:               core.PromptCacheModeBypass,
-			MessageBreakpoints: []int{0, 1},
 		},
 	}
 
@@ -79,13 +72,13 @@ func TestAnthropicPayloadBypassSkipsCacheMarkers(t *testing.T) {
 
 	system := payload["system"].([]map[string]any)
 	if _, ok := system[0]["cache_control"]; ok {
-		t.Fatal("did not expect cache marker when bypass is set")
+		t.Fatal("did not expect cache marker without breakpoints")
 	}
 
 	messages := payload["messages"].([]map[string]any)
 	content := messages[0]["content"].([]map[string]any)
 	if _, ok := content[0]["cache_control"]; ok {
-		t.Fatal("did not expect message cache marker when bypass is set")
+		t.Fatal("did not expect message cache marker without breakpoints")
 	}
 }
 
@@ -262,9 +255,7 @@ func TestOllamaKeepAliveBody(t *testing.T) {
 func TestOpenRouterCacheControlBodyForClaude(t *testing.T) {
 	provider := NewOpenRouter("test-key", "anthropic/claude-sonnet-4")
 	body := provider.extraBody(core.ChatRequest{
-		PromptCache: &core.PromptCachePolicy{
-			Mode: core.PromptCacheModePrefer,
-		},
+		CacheBreakpoints: []int{0},
 	})
 
 	expected := map[string]any{
@@ -280,9 +271,7 @@ func TestOpenRouterCacheControlBodyForClaude(t *testing.T) {
 func TestOpenRouterCacheControlBodySkipsUnsupportedModels(t *testing.T) {
 	provider := NewOpenRouter("test-key", "openai/gpt-4o-mini")
 	body := provider.extraBody(core.ChatRequest{
-		PromptCache: &core.PromptCachePolicy{
-			Mode: core.PromptCacheModePrefer,
-		},
+		CacheBreakpoints: []int{0},
 	})
 
 	if body != nil {
@@ -290,13 +279,9 @@ func TestOpenRouterCacheControlBodySkipsUnsupportedModels(t *testing.T) {
 	}
 }
 
-func TestOpenRouterCacheControlBodySkipsBypassMode(t *testing.T) {
+func TestOpenRouterCacheControlBodySkipsWhenNoBreakpoints(t *testing.T) {
 	provider := NewOpenRouter("test-key", "anthropic/claude-sonnet-4")
-	body := provider.extraBody(core.ChatRequest{
-		PromptCache: &core.PromptCachePolicy{
-			Mode: core.PromptCacheModeBypass,
-		},
-	})
+	body := provider.extraBody(core.ChatRequest{})
 
 	if body != nil {
 		t.Fatalf("extraBody = %#v, want nil", body)

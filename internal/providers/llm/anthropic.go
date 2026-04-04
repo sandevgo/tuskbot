@@ -92,10 +92,8 @@ func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 	}
 
 	breakpoints := map[int]struct{}{}
-	if req.PromptCache != nil && req.PromptCache.Mode != core.PromptCacheModeBypass {
-		for _, idx := range req.PromptCache.MessageBreakpoints {
-			breakpoints[idx] = struct{}{}
-		}
+	for _, idx := range req.CacheBreakpoints {
+		breakpoints[idx] = struct{}{}
 	}
 
 	systemBlocks := make([]map[string]any, 0, systemCount)

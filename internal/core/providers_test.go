@@ -7,10 +7,10 @@ import (
 
 func TestNewChatRequest(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       PromptContext
-		tools     []Tool
-		wantCache *PromptCachePolicy
+		name            string
+		ctx             PromptContext
+		tools           []Tool
+		wantBreakpoints []int
 	}{
 		{
 			name: "no static prefix",
@@ -24,10 +24,7 @@ func TestNewChatRequest(t *testing.T) {
 				Messages:          []Message{{Role: RoleSystem, Content: "sys"}, {Role: RoleUser, Content: "hi"}},
 				StaticPrefixCount: 1,
 			},
-			wantCache: &PromptCachePolicy{
-				Mode:               PromptCacheModePrefer,
-				MessageBreakpoints: []int{0},
-			},
+			wantBreakpoints: []int{0},
 		},
 		{
 			name: "static prefix with tools",
@@ -39,11 +36,8 @@ func TestNewChatRequest(t *testing.T) {
 				},
 				StaticPrefixCount: 2,
 			},
-			tools: []Tool{{Type: "function"}},
-			wantCache: &PromptCachePolicy{
-				Mode:               PromptCacheModePrefer,
-				MessageBreakpoints: []int{0, 1},
-			},
+			tools:           []Tool{{Type: "function"}},
+			wantBreakpoints: []int{0, 1},
 		},
 	}
 
@@ -57,8 +51,8 @@ func TestNewChatRequest(t *testing.T) {
 			if !reflect.DeepEqual(got.Tools, tt.tools) {
 				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
 			}
-			if !reflect.DeepEqual(got.PromptCache, tt.wantCache) {
-				t.Fatalf("Prompt cache = %#v, want %#v", got.PromptCache, tt.wantCache)
+			if !reflect.DeepEqual(got.CacheBreakpoints, tt.wantBreakpoints) {
+				t.Fatalf("CacheBreakpoints = %#v, want %#v", got.CacheBreakpoints, tt.wantBreakpoints)
 			}
 		})
 	}

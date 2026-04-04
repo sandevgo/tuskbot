@@ -115,10 +115,10 @@ func TestSanitizeToolCalls(t *testing.T) {
 
 func TestBuildChatRequest(t *testing.T) {
 	tests := []struct {
-		name      string
-		ctx       core.PromptContext
-		tools     []core.Tool
-		wantCache *core.PromptCachePolicy
+		name            string
+		ctx             core.PromptContext
+		tools           []core.Tool
+		wantBreakpoints []int
 	}{
 		{
 			name: "no static prefix",
@@ -132,10 +132,7 @@ func TestBuildChatRequest(t *testing.T) {
 				Messages:          []core.Message{{Role: core.RoleSystem, Content: "sys"}, {Role: core.RoleUser, Content: "hi"}},
 				StaticPrefixCount: 1,
 			},
-			wantCache: &core.PromptCachePolicy{
-				Mode:               core.PromptCacheModePrefer,
-				MessageBreakpoints: []int{0},
-			},
+			wantBreakpoints: []int{0},
 		},
 		{
 			name: "static prefix with tools",
@@ -147,11 +144,8 @@ func TestBuildChatRequest(t *testing.T) {
 				},
 				StaticPrefixCount: 2,
 			},
-			tools: []core.Tool{{Type: "function"}},
-			wantCache: &core.PromptCachePolicy{
-				Mode:               core.PromptCacheModePrefer,
-				MessageBreakpoints: []int{0, 1},
-			},
+			tools:           []core.Tool{{Type: "function"}},
+			wantBreakpoints: []int{0, 1},
 		},
 	}
 
@@ -165,8 +159,8 @@ func TestBuildChatRequest(t *testing.T) {
 			if !reflect.DeepEqual(got.Tools, tt.tools) {
 				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
 			}
-			if !reflect.DeepEqual(got.PromptCache, tt.wantCache) {
-				t.Fatalf("Prompt cache = %#v, want %#v", got.PromptCache, tt.wantCache)
+			if !reflect.DeepEqual(got.CacheBreakpoints, tt.wantBreakpoints) {
+				t.Fatalf("CacheBreakpoints = %#v, want %#v", got.CacheBreakpoints, tt.wantBreakpoints)
 			}
 		})
 	}
