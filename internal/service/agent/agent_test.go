@@ -167,8 +167,8 @@ func TestBuildChatRequest(t *testing.T) {
 			if !reflect.DeepEqual(got.Tools, tt.tools) {
 				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
 			}
-			if !reflect.DeepEqual(got.Cache.Prompt, tt.wantCache) {
-				t.Fatalf("Prompt cache = %#v, want %#v", got.Cache.Prompt, tt.wantCache)
+			if !reflect.DeepEqual(got.PromptCache, tt.wantCache) {
+				t.Fatalf("Prompt cache = %#v, want %#v", got.PromptCache, tt.wantCache)
 			}
 		})
 	}

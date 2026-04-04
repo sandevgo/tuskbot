@@ -32,9 +32,10 @@ type Model struct {
 }
 
 type ChatRequest struct {
-	Messages []Message
-	Tools    []Tool
-	Cache    CachePolicy
+	Messages    []Message
+	Tools       []Tool
+	PromptCache *PromptCachePolicy
+	ModelReuse  *ModelReusePolicy
 }
 
 func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
@@ -52,18 +53,13 @@ func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
 		breakpoints[i] = i
 	}
 
-	req.Cache.Prompt = &PromptCachePolicy{
+	req.PromptCache = &PromptCachePolicy{
 		Mode:               PromptCacheModePrefer,
 		MessageBreakpoints: breakpoints,
 		IncludeTools:       len(tools) > 0,
 	}
 
 	return req
-}
-
-type CachePolicy struct {
-	Prompt     *PromptCachePolicy
-	ModelReuse *ModelReusePolicy
 }
 
 type PromptCacheMode string
