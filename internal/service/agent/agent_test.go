@@ -115,10 +115,10 @@ func TestSanitizeToolCalls(t *testing.T) {
 
 func TestBuildChatRequest(t *testing.T) {
 	tests := []struct {
-		name            string
-		ctx             core.PromptContext
-		tools           []core.Tool
-		wantBreakpoints []int
+		name       string
+		ctx        core.PromptContext
+		tools      []core.Tool
+		wantPrefix int
 	}{
 		{
 			name: "no static prefix",
@@ -132,7 +132,7 @@ func TestBuildChatRequest(t *testing.T) {
 				Messages:          []core.Message{{Role: core.RoleSystem, Content: "sys"}, {Role: core.RoleUser, Content: "hi"}},
 				StaticPrefixCount: 1,
 			},
-			wantBreakpoints: []int{0},
+			wantPrefix: 1,
 		},
 		{
 			name: "static prefix with tools",
@@ -144,8 +144,8 @@ func TestBuildChatRequest(t *testing.T) {
 				},
 				StaticPrefixCount: 2,
 			},
-			tools:           []core.Tool{{Type: "function"}},
-			wantBreakpoints: []int{0, 1},
+			tools:      []core.Tool{{Type: "function"}},
+			wantPrefix: 2,
 		},
 	}
 
@@ -159,8 +159,8 @@ func TestBuildChatRequest(t *testing.T) {
 			if !reflect.DeepEqual(got.Tools, tt.tools) {
 				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
 			}
-			if !reflect.DeepEqual(got.CacheBreakpoints, tt.wantBreakpoints) {
-				t.Fatalf("CacheBreakpoints = %#v, want %#v", got.CacheBreakpoints, tt.wantBreakpoints)
+			if got.CachePrefixCount != tt.wantPrefix {
+				t.Fatalf("CachePrefixCount = %d, want %d", got.CachePrefixCount, tt.wantPrefix)
 			}
 		})
 	}

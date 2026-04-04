@@ -7,10 +7,10 @@ import (
 
 func TestNewChatRequest(t *testing.T) {
 	tests := []struct {
-		name            string
-		ctx             PromptContext
-		tools           []Tool
-		wantBreakpoints []int
+		name       string
+		ctx        PromptContext
+		tools      []Tool
+		wantPrefix int
 	}{
 		{
 			name: "no static prefix",
@@ -24,7 +24,7 @@ func TestNewChatRequest(t *testing.T) {
 				Messages:          []Message{{Role: RoleSystem, Content: "sys"}, {Role: RoleUser, Content: "hi"}},
 				StaticPrefixCount: 1,
 			},
-			wantBreakpoints: []int{0},
+			wantPrefix: 1,
 		},
 		{
 			name: "static prefix with tools",
@@ -36,8 +36,8 @@ func TestNewChatRequest(t *testing.T) {
 				},
 				StaticPrefixCount: 2,
 			},
-			tools:           []Tool{{Type: "function"}},
-			wantBreakpoints: []int{0, 1},
+			tools:      []Tool{{Type: "function"}},
+			wantPrefix: 2,
 		},
 	}
 
@@ -51,8 +51,8 @@ func TestNewChatRequest(t *testing.T) {
 			if !reflect.DeepEqual(got.Tools, tt.tools) {
 				t.Fatalf("Tools = %#v, want %#v", got.Tools, tt.tools)
 			}
-			if !reflect.DeepEqual(got.CacheBreakpoints, tt.wantBreakpoints) {
-				t.Fatalf("CacheBreakpoints = %#v, want %#v", got.CacheBreakpoints, tt.wantBreakpoints)
+			if got.CachePrefixCount != tt.wantPrefix {
+				t.Fatalf("CachePrefixCount = %d, want %d", got.CachePrefixCount, tt.wantPrefix)
 			}
 		})
 	}

@@ -35,14 +35,14 @@ func TestAnthropicPayloadAddsCacheMarkersAndTools(t *testing.T) {
 				},
 			},
 		},
-		CacheBreakpoints: []int{1, 2},
+		CachePrefixCount: 3,
 	}
 
 	payload := anthropicPayload("claude-test", req)
 
 	system := payload["system"].([]map[string]any)
-	if _, ok := system[0]["cache_control"]; ok {
-		t.Fatal("did not expect cache marker on first system block")
+	if _, ok := system[0]["cache_control"]; !ok {
+		t.Fatal("expected cache marker on first system block")
 	}
 	if _, ok := system[1]["cache_control"]; !ok {
 		t.Fatal("expected cache marker on second system block")
@@ -255,7 +255,7 @@ func TestOllamaKeepAliveBody(t *testing.T) {
 func TestOpenRouterCacheControlBodyForClaude(t *testing.T) {
 	provider := NewOpenRouter("test-key", "anthropic/claude-sonnet-4")
 	body := provider.extraBody(core.ChatRequest{
-		CacheBreakpoints: []int{0},
+		CachePrefixCount: 1,
 	})
 
 	expected := map[string]any{
@@ -271,7 +271,7 @@ func TestOpenRouterCacheControlBodyForClaude(t *testing.T) {
 func TestOpenRouterCacheControlBodySkipsUnsupportedModels(t *testing.T) {
 	provider := NewOpenRouter("test-key", "openai/gpt-4o-mini")
 	body := provider.extraBody(core.ChatRequest{
-		CacheBreakpoints: []int{0},
+		CachePrefixCount: 1,
 	})
 
 	if body != nil {

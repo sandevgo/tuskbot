@@ -28,7 +28,7 @@ func NewOpenRouter(apiKey, model string) *OpenRouter {
 				"X-Title":      core.TuskName,
 			},
 			ExtraBody: func(req core.ChatRequest) map[string]any {
-				if len(req.CacheBreakpoints) == 0 {
+				if req.CachePrefixCount <= 0 {
 					return nil
 				}
 				if !supportsOpenRouterAutomaticCaching(model) {

@@ -33,7 +33,7 @@ type Model struct {
 type ChatRequest struct {
 	Messages         []Message
 	Tools            []Tool
-	CacheBreakpoints []int
+	CachePrefixCount int
 }
 
 func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
@@ -46,12 +46,7 @@ func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
 		return req
 	}
 
-	breakpoints := make([]int, promptCtx.StaticPrefixCount)
-	for i := range promptCtx.StaticPrefixCount {
-		breakpoints[i] = i
-	}
-
-	req.CacheBreakpoints = breakpoints
+	req.CachePrefixCount = promptCtx.StaticPrefixCount
 
 	return req
 }

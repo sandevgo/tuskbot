@@ -91,15 +91,10 @@ func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 		systemCount++
 	}
 
-	breakpoints := map[int]struct{}{}
-	for _, idx := range req.CacheBreakpoints {
-		breakpoints[idx] = struct{}{}
-	}
-
 	systemBlocks := make([]map[string]any, 0, systemCount)
 	for i := 0; i < systemCount; i++ {
 		block := textBlock(req.Messages[i].Content)
-		if _, ok := breakpoints[i]; ok {
+		if i < req.CachePrefixCount {
 			block["cache_control"] = map[string]any{"type": "ephemeral"}
 		}
 		systemBlocks = append(systemBlocks, block)
@@ -109,7 +104,7 @@ func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 	for i, m := range req.Messages[systemCount:] {
 		absoluteIdx := systemCount + i
 		msg := anthropicMessage(m)
-		if _, ok := breakpoints[absoluteIdx]; ok {
+		if absoluteIdx < req.CachePrefixCount {
 			addAnthropicCacheControl(msg)
 		}
 		messages = append(messages, msg)
