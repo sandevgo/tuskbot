@@ -3,8 +3,9 @@ package core
 import "context"
 
 type AIProvider interface {
-	Chat(ctx context.Context, history []Message, tools []Tool) (Message, error)
+	Chat(ctx context.Context, req ChatRequest) (Message, error)
 	Models(ctx context.Context) ([]Model, error)
+	Capabilities() ProviderCapabilities
 }
 
 type Embedder interface {
@@ -28,4 +29,55 @@ type Model struct {
 	ID            string `json:"id"`
 	Name          string `json:"name"`
 	ContextLength int    `json:"context_length"`
+}
+
+type ChatRequest struct {
+	Messages []Message
+	Tools    []Tool
+	Cache    CachePolicy
+}
+
+type CachePolicy struct {
+	Prompt     *PromptCachePolicy
+	ModelReuse *ModelReusePolicy
+}
+
+type PromptCacheMode string
+
+const (
+	PromptCacheModeDefault PromptCacheMode = "default"
+	PromptCacheModePrefer  PromptCacheMode = "prefer"
+	PromptCacheModeBypass  PromptCacheMode = "bypass"
+)
+
+type PromptCachePolicy struct {
+	Mode               PromptCacheMode
+	MessageBreakpoints []int
+	IncludeTools       bool
+}
+
+type ModelReuseMode string
+
+const (
+	ModelReuseModeDefault ModelReuseMode = "default"
+	ModelReuseModePrefer  ModelReuseMode = "prefer"
+	ModelReuseModeBypass  ModelReuseMode = "bypass"
+)
+
+type ModelReusePolicy struct {
+	Mode ModelReuseMode
+	TTL  string
+}
+
+type PromptCacheSupport string
+
+const (
+	PromptCacheSupportNone      PromptCacheSupport = "none"
+	PromptCacheSupportAutomatic PromptCacheSupport = "automatic"
+	PromptCacheSupportExplicit  PromptCacheSupport = "explicit"
+)
+
+type ProviderCapabilities struct {
+	PromptCache PromptCacheSupport
+	ModelReuse  bool
 }
