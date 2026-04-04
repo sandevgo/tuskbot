@@ -28,17 +28,17 @@ func (c *StatsCommand) Description() string {
 }
 
 func (c *StatsCommand) Execute(ctx context.Context, sessionID string, args []string) (string, error) {
-	messages, err := c.memory.GetFullContext(ctx, sessionID, "")
+	promptCtx, err := c.memory.GetFullContext(ctx, sessionID, "")
 	if err != nil {
 		return "", err
 	}
 
-	tokens := c.memory.CountTokens(messages)
+	tokens := c.memory.CountTokens(promptCtx.Messages)
 
 	return c.formatter.Combine(
 		c.formatter.Info("Session Statistics"),
 		c.formatter.Label("Session ID", sessionID),
 		c.formatter.Label("Context Size", fmt.Sprintf("%d tokens", tokens)),
-		c.formatter.Label("Messages", fmt.Sprintf("%d", len(messages))),
+		c.formatter.Label("Messages", fmt.Sprintf("%d", len(promptCtx.Messages))),
 	), nil
 }
