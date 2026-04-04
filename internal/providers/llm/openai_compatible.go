@@ -15,6 +15,8 @@ type OpenAICompatible struct {
 	authHeader   string
 	authPrefix   string
 	extraHeaders map[string]string
+	extraBody    func(core.ChatRequest) map[string]any
+	capabilities core.ProviderCapabilities
 }
 
 type OpenAICompatibleConfig struct {
@@ -24,6 +26,8 @@ type OpenAICompatibleConfig struct {
 	AuthHeader   string // e.g., "Authorization"
 	AuthPrefix   string // e.g., "Bearer "
 	ExtraHeaders map[string]string
+	ExtraBody    func(core.ChatRequest) map[string]any
+	Capabilities core.ProviderCapabilities
 }
 
 func NewOpenAICompatible(cfg OpenAICompatibleConfig) *OpenAICompatible {
@@ -32,16 +36,23 @@ func NewOpenAICompatible(cfg OpenAICompatibleConfig) *OpenAICompatible {
 		authHeader:   cfg.AuthHeader,
 		authPrefix:   cfg.AuthPrefix,
 		extraHeaders: cfg.ExtraHeaders,
+		extraBody:    cfg.ExtraBody,
+		capabilities: cfg.Capabilities,
 	}
 }
 
-func (o *OpenAICompatible) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
+func (o *OpenAICompatible) Chat(ctx context.Context, req core.ChatRequest) (core.Message, error) {
 	payload := map[string]any{
 		"model":    o.model,
-		"messages": history,
+		"messages": req.Messages,
 	}
-	if len(tools) > 0 {
-		payload["tools"] = tools
+	if len(req.Tools) > 0 {
+		payload["tools"] = req.Tools
+	}
+	if o.extraBody != nil {
+		for k, v := range o.extraBody(req) {
+			payload[k] = v
+		}
 	}
 
 	headers := make(map[string]string)
@@ -59,6 +70,10 @@ func (o *OpenAICompatible) Chat(ctx context.Context, history []core.Message, too
 	defer resp.Body.Close()
 
 	return parseOpenAIResponse(resp)
+}
+
+func (o *OpenAICompatible) Capabilities() core.ProviderCapabilities {
+	return o.capabilities
 }
 
 func parseOpenAIResponse(resp *http.Response) (core.Message, error) {

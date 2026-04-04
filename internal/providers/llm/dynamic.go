@@ -32,14 +32,19 @@ func NewDynamicProvider(
 	return d, nil
 }
 
-func (d *DynamicProvider) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
+func (d *DynamicProvider) Chat(ctx context.Context, req core.ChatRequest) (core.Message, error) {
 	provider := d.current.Load().(core.AIProvider)
-	return provider.Chat(ctx, history, tools)
+	return provider.Chat(ctx, req)
 }
 
 func (d *DynamicProvider) Models(ctx context.Context) ([]core.Model, error) {
 	provider := d.current.Load().(core.AIProvider)
 	return provider.Models(ctx)
+}
+
+func (d *DynamicProvider) Capabilities() core.ProviderCapabilities {
+	provider := d.current.Load().(core.AIProvider)
+	return provider.Capabilities()
 }
 
 // GetModel (thread-safe)

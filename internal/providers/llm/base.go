@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sandevgo/tuskbot/internal/core"
 	"github.com/sandevgo/tuskbot/pkg/retry"
 )
 
@@ -34,6 +35,10 @@ func newBaseProvider(baseURL, apiKey, model string) baseProvider {
 
 func (b *baseProvider) GetModel() string {
 	return b.model
+}
+
+func (b *baseProvider) Capabilities() core.ProviderCapabilities {
+	return core.ProviderCapabilities{}
 }
 
 func (b *baseProvider) doRequest(ctx context.Context, method, path string, body any, headers map[string]string) (*http.Response, error) {

@@ -24,6 +24,9 @@ func NewOpenAI(apiKey, model string) *OpenAI {
 			Model:      model,
 			AuthHeader: "Authorization",
 			AuthPrefix: "Bearer ",
+			Capabilities: core.ProviderCapabilities{
+				PromptCache: core.PromptCacheSupportAutomatic,
+			},
 		}),
 	}
 }

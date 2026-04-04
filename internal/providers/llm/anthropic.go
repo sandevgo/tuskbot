@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/sandevgo/tuskbot/internal/core"
 )
@@ -21,25 +22,8 @@ func NewAnthropic(apiKey, model string) *Anthropic {
 	}
 }
 
-func (a *Anthropic) Chat(ctx context.Context, history []core.Message, tools []core.Tool) (core.Message, error) {
-	type msg struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}
-
-	var messages []msg
-	for _, m := range history {
-		if m.Role == core.RoleSystem {
-			continue
-		}
-		messages = append(messages, msg{Role: m.Role, Content: m.Content})
-	}
-
-	payload := map[string]any{
-		"model":      a.model,
-		"max_tokens": 4096,
-		"messages":   messages,
-	}
+func (a *Anthropic) Chat(ctx context.Context, req core.ChatRequest) (core.Message, error) {
+	payload := anthropicPayload(a.model, req)
 
 	headers := map[string]string{
 		"x-api-key":         a.apiKey,
@@ -78,6 +62,100 @@ func (a *Anthropic) Chat(ctx context.Context, history []core.Message, tools []co
 		}
 	}
 	return core.Message{Role: core.RoleAssistant, Content: text}, nil
+}
+
+func (a *Anthropic) Capabilities() core.ProviderCapabilities {
+	return core.ProviderCapabilities{
+		PromptCache: core.PromptCacheSupportExplicit,
+	}
+}
+
+func anthropicPayload(model string, req core.ChatRequest) map[string]any {
+	systemCount := 0
+	for _, msg := range req.Messages {
+		if msg.Role != core.RoleSystem {
+			break
+		}
+		systemCount++
+	}
+
+	breakpoints := map[int]struct{}{}
+	if req.PromptCache != nil && req.PromptCache.Mode != core.PromptCacheModeBypass {
+		for _, idx := range req.PromptCache.MessageBreakpoints {
+			breakpoints[idx] = struct{}{}
+		}
+	}
+
+	systemBlocks := make([]map[string]any, 0, systemCount)
+	for i := 0; i < systemCount; i++ {
+		block := textBlock(req.Messages[i].Content)
+		if _, ok := breakpoints[i]; ok {
+			block["cache_control"] = map[string]any{"type": "ephemeral"}
+		}
+		systemBlocks = append(systemBlocks, block)
+	}
+
+	messages := make([]map[string]any, 0, len(req.Messages)-systemCount)
+	for i, m := range req.Messages[systemCount:] {
+		role := normalizeAnthropicRole(m.Role)
+		block := textBlock(m.Content)
+		absoluteIdx := systemCount + i
+		if _, ok := breakpoints[absoluteIdx]; ok {
+			block["cache_control"] = map[string]any{"type": "ephemeral"}
+		}
+
+		msg := map[string]any{
+			"role":    role,
+			"content": []map[string]any{block},
+		}
+		messages = append(messages, msg)
+	}
+
+	payload := map[string]any{
+		"model":      model,
+		"max_tokens": 4096,
+		"messages":   messages,
+	}
+	if len(systemBlocks) > 0 {
+		payload["system"] = systemBlocks
+	}
+	if req.PromptCache != nil && req.PromptCache.IncludeTools && len(req.Tools) > 0 {
+		payload["tools"] = anthropicTools(req.Tools)
+	}
+
+	return payload
+}
+
+func anthropicTools(tools []core.Tool) []map[string]any {
+	result := make([]map[string]any, 0, len(tools))
+	for _, tool := range tools {
+		result = append(result, map[string]any{
+			"name":         tool.Function.Name,
+			"description":  tool.Function.Description,
+			"input_schema": tool.Function.Parameters,
+		})
+	}
+	return result
+}
+
+func normalizeAnthropicRole(role string) string {
+	switch role {
+	case core.RoleAssistant:
+		return "assistant"
+	case core.RoleUser:
+		return "user"
+	case core.RoleTool:
+		return "user"
+	default:
+		return "user"
+	}
+}
+
+func textBlock(content string) map[string]any {
+	return map[string]any{
+		"type": "text",
+		"text": strings.TrimSpace(content),
+	}
 }
 
 func (a *Anthropic) Models(ctx context.Context) ([]core.Model, error) {

@@ -26,6 +26,9 @@ func NewOpenRouter(apiKey, model string) *OpenRouter {
 				"HTTP-Referer": core.TuskRepositoryURL,
 				"X-Title":      core.TuskName,
 			},
+			Capabilities: core.ProviderCapabilities{
+				PromptCache: core.PromptCacheSupportAutomatic,
+			},
 		}),
 	}
 }
