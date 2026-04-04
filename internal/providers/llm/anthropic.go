@@ -115,16 +115,10 @@ func anthropicPayload(model string, req core.ChatRequest) map[string]any {
 
 	messages := make([]map[string]any, 0, len(req.Messages)-systemCount)
 	for i, m := range req.Messages[systemCount:] {
-		role := normalizeAnthropicRole(m.Role)
-		block := textBlock(m.Content)
 		absoluteIdx := systemCount + i
+		msg := anthropicMessage(m)
 		if _, ok := breakpoints[absoluteIdx]; ok {
-			block["cache_control"] = map[string]any{"type": "ephemeral"}
-		}
-
-		msg := map[string]any{
-			"role":    role,
-			"content": []map[string]any{block},
+			addAnthropicCacheControl(msg)
 		}
 		messages = append(messages, msg)
 	}
@@ -156,13 +150,73 @@ func anthropicTools(tools []core.Tool) []map[string]any {
 	return result
 }
 
+func anthropicMessage(msg core.Message) map[string]any {
+	switch msg.Role {
+	case core.RoleAssistant:
+		content := make([]map[string]any, 0, 1+len(msg.ToolCalls))
+		if strings.TrimSpace(msg.Content) != "" {
+			content = append(content, textBlock(msg.Content))
+		}
+		for _, tc := range msg.ToolCalls {
+			content = append(content, map[string]any{
+				"type":  "tool_use",
+				"id":    tc.ID,
+				"name":  tc.Function.Name,
+				"input": anthropicToolInput(tc.Function.Arguments),
+			})
+		}
+		if len(content) == 0 {
+			content = append(content, textBlock(msg.Content))
+		}
+		return map[string]any{
+			"role":    "assistant",
+			"content": content,
+		}
+	case core.RoleTool:
+		return map[string]any{
+			"role": "user",
+			"content": []map[string]any{
+				{
+					"type":        "tool_result",
+					"tool_use_id": msg.ToolCallID,
+					"content":     msg.Content,
+				},
+			},
+		}
+	default:
+		return map[string]any{
+			"role":    normalizeAnthropicRole(msg.Role),
+			"content": []map[string]any{textBlock(msg.Content)},
+		}
+	}
+}
+
+func addAnthropicCacheControl(msg map[string]any) {
+	content, ok := msg["content"].([]map[string]any)
+	if !ok || len(content) == 0 {
+		return
+	}
+	content[0]["cache_control"] = map[string]any{"type": "ephemeral"}
+}
+
+func anthropicToolInput(arguments string) any {
+	if strings.TrimSpace(arguments) == "" {
+		return map[string]any{}
+	}
+
+	var input any
+	if err := json.Unmarshal([]byte(arguments), &input); err != nil {
+		return map[string]any{"raw": arguments}
+	}
+
+	return input
+}
+
 func normalizeAnthropicRole(role string) string {
 	switch role {
 	case core.RoleAssistant:
 		return "assistant"
 	case core.RoleUser:
-		return "user"
-	case core.RoleTool:
 		return "user"
 	default:
 		return "user"

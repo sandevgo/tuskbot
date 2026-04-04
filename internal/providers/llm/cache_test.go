@@ -120,6 +120,72 @@ func TestAnthropicPayloadIncludesToolsWithoutPromptCache(t *testing.T) {
 	}
 }
 
+func TestAnthropicPayloadPreservesToolConversationState(t *testing.T) {
+	req := core.ChatRequest{
+		Messages: []core.Message{
+			{Role: core.RoleSystem, Content: "system"},
+			{
+				Role:    core.RoleAssistant,
+				Content: "Let me check that.",
+				ToolCalls: []core.ToolCall{
+					{
+						ID:   "call_1",
+						Type: "function",
+						Function: core.FunctionCall{
+							Name:      "search",
+							Arguments: `{"query":"golang"}`,
+						},
+					},
+				},
+			},
+			{Role: core.RoleTool, ToolCallID: "call_1", Content: "search results"},
+		},
+	}
+
+	payload := anthropicPayload("claude-test", req)
+	messages := payload["messages"].([]map[string]any)
+
+	if len(messages) != 2 {
+		t.Fatalf("messages len = %d, want 2", len(messages))
+	}
+
+	assistant := messages[0]
+	if assistant["role"] != "assistant" {
+		t.Fatalf("assistant role = %#v, want %q", assistant["role"], "assistant")
+	}
+	assistantContent := assistant["content"].([]map[string]any)
+	if assistantContent[0]["type"] != "text" {
+		t.Fatalf("assistant first block type = %#v, want %q", assistantContent[0]["type"], "text")
+	}
+	if assistantContent[1]["type"] != "tool_use" {
+		t.Fatalf("assistant second block type = %#v, want %q", assistantContent[1]["type"], "tool_use")
+	}
+	if assistantContent[1]["id"] != "call_1" {
+		t.Fatalf("assistant tool_use id = %#v, want %q", assistantContent[1]["id"], "call_1")
+	}
+	if assistantContent[1]["name"] != "search" {
+		t.Fatalf("assistant tool_use name = %#v, want %q", assistantContent[1]["name"], "search")
+	}
+	if !reflect.DeepEqual(assistantContent[1]["input"], map[string]any{"query": "golang"}) {
+		t.Fatalf("assistant tool_use input = %#v, want %#v", assistantContent[1]["input"], map[string]any{"query": "golang"})
+	}
+
+	toolResult := messages[1]
+	if toolResult["role"] != "user" {
+		t.Fatalf("tool result role = %#v, want %q", toolResult["role"], "user")
+	}
+	toolResultContent := toolResult["content"].([]map[string]any)
+	if toolResultContent[0]["type"] != "tool_result" {
+		t.Fatalf("tool result block type = %#v, want %q", toolResultContent[0]["type"], "tool_result")
+	}
+	if toolResultContent[0]["tool_use_id"] != "call_1" {
+		t.Fatalf("tool result tool_use_id = %#v, want %q", toolResultContent[0]["tool_use_id"], "call_1")
+	}
+	if toolResultContent[0]["content"] != "search results" {
+		t.Fatalf("tool result content = %#v, want %q", toolResultContent[0]["content"], "search results")
+	}
+}
+
 func TestAnthropicChatParsesToolUseBlocks(t *testing.T) {
 	provider := NewAnthropic("test-key", "claude-test")
 	provider.client = &http.Client{
