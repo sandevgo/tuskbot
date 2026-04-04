@@ -35,7 +35,6 @@ type ChatRequest struct {
 	Messages    []Message
 	Tools       []Tool
 	PromptCache *PromptCachePolicy
-	ModelReuse  *ModelReusePolicy
 }
 
 func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
@@ -74,19 +73,6 @@ type PromptCachePolicy struct {
 	Mode               PromptCacheMode
 	MessageBreakpoints []int
 	IncludeTools       bool
-}
-
-type ModelReuseMode string
-
-const (
-	ModelReuseModeDefault ModelReuseMode = "default"
-	ModelReuseModePrefer  ModelReuseMode = "prefer"
-	ModelReuseModeBypass  ModelReuseMode = "bypass"
-)
-
-type ModelReusePolicy struct {
-	Mode ModelReuseMode
-	TTL  string
 }
 
 type PromptCacheSupport string

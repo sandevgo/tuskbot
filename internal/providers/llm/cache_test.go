@@ -252,14 +252,9 @@ func TestAnthropicChatParsesToolUseBlocks(t *testing.T) {
 
 func TestOllamaKeepAliveBody(t *testing.T) {
 	provider := NewOllama("http://localhost:11434", "", "llama3")
-	body := provider.extraBody(core.ChatRequest{
-		ModelReuse: &core.ModelReusePolicy{
-			Mode: core.ModelReuseModePrefer,
-			TTL:  "5m",
-		},
-	})
+	body := provider.extraBody(core.ChatRequest{})
 
-	expected := map[string]any{"keep_alive": "5m"}
+	expected := map[string]any{"keep_alive": "1h"}
 	if !reflect.DeepEqual(body, expected) {
 		t.Fatalf("extraBody = %#v, want %#v", body, expected)
 	}

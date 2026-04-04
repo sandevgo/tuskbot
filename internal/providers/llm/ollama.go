@@ -23,12 +23,8 @@ func NewOllama(baseURL, apiKey, model string) *Ollama {
 			AuthHeader: "Authorization",
 			AuthPrefix: "Bearer ",
 			ExtraBody: func(req core.ChatRequest) map[string]any {
-				if req.ModelReuse == nil || req.ModelReuse.TTL == "" {
-					return nil
-				}
-
 				return map[string]any{
-					"keep_alive": req.ModelReuse.TTL,
+					"keep_alive": "1h",
 				}
 			},
 			Capabilities: core.ProviderCapabilities{
