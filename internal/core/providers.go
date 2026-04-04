@@ -54,7 +54,6 @@ func NewChatRequest(promptCtx PromptContext, tools []Tool) ChatRequest {
 	req.PromptCache = &PromptCachePolicy{
 		Mode:               PromptCacheModePrefer,
 		MessageBreakpoints: breakpoints,
-		IncludeTools:       len(tools) > 0,
 	}
 
 	return req
@@ -71,5 +70,4 @@ const (
 type PromptCachePolicy struct {
 	Mode               PromptCacheMode
 	MessageBreakpoints []int
-	IncludeTools       bool
 }

@@ -38,7 +38,6 @@ func TestAnthropicPayloadAddsCacheMarkersAndTools(t *testing.T) {
 		PromptCache: &core.PromptCachePolicy{
 			Mode:               core.PromptCacheModePrefer,
 			MessageBreakpoints: []int{1, 2},
-			IncludeTools:       true,
 		},
 	}
 

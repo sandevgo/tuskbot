@@ -27,7 +27,6 @@ func TestNewChatRequest(t *testing.T) {
 			wantCache: &PromptCachePolicy{
 				Mode:               PromptCacheModePrefer,
 				MessageBreakpoints: []int{0},
-				IncludeTools:       false,
 			},
 		},
 		{
@@ -44,7 +43,6 @@ func TestNewChatRequest(t *testing.T) {
 			wantCache: &PromptCachePolicy{
 				Mode:               PromptCacheModePrefer,
 				MessageBreakpoints: []int{0, 1},
-				IncludeTools:       true,
 			},
 		},
 	}

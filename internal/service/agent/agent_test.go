@@ -135,7 +135,6 @@ func TestBuildChatRequest(t *testing.T) {
 			wantCache: &core.PromptCachePolicy{
 				Mode:               core.PromptCacheModePrefer,
 				MessageBreakpoints: []int{0},
-				IncludeTools:       false,
 			},
 		},
 		{
@@ -152,7 +151,6 @@ func TestBuildChatRequest(t *testing.T) {
 			wantCache: &core.PromptCachePolicy{
 				Mode:               core.PromptCacheModePrefer,
 				MessageBreakpoints: []int{0, 1},
-				IncludeTools:       true,
 			},
 		},
 	}
