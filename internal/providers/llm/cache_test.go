@@ -264,3 +264,47 @@ func TestOllamaKeepAliveBody(t *testing.T) {
 		t.Fatalf("extraBody = %#v, want %#v", body, expected)
 	}
 }
+
+func TestOpenRouterCacheControlBodyForClaude(t *testing.T) {
+	provider := NewOpenRouter("test-key", "anthropic/claude-sonnet-4")
+	body := provider.extraBody(core.ChatRequest{
+		PromptCache: &core.PromptCachePolicy{
+			Mode: core.PromptCacheModePrefer,
+		},
+	})
+
+	expected := map[string]any{
+		"cache_control": map[string]any{
+			"type": "ephemeral",
+		},
+	}
+	if !reflect.DeepEqual(body, expected) {
+		t.Fatalf("extraBody = %#v, want %#v", body, expected)
+	}
+}
+
+func TestOpenRouterCacheControlBodySkipsUnsupportedModels(t *testing.T) {
+	provider := NewOpenRouter("test-key", "openai/gpt-4o-mini")
+	body := provider.extraBody(core.ChatRequest{
+		PromptCache: &core.PromptCachePolicy{
+			Mode: core.PromptCacheModePrefer,
+		},
+	})
+
+	if body != nil {
+		t.Fatalf("extraBody = %#v, want nil", body)
+	}
+}
+
+func TestOpenRouterCacheControlBodySkipsBypassMode(t *testing.T) {
+	provider := NewOpenRouter("test-key", "anthropic/claude-sonnet-4")
+	body := provider.extraBody(core.ChatRequest{
+		PromptCache: &core.PromptCachePolicy{
+			Mode: core.PromptCacheModeBypass,
+		},
+	})
+
+	if body != nil {
+		t.Fatalf("extraBody = %#v, want nil", body)
+	}
+}
